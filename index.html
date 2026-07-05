@@ -1,0 +1,1727 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kamayan sa Qyusi — Business Manager</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --red:        #c0392b;
+  --red-dark:   #a93226;
+  --red-light:  #fef2f1;
+  --bg:         #f0f2f5;
+  --sidebar:    #111827;
+  --white:      #ffffff;
+  --text:       #111827;
+  --muted:      #6b7280;
+  --light:      #9ca3af;
+  --border:     #e5e7eb;
+  --green:      #059669;
+  --green-bg:   #ecfdf5;
+  --blue:       #2563eb;
+  --blue-bg:    #eff6ff;
+  --orange:     #d97706;
+  --orange-bg:  #fffbeb;
+  --purple:     #7c3aed;
+  --sh-sm:      0 1px 3px rgba(0,0,0,.07), 0 1px 2px rgba(0,0,0,.04);
+  --sh:         0 4px 6px -1px rgba(0,0,0,.07), 0 2px 4px -1px rgba(0,0,0,.04);
+  --r:          12px;
+  --r-sm:       8px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); font-size: 14px; }
+
+/* ── LOGIN ── */
+#login { display: flex; align-items: center; justify-content: center; min-height: 100vh; background: linear-gradient(135deg, #0F1C2E 0%, #1A2F4E 60%, #0E2040 100%); }
+.login-card { background: var(--white); border-radius: 20px; box-shadow: 0 25px 60px rgba(0,0,0,.35); padding: 48px 44px; width: 100%; max-width: 380px; }
+.login-logo { font-size: 2.8rem; margin-bottom: 8px; text-align: center; }
+.login-brand { font-size: 1.2rem; font-weight: 800; color: var(--text); text-align: center; letter-spacing: -.02em; }
+.login-sub { font-size: .75rem; color: var(--muted); text-align: center; margin-bottom: 32px; margin-top: 4px; }
+.f-lbl { display: block; font-size: .71rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 6px; }
+.f-inp { width: 100%; padding: 11px 14px; border: 1.5px solid var(--border); border-radius: var(--r-sm); font-size: .9rem; color: var(--text); outline: none; background: #fafafa; font-family: inherit; transition: border-color .15s, box-shadow .15s; }
+.f-inp:focus { border-color: var(--red); background: var(--white); box-shadow: 0 0 0 3px rgba(192,57,43,.1); }
+.login-inp-wrap { margin-bottom: 18px; }
+.login-btn { width: 100%; padding: 13px; background: var(--red); color: var(--white); border: none; border-radius: var(--r-sm); font-size: .9rem; font-weight: 700; cursor: pointer; font-family: inherit; letter-spacing: .01em; transition: background .15s, transform .1s; margin-top: 4px; }
+.login-btn:hover { background: var(--red-dark); }
+.login-btn:active { transform: scale(.98); }
+.login-err { color: var(--red); font-size: .78rem; margin-top: 10px; min-height: 18px; text-align: center; font-weight: 500; }
+
+/* ── LAYOUT ── */
+#app { display: none; min-height: 100vh; }
+.layout { display: flex; min-height: 100vh; }
+
+/* ── SIDEBAR ── */
+.sidebar { width: 240px; background: var(--sidebar); flex-shrink: 0; display: flex; flex-direction: column; position: fixed; top: 0; left: 0; height: 100vh; z-index: 100; }
+.sb-brand { padding: 24px 20px 20px; border-bottom: 1px solid rgba(255,255,255,.06); }
+.sb-logo { font-size: 1.7rem; margin-bottom: 7px; }
+.sb-name { font-size: .95rem; font-weight: 800; color: var(--white); line-height: 1.3; letter-spacing: -.01em; }
+.sb-tagline { font-size: .68rem; color: rgba(255,255,255,.3); margin-top: 3px; text-transform: uppercase; letter-spacing: .07em; }
+.sb-nav { flex: 1; padding: 16px 12px; overflow-y: auto; }
+.nav-section { font-size: .63rem; font-weight: 700; color: rgba(255,255,255,.22); text-transform: uppercase; letter-spacing: .1em; padding: 10px 10px 5px; }
+.nav-item { display: flex; align-items: center; gap: 11px; padding: 10px 10px; cursor: pointer; color: rgba(255,255,255,.5); font-size: .84rem; font-weight: 500; border-radius: var(--r-sm); margin-bottom: 2px; transition: all .15s; }
+.nav-item:hover { color: var(--white); background: rgba(255,255,255,.07); }
+.nav-item.active { color: var(--white); background: rgba(192,57,43,.22); border: 1px solid rgba(192,57,43,.3); }
+.nav-item.active .ni { color: #e74c3c; }
+.ni { font-size: .95rem; width: 18px; text-align: center; flex-shrink: 0; }
+.sb-footer { padding: 14px 12px; border-top: 1px solid rgba(255,255,255,.06); }
+.sb-logout { display: flex; align-items: center; gap: 10px; color: rgba(255,255,255,.35); font-size: .82rem; cursor: pointer; font-weight: 500; padding: 10px 10px; border-radius: var(--r-sm); transition: all .15s; }
+.sb-logout:hover { color: var(--white); background: rgba(255,255,255,.07); }
+
+/* ── MAIN ── */
+.main { margin-left: 240px; flex: 1; padding: 32px 36px; }
+
+/* TOPBAR */
+.topbar { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 28px; gap: 16px; }
+.topbar-left { min-width: 0; }
+.page-title { font-size: 1.45rem; font-weight: 800; color: var(--text); letter-spacing: -.03em; }
+.page-sub { font-size: .78rem; color: var(--muted); margin-top: 4px; }
+.topbar-right { display: flex; gap: 10px; align-items: center; flex-shrink: 0; padding-top: 4px; }
+.month-sel { padding: 9px 14px; border: 1.5px solid var(--border); border-radius: var(--r-sm); font-size: .82rem; color: var(--text); background: var(--white); cursor: pointer; outline: none; font-family: inherit; font-weight: 500; box-shadow: var(--sh-sm); transition: border-color .15s; }
+.month-sel:focus { border-color: var(--red); }
+.btn { padding: 9px 18px; border-radius: var(--r-sm); border: none; font-size: .82rem; font-weight: 600; cursor: pointer; font-family: inherit; transition: all .15s; display: inline-flex; align-items: center; gap: 6px; }
+.btn-red { background: var(--red); color: var(--white); box-shadow: 0 1px 3px rgba(192,57,43,.35); }
+.btn-red:hover { background: var(--red-dark); box-shadow: 0 3px 8px rgba(192,57,43,.35); }
+.btn-ghost { background: var(--white); color: var(--text); border: 1.5px solid var(--border); box-shadow: var(--sh-sm); }
+.btn-ghost:hover { border-color: var(--red); color: var(--red); }
+
+/* SUMMARY CARDS */
+.cards { display: grid; grid-template-columns: repeat(6,1fr); gap: 14px; margin-bottom: 24px; }
+.card { background: var(--white); border-radius: var(--r); padding: 20px; box-shadow: var(--sh-sm); border: 1px solid var(--border); position: relative; overflow: hidden; }
+.card-accent { position: absolute; top: 0; left: 0; right: 0; height: 3px; }
+.ca-blue   { background: var(--blue); }
+.ca-red    { background: var(--red); }
+.ca-green  { background: var(--green); }
+.ca-orange { background: var(--orange); }
+.ca-purple { background: var(--purple); }
+.card-icon { font-size: 1.25rem; margin-bottom: 12px; margin-top: 4px; }
+.card-lbl { font-size: .68rem; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-bottom: 6px; }
+.card-val { font-size: 1.2rem; font-weight: 800; color: var(--text); letter-spacing: -.02em; }
+.card-val.green  { color: var(--green); }
+.card-val.red    { color: var(--red); }
+.card-val.blue   { color: var(--blue); }
+.card-val.orange { color: var(--orange); }
+.card-val.purple { color: var(--purple); }
+.card-sub { font-size: .68rem; color: var(--light); margin-top: 5px; }
+
+/* CHART */
+.chart-wrap { background: var(--white); border-radius: var(--r); box-shadow: var(--sh-sm); border: 1px solid var(--border); padding: 22px 22px 16px; margin-bottom: 20px; }
+.chart-hdr { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 18px; }
+.chart-title { font-size: .88rem; font-weight: 700; color: var(--text); }
+.chart-sub { font-size: .72rem; color: var(--muted); margin-top: 2px; }
+#sales-chart { width: 100%; height: 160px; display: block; }
+
+/* SECTION */
+.section { background: var(--white); border-radius: var(--r); box-shadow: var(--sh-sm); border: 1px solid var(--border); overflow: hidden; }
+.sec-hdr { display: flex; align-items: center; justify-content: space-between; padding: 18px 22px; border-bottom: 1px solid var(--border); }
+.sec-title { font-size: .9rem; font-weight: 700; color: var(--text); }
+.sec-count { font-size: .72rem; color: var(--muted); margin-top: 2px; }
+.sec-total { font-size: .82rem; font-weight: 700; }
+table { width: 100%; border-collapse: collapse; }
+th { font-size: .67rem; color: var(--muted); text-transform: uppercase; letter-spacing: .07em; padding: 11px 22px; text-align: left; background: #fafbfc; border-bottom: 1px solid var(--border); font-weight: 600; white-space: nowrap; }
+td { padding: 13px 22px; border-bottom: 1px solid #f3f4f6; font-size: .84rem; vertical-align: middle; }
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: #fafbfd; }
+.empty-row { text-align: center; padding: 52px; color: var(--light); font-size: .85rem; }
+
+/* PILLS */
+.day-pill { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: .67rem; font-weight: 700; letter-spacing: .02em; }
+.pill-mon { background: #dcfce7; color: #166534; }
+.pill-tue { background: #dbeafe; color: #1e40af; }
+.pill-wed { background: #f3e8ff; color: #6b21a8; }
+.pill-thu { background: #ffedd5; color: #9a3412; }
+.pill-fri { background: #fce7f3; color: #9d174d; }
+.pill-sat { background: #e0e7ff; color: #3730a3; }
+.pill-sun { background: #fee2e2; color: #991b1b; }
+
+/* CATEGORY BADGE */
+.cat-badge { display: inline-block; padding: 2px 9px; border-radius: 20px; font-size: .65rem; font-weight: 600; }
+.cat-Restock    { background: #eff6ff; color: #1e40af; }
+.cat-FB         { background: #eef2ff; color: #3730a3; }
+.cat-Salary     { background: #fef3c7; color: #92400e; }
+.cat-Utilities  { background: #f0fdf4; color: #166534; }
+.cat-Transport  { background: #fdf4ff; color: #6b21a8; }
+.cat-Other      { background: #f9fafb; color: #374151; }
+
+.amt-pos  { color: var(--green); font-weight: 700; }
+.amt-neg  { color: var(--red);   font-weight: 700; }
+.amt-blue { color: var(--blue);  font-weight: 700; }
+
+.act-btn { background: none; border: 1.5px solid var(--border); color: var(--muted); border-radius: 6px; padding: 4px 12px; font-size: .7rem; cursor: pointer; font-weight: 600; font-family: inherit; transition: all .15s; }
+.act-btn:hover { border-color: var(--blue); color: var(--blue); background: var(--blue-bg); }
+.del-btn:hover { border-color: var(--red) !important; color: var(--red) !important; background: var(--red-light) !important; }
+
+/* EMPLOYEE AVATAR */
+.emp-pill { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, var(--red), #e74c3c); color: var(--white); font-size: .67rem; font-weight: 800; margin-right: 10px; flex-shrink: 0; letter-spacing: .02em; }
+
+/* MODAL */
+.overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); z-index: 300; align-items: center; justify-content: center; padding: 20px; }
+.overlay.open { display: flex; animation: ov-in .15s ease; }
+@keyframes ov-in { from { opacity:0 } to { opacity:1 } }
+.modal { background: var(--white); border-radius: 18px; padding: 32px; width: 100%; max-width: 440px; box-shadow: 0 20px 60px rgba(0,0,0,.22); animation: mo-in .2s ease; }
+@keyframes mo-in { from { transform: translateY(-14px); opacity:0 } to { transform: translateY(0); opacity:1 } }
+.modal h3 { font-size: 1rem; font-weight: 800; color: var(--text); margin-bottom: 24px; letter-spacing: -.02em; }
+.modal .f-lbl { margin-top: 4px; }
+.modal .f-inp { margin-bottom: 0; }
+.modal-field { margin-bottom: 14px; }
+.modal-btns { display: flex; gap: 10px; justify-content: flex-end; margin-top: 24px; }
+.f-row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+select.f-inp { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath fill='%236b7280' d='M1 1l5 5 5-5'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; background-size: 10px; padding-right: 32px; }
+
+/* VIEW TOGGLE */
+.view-toggle { display: flex; background: #f0f2f5; border-radius: var(--r-sm); padding: 3px; gap: 2px; }
+.vt-btn { padding: 6px 14px; border-radius: 6px; border: none; font-size: .78rem; font-weight: 600; cursor: pointer; font-family: inherit; color: var(--muted); background: none; transition: all .15s; }
+.vt-btn.active { background: var(--white); color: var(--text); box-shadow: var(--sh-sm); }
+
+/* WEEK ROW */
+.week-label { font-size: .72rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+.week-range { font-size: .78rem; color: var(--muted); margin-top: 1px; }
+.best-day-chip { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: .65rem; font-weight: 600; background: #ecfdf5; color: #166534; }
+
+/* EXPANDABLE WEEK */
+.week-row { cursor: pointer; user-select: none; }
+.week-row:hover td { background: #f5f7ff; }
+.week-chevron { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 6px; background: #f0f2f5; color: var(--muted); font-size: .7rem; margin-right: 8px; transition: transform .2s, background .15s; flex-shrink: 0; }
+.week-chevron.open { transform: rotate(90deg); background: var(--blue-bg); color: var(--blue); }
+.week-detail-row td { padding: 0 !important; border-bottom: 2px solid var(--blue) !important; background: #f8faff; }
+.week-detail-inner { padding: 12px 22px 16px 44px; }
+.week-detail-inner table { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: var(--white); }
+.week-detail-inner th { background: #f0f4ff; font-size: .63rem; padding: 8px 14px; color: var(--blue); }
+.week-detail-inner td { padding: 9px 14px; font-size: .8rem; border-bottom: 1px solid #f0f2f5; background: var(--white); }
+.week-detail-inner tr:last-child td { border-bottom: none; }
+.week-detail-inner tr:hover td { background: #fafbfd; }
+
+/* DIVIDER */
+.tbl-section + .tbl-section { margin-top: 24px; }
+
+/* ── SALES PRO UI ── */
+.s-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 0; gap: 16px; padding-bottom: 18px; }
+.s-header-left { min-width: 0; }
+.s-header-right { display: flex; gap: 10px; align-items: center; flex-shrink: 0; padding-top: 4px; }
+
+/* Tab bar */
+.s-nav-tabs { display: flex; align-items: center; gap: 0; border-bottom: 2px solid var(--border); margin-bottom: 18px; background: var(--white); border-radius: var(--r) var(--r) 0 0; padding: 0 6px; box-shadow: var(--sh-sm); border: 1px solid var(--border); border-bottom: 2px solid var(--border); }
+.s-vt { padding: 13px 20px; border: none; background: none; font-family: inherit; font-size: .82rem; font-weight: 600; color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all .15s; white-space: nowrap; }
+.s-vt:hover { color: var(--text); background: #f5f7fa; }
+.s-vt.active { color: var(--blue); border-bottom-color: var(--blue); background: var(--blue-bg); border-radius: 4px 4px 0 0; }
+
+/* KPI Cards */
+.sales-kpi { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; margin-bottom: 18px; }
+.s-kpi { background: var(--white); border-radius: var(--r); padding: 18px 20px; box-shadow: var(--sh-sm); border: 1px solid var(--border); border-left: 4px solid transparent; display: flex; flex-direction: column; gap: 2px; }
+.s-kpi.k-blue   { border-left-color: var(--blue); }
+.s-kpi.k-green  { border-left-color: var(--green); }
+.s-kpi.k-orange { border-left-color: var(--orange); }
+.s-kpi.k-purple { border-left-color: var(--purple); }
+.s-kpi-icon { font-size: .95rem; margin-bottom: 6px; }
+.s-kpi-lbl { font-size: .62rem; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); }
+.s-kpi-val { font-size: 1.12rem; font-weight: 800; letter-spacing: -.02em; margin-top: 4px; }
+.s-kpi-val.blue   { color: var(--blue); }
+.s-kpi-val.green  { color: var(--green); }
+.s-kpi-val.orange { color: var(--orange); }
+.s-kpi-val.purple { color: var(--purple); }
+.s-kpi-sub { font-size: .67rem; color: var(--light); margin-top: 3px; }
+
+/* Professional table for sales */
+#tab-sales .section { border-radius: 0 0 var(--r) var(--r); border-top: none; }
+#tab-sales .sec-hdr { background: linear-gradient(90deg,#f7f9ff,#ffffff); border-bottom: 2px solid #dde4f5; padding: 14px 22px; }
+#tab-sales .sec-title { font-size: .87rem; font-weight: 700; letter-spacing: -.01em; }
+#tab-sales th { background: #f2f5fb; border-bottom: 2px solid #dde4f5; color: #4a5578; font-size: .63rem; letter-spacing: .09em; padding: 10px 20px; font-weight: 700; }
+#tab-sales td { padding: 11px 20px; border-bottom: 1px solid #eef1f8; font-size: .83rem; }
+#tab-sales tbody tr:nth-child(4n+1) > td { background: #fafbff; }
+#tab-sales tr:hover > td { background: #eef3ff !important; transition: background .1s; }
+#tab-sales tr:last-child > td { border-bottom: none; }
+#tab-sales .week-detail-inner th { background: #e8eeff; color: #2a4ab5; font-size: .61rem; padding: 7px 12px; }
+#tab-sales .week-detail-inner td { padding: 8px 12px; font-size: .79rem; border-bottom: 1px solid #eef1f8; }
+#tab-sales .week-detail-inner tr:hover td { background: #f0f4ff !important; }
+
+/* ── OFFICE PROFESSIONAL THEME ── */
+:root {
+  --blue:       #1E5CA8;
+  --blue-bg:    #EBF0FA;
+  --blue-dark:  #174D8E;
+  --green:      #1A6B3C;
+  --green-bg:   #EDFAF3;
+  --orange:     #8B5E00;
+  --orange-bg:  #FFF8EC;
+  --purple:     #4A3080;
+  --red:        #A52B23;
+  --red-dark:   #8B2219;
+  --red-light:  #FEF2F1;
+  --bg:         #ECEEF2;
+  --sidebar:    #1A2332;
+  --muted:      #4B5563;
+  --light:      #9CA3AF;
+  --border:     #C8D0DB;
+  --text:       #111827;
+}
+
+/* Day pills — neutral slate */
+.day-pill { background: #E2E8F0 !important; color: #334155 !important; }
+.pill-mon,.pill-tue,.pill-wed,.pill-thu,.pill-fri,.pill-sat,.pill-sun { background: #E2E8F0 !important; color: #334155 !important; }
+
+/* Category badges — neutral */
+.cat-badge { background: #F1F5F9 !important; color: #475569 !important; border: 1px solid #E2E8F0; }
+.cat-Restock,.cat-FB,.cat-Salary,.cat-Utilities,.cat-Transport,.cat-Other { background: #F1F5F9 !important; color: #475569 !important; }
+
+/* Best-day chip — neutral */
+.best-day-chip { background: #F1F5F9; color: #475569; border: 1px solid #DDE3ED; font-weight: 600; }
+
+/* Amount colors — professional */
+.amt-blue { color: #1E5CA8; }
+.amt-pos  { color: #1A6B3C; }
+.amt-neg  { color: #A52B23; }
+
+/* Card values */
+.card-val.blue   { color: #1E5CA8; }
+.card-val.green  { color: #1A6B3C; }
+.card-val.orange { color: #8B5E00; }
+.card-val.purple { color: #4A3080; }
+
+/* Dashboard card accents */
+.ca-blue   { background: #1E5CA8; }
+.ca-green  { background: #1A6B3C; }
+.ca-orange { background: #8B5E00; }
+.ca-purple { background: #4A3080; }
+
+/* KPI cards — one accent color, professional */
+.s-kpi { border-left-color: #C8D0DB !important; }
+.s-kpi.k-blue,.s-kpi.k-green,.s-kpi.k-orange,.s-kpi.k-purple { border-left-color: #1E5CA8 !important; }
+.s-kpi-val        { color: #111827 !important; }
+.s-kpi-val.blue   { color: #1E5CA8 !important; }
+.s-kpi-val.green  { color: #1A6B3C !important; }
+.s-kpi-val.orange { color: #8B5E00 !important; }
+.s-kpi-val.purple { color: #4A3080 !important; }
+
+/* Tab bar — clean office style */
+.s-nav-tabs { background: #FFFFFF; border-color: #C8D0DB; box-shadow: 0 1px 4px rgba(0,0,0,.06); }
+.s-vt { color: #4B5563; font-weight: 500; }
+.s-vt:hover { color: #1E5CA8; background: #F0F4FA; }
+.s-vt.active { color: #1E5CA8; border-bottom-color: #1E5CA8; background: #EBF0FA; font-weight: 700; border-radius: 4px 4px 0 0; }
+
+/* Table headers — neutral professional */
+th { background: #F3F5F8; color: #374151; border-bottom-color: #C8D0DB; }
+#tab-sales th { background: #F3F5F8 !important; color: #374151 !important; border-bottom-color: #C8D0DB !important; }
+#tab-sales .sec-hdr { background: #F8FAFC !important; border-bottom-color: #C8D0DB !important; }
+#tab-sales tbody tr:nth-child(4n+1) > td { background: #F9FAFB !important; }
+#tab-sales tr:hover > td { background: #EDF1FA !important; }
+
+/* Nested detail tables */
+.week-detail-row td { background: #EDF1F8 !important; border-bottom-color: #C8D0DB !important; }
+.week-detail-inner { background: #F3F6FB; }
+.week-detail-inner table { border-color: #D0D7E3; }
+.week-detail-inner th { background: #E8EDF6 !important; color: #334155 !important; }
+.week-detail-inner td { background: #FAFBFD !important; border-bottom-color: #E8EDF0 !important; }
+.week-detail-inner tr:hover td { background: #EEF2FA !important; }
+
+/* Chevron — neutral */
+.week-chevron { background: #E2E8F0 !important; color: #475569 !important; }
+.week-chevron.open { background: #DBEAFE !important; color: #1E5CA8 !important; }
+.week-row:hover td { background: #F0F4FA !important; }
+
+/* Sidebar — dark professional navy */
+.sidebar { background: var(--sidebar); }
+.nav-item.active { background: rgba(30,92,168,.18) !important; border-color: rgba(30,92,168,.3) !important; }
+.nav-item.active .ni { color: #93BBEE !important; }
+
+/* Buttons */
+.btn-red { background: #1E5CA8; box-shadow: 0 1px 3px rgba(30,92,168,.3); }
+.btn-red:hover { background: #174D8E; box-shadow: 0 3px 8px rgba(30,92,168,.3); }
+.btn-ghost:hover { border-color: #1E5CA8; color: #1E5CA8; }
+.login-btn { background: #1E5CA8; }
+.login-btn:hover { background: #174D8E; }
+.f-inp:focus { border-color: #1E5CA8; box-shadow: 0 0 0 3px rgba(30,92,168,.1); }
+.month-sel:focus { border-color: #1E5CA8; }
+.act-btn:hover { border-color: #1E5CA8; color: #1E5CA8; background: #EBF0FA; }
+
+/* RESPONSIVE */
+@media (max-width: 1200px) { .cards { grid-template-columns: repeat(3,1fr); } }
+@media (max-width: 960px)  { .cards { grid-template-columns: repeat(2,1fr); } }
+@media (max-width: 900px) {
+  .sidebar { width: 64px; }
+  .sb-name,.sb-tagline,.nav-item span,.sb-logout span,.nav-section,.sb-logo-text { display: none; }
+  .main { margin-left: 64px; padding: 20px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ── LOGIN ── -->
+<div id="login">
+  <div class="login-card">
+    <div class="login-logo">🍽️</div>
+    <div class="login-brand">Kamayan sa Qyusi</div>
+    <div class="login-sub">Business Manager</div>
+    <div class="login-inp-wrap">
+      <label class="f-lbl">Password</label>
+      <input type="password" id="pin" class="f-inp" placeholder="Enter password" maxlength="20"
+        onkeypress="if(event.key==='Enter')login()" autofocus />
+    </div>
+    <button class="login-btn" onclick="login()">Sign In</button>
+    <div class="login-err" id="login-err"></div>
+  </div>
+</div>
+
+<!-- ── APP ── -->
+<div id="app">
+  <div class="layout">
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+      <div class="sb-brand">
+        <div class="sb-logo">🍽️</div>
+        <div class="sb-name">Kamayan sa Qyusi</div>
+        <div class="sb-tagline">Business Manager</div>
+      </div>
+      <nav class="sb-nav">
+        <div class="nav-section">Overview</div>
+        <div class="nav-item active" onclick="showTab('dashboard')">
+          <span class="ni">📊</span><span>Dashboard</span>
+        </div>
+        <div class="nav-section">Records</div>
+        <div class="nav-item" onclick="showTab('sales')">
+          <span class="ni">💰</span><span>Sales</span>
+        </div>
+        <div class="nav-item" onclick="showTab('expenses')">
+          <span class="ni">📋</span><span>Expenses</span>
+        </div>
+        <div class="nav-item" onclick="showTab('salary')">
+          <span class="ni">👥</span><span>Salary</span>
+        </div>
+        <div class="nav-item" onclick="showTab('others')">
+          <span class="ni">📋</span><span>Others</span>
+        </div>
+      </nav>
+      <div class="sb-footer">
+        <div class="sb-logout" onclick="logout()">
+          <span>🔒</span><span>Lock</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- MAIN -->
+    <div class="main">
+
+      <!-- DASHBOARD -->
+      <div id="tab-dashboard">
+        <div class="topbar">
+          <div class="topbar-left">
+            <div class="page-title">Dashboard</div>
+            <div class="page-sub" id="dash-period">Loading...</div>
+          </div>
+          <div class="topbar-right">
+            <select class="month-sel" id="dash-month" onchange="renderDashboard()"></select>
+          </div>
+        </div>
+        <div class="cards" id="dash-cards"></div>
+        <div class="chart-wrap">
+          <div class="chart-hdr">
+            <div>
+              <div class="chart-title">Daily Sales</div>
+              <div class="chart-sub">Gross sales per day — selected month</div>
+            </div>
+          </div>
+          <canvas id="sales-chart"></canvas>
+        </div>
+        <div class="section">
+          <div class="sec-hdr">
+            <div>
+              <div class="sec-title">Daily Breakdown</div>
+              <div class="sec-count" id="dash-tbl-count"></div>
+            </div>
+          </div>
+          <table>
+            <thead><tr>
+              <th>Day</th><th>Date</th><th>Gross Sales</th><th>Expenses</th><th>Net</th>
+            </tr></thead>
+            <tbody id="dash-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- SALES -->
+      <div id="tab-sales" style="display:none">
+        <!-- Header row -->
+        <div class="s-header">
+          <div class="s-header-left">
+            <div class="page-title" id="sales-page-title">Sales</div>
+            <div class="page-sub" id="sales-page-sub">Gross sales overview</div>
+          </div>
+          <div class="s-header-right">
+            <select class="month-sel" id="sales-year" onchange="renderSales()"></select>
+            <button class="btn btn-red" id="btn-add-sale" onclick="openSaleModal()">＋ Add Sale</button>
+          </div>
+        </div>
+        <!-- Tab bar -->
+        <div class="s-nav-tabs">
+          <button class="s-vt active" id="vt-monthly"   onclick="setSalesView('monthly')">📆 Monthly</button>
+          <button class="s-vt"        id="vt-quarterly" onclick="setSalesView('quarterly')">📊 Quarterly</button>
+          <button class="s-vt"        id="vt-yearly"    onclick="setSalesView('yearly')">📈 Yearly</button>
+        </div>
+        <!-- KPI Cards -->
+        <div class="sales-kpi" id="sales-kpi"></div>
+        <div class="section">
+          <div class="sec-hdr">
+            <div>
+              <div class="sec-title" id="sales-sec-title">Sales Records</div>
+              <div class="sec-count" id="sales-count"></div>
+            </div>
+            <div class="sec-total amt-pos" id="sales-total-lbl"></div>
+          </div>
+          <!-- monthly -->
+          <table id="sales-table-monthly" style="display:none">
+            <thead><tr><th>Month</th><th>Weeks</th><th>Total Sales</th><th>Avg / Day</th><th>Best Day</th></tr></thead>
+            <tbody id="sales-tbody-monthly"></tbody>
+          </table>
+          <!-- quarterly -->
+          <table id="sales-table-quarterly" style="display:none">
+            <thead><tr><th>Quarter</th><th>Months</th><th>Days</th><th>Total Sales</th><th>Avg / Month</th><th>Best Month</th></tr></thead>
+            <tbody id="sales-tbody-quarterly"></tbody>
+          </table>
+          <!-- yearly -->
+          <table id="sales-table-yearly" style="display:none">
+            <thead><tr><th>Year</th><th>Months</th><th>Days</th><th>Total Sales</th><th>Avg / Month</th><th>Best Month</th></tr></thead>
+            <tbody id="sales-tbody-yearly"></tbody>
+          </table>
+        </div>
+
+      </div>
+
+      <!-- OTHERS -->
+      <div id="tab-others" style="display:none">
+        <div class="topbar">
+          <div class="topbar-left">
+            <div class="page-title">Others / Receivables</div>
+            <div class="page-sub">Other receivables &amp; funds</div>
+          </div>
+          <div class="topbar-right">
+            <button class="btn btn-red" onclick="openOtherModal()">＋ Add Other</button>
+          </div>
+        </div>
+        <div class="sales-kpi" id="other-kpi"></div>
+        <div class="section">
+          <div class="sec-hdr">
+            <div>
+              <div class="sec-title">Receivables &amp; Funds</div>
+              <div class="sec-count" id="other-count"></div>
+            </div>
+            <div class="sec-total amt-pos" id="other-total-lbl"></div>
+          </div>
+          <table>
+            <thead><tr><th>Description</th><th>Amount</th><th>Notes</th><th></th></tr></thead>
+            <tbody id="other-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- EXPENSES -->
+      <div id="tab-expenses" style="display:none">
+        <div class="topbar">
+          <div class="topbar-left">
+            <div class="page-title">Expenses</div>
+            <div class="page-sub">Daily expense records</div>
+          </div>
+          <div class="topbar-right">
+            <select class="month-sel" id="exp-month" onchange="renderExpenses()"></select>
+            <button class="btn btn-red" onclick="openExpModal()">+ Add Expense</button>
+          </div>
+        </div>
+        <div class="section">
+          <div class="sec-hdr">
+            <div>
+              <div class="sec-title">Expense Records</div>
+              <div class="sec-count" id="exp-count"></div>
+            </div>
+            <div class="sec-total amt-neg" id="exp-total-lbl"></div>
+          </div>
+          <table>
+            <thead><tr>
+              <th>Day</th><th>Date</th><th>Amount</th><th>Description</th><th></th>
+            </tr></thead>
+            <tbody id="exp-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- SALARY -->
+      <div id="tab-salary" style="display:none">
+        <div class="topbar">
+          <div class="topbar-left">
+            <div class="page-title">Salary</div>
+            <div class="page-sub">Employee payroll records</div>
+          </div>
+          <div class="topbar-right">
+            <select class="month-sel" id="sal-month" onchange="renderSalary()"></select>
+            <button class="btn btn-red" onclick="openSalModal()">+ Add Record</button>
+          </div>
+        </div>
+        <div class="section">
+          <div class="sec-hdr">
+            <div>
+              <div class="sec-title">Employee Salary</div>
+              <div class="sec-count" id="sal-count"></div>
+            </div>
+            <div class="sec-total" style="color:var(--orange)" id="sal-total-lbl"></div>
+          </div>
+          <table>
+            <thead><tr>
+              <th>Employee</th><th>Salary Earned</th><th>Cash Advance</th><th>Net Pay</th><th></th>
+            </tr></thead>
+            <tbody id="sal-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+    </div><!-- /main -->
+  </div>
+</div>
+
+<!-- SALE MODAL -->
+<div class="overlay" id="sale-modal">
+  <div class="modal">
+    <h3 id="sale-modal-title">Add Sale</h3>
+    <div class="modal-field">
+      <label class="f-lbl">Date</label>
+      <input type="date" id="s-date" class="f-inp" />
+    </div>
+    <div class="modal-field">
+      <label class="f-lbl">Gross Sales (₱)</label>
+      <input type="number" id="s-amt" class="f-inp" placeholder="0" />
+    </div>
+    <div class="modal-field">
+      <label class="f-lbl">Notes</label>
+      <input type="text" id="s-notes" class="f-inp" placeholder="Optional..." />
+    </div>
+    <div class="modal-btns">
+      <button class="btn btn-ghost" onclick="closeModal('sale-modal')">Cancel</button>
+      <button class="btn btn-red" onclick="saveSale()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- EXPENSE MODAL -->
+<div class="overlay" id="exp-modal">
+  <div class="modal">
+    <h3 id="exp-modal-title">Add Expense</h3>
+    <div class="modal-field">
+      <label class="f-lbl">Date</label>
+      <input type="date" id="e-date" class="f-inp" />
+    </div>
+    <div class="f-row2" style="margin-bottom:14px">
+      <div>
+        <label class="f-lbl">Amount (₱)</label>
+        <input type="number" id="e-amt" class="f-inp" placeholder="0" />
+      </div>
+      <div>
+        <label class="f-lbl">Category</label>
+        <select id="e-cat" class="f-inp">
+          <option>Restock</option>
+          <option>FB Ads</option>
+          <option>Salary</option>
+          <option>Utilities</option>
+          <option>Transport</option>
+          <option>Other</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-field">
+      <label class="f-lbl">Description</label>
+      <input type="text" id="e-desc" class="f-inp" placeholder="e.g. Puregold restock" />
+    </div>
+    <div class="modal-btns">
+      <button class="btn btn-ghost" onclick="closeModal('exp-modal')">Cancel</button>
+      <button class="btn btn-red" onclick="saveExp()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- SALARY MODAL -->
+<div class="overlay" id="sal-modal">
+  <div class="modal">
+    <h3 id="sal-modal-title">Add Salary Record</h3>
+    <div class="modal-field">
+      <label class="f-lbl">Month</label>
+      <input type="month" id="sl-month" class="f-inp" />
+    </div>
+    <div class="modal-field">
+      <label class="f-lbl">Employee Name</label>
+      <input type="text" id="sl-name" class="f-inp" placeholder="e.g. Chef Yvann" />
+    </div>
+    <div class="f-row2">
+      <div>
+        <label class="f-lbl">Salary Earned (₱)</label>
+        <input type="number" id="sl-earned" class="f-inp" placeholder="0" />
+      </div>
+      <div>
+        <label class="f-lbl">Cash Advance (₱)</label>
+        <input type="number" id="sl-ca" class="f-inp" placeholder="0" />
+      </div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn btn-ghost" onclick="closeModal('sal-modal')">Cancel</button>
+      <button class="btn btn-red" onclick="saveSal()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- OTHER MODAL -->
+<div class="overlay" id="other-modal">
+  <div class="modal">
+    <h3 id="other-modal-title">Add Other / Receivable</h3>
+    <div class="modal-field">
+      <label class="f-lbl">Description</label>
+      <input type="text" id="ot-desc" class="f-inp" placeholder="e.g. Receivable from Kamayan sa Cainta" />
+    </div>
+    <div class="modal-field">
+      <label class="f-lbl">Amount (₱)</label>
+      <input type="number" id="ot-amt" class="f-inp" placeholder="0" step="0.01" />
+    </div>
+    <div class="modal-field">
+      <label class="f-lbl">Notes</label>
+      <input type="text" id="ot-notes" class="f-inp" placeholder="Optional..." />
+    </div>
+    <div class="modal-btns">
+      <button class="btn btn-ghost" onclick="closeModal('other-modal')">Cancel</button>
+      <button class="btn btn-red" onclick="saveOther()">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const PIN    = '3236';
+const K_SALES = 'ksq_sales';
+const K_EXP   = 'ksq_expenses';
+const K_SAL   = 'ksq_salary';
+const K_OTHER = 'ksq_other';
+let editSaleId = null, editExpId = null, editSalId = null, editOtherId = null;
+let salesView = 'monthly';
+
+// ── AUTH ──
+function login() {
+  if (document.getElementById('pin').value === PIN) {
+    sessionStorage.setItem('ksq_auth','1');
+    document.getElementById('login').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    init();
+  } else {
+    document.getElementById('login-err').textContent = 'Incorrect password.';
+    document.getElementById('pin').value = '';
+  }
+}
+function logout() {
+  sessionStorage.removeItem('ksq_auth');
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('login').style.display = 'flex';
+  document.getElementById('pin').value = '';
+  document.getElementById('login-err').textContent = '';
+}
+
+// ── STORAGE ──
+function getS(k){ try{ return JSON.parse(localStorage.getItem(k))||[]; }catch{ return []; } }
+function setS(k,v){ localStorage.setItem(k,JSON.stringify(v)); }
+
+// ── SEED ──
+function seed(){
+  if(!getS(K_SALES).length){
+    setS(K_SALES,[
+      {id:1,date:'2026-06-01',amount:34298,notes:''},
+      {id:2,date:'2026-06-02',amount:53160,notes:''},
+      {id:3,date:'2026-06-03',amount:41125,notes:''},
+      {id:4,date:'2026-06-04',amount:49636,notes:''},
+      {id:5,date:'2026-06-05',amount:33436,notes:''},
+      {id:6,date:'2026-06-06',amount:54665,notes:''},
+      {id:7,date:'2026-06-07',amount:67949,notes:''},
+      {id:8,date:'2026-06-08',amount:24762,notes:''},
+      {id:9,date:'2026-06-09',amount:33427,notes:''},
+      {id:10,date:'2026-06-10',amount:43981,notes:''},
+      {id:11,date:'2026-06-11',amount:56903,notes:''},
+      {id:12,date:'2026-06-12',amount:45646,notes:''},
+      {id:13,date:'2026-06-13',amount:42859,notes:''},
+      {id:14,date:'2026-06-14',amount:64519,notes:''},
+      {id:15,date:'2026-06-15',amount:41180,notes:''},
+      {id:16,date:'2026-06-16',amount:31348,notes:''},
+      {id:17,date:'2026-06-17',amount:34829,notes:''},
+      {id:18,date:'2026-06-18',amount:29850,notes:''},
+      {id:19,date:'2026-06-19',amount:46964,notes:''},
+      {id:20,date:'2026-06-20',amount:46883,notes:''},
+      {id:21,date:'2026-06-21',amount:131806,notes:''},
+      {id:22,date:'2026-06-22',amount:33373,notes:''},
+    ]);
+  }
+  if(!getS(K_EXP).length){
+    setS(K_EXP,[
+      {id:1,date:'2026-06-01',amount:500,desc:'FB Ads',cat:'FB Ads'},
+      {id:101,date:'2026-06-01',amount:5026,desc:'Expenses from Kamayan Sales',cat:'Other'},
+      {id:2,date:'2026-06-02',amount:500,desc:'FB Ads',cat:'FB Ads'},
+      {id:3,date:'2026-06-02',amount:2265,desc:'Restock palengke',cat:'Restock'},
+      {id:4,date:'2026-06-02',amount:3800,desc:'10 sacks uling',cat:'Restock'},
+      {id:102,date:'2026-06-02',amount:7994,desc:'Expenses from Kamayan Sales',cat:'Other'},
+      {id:5,date:'2026-06-03',amount:1800,desc:'WIFI',cat:'Utilities'},
+      {id:6,date:'2026-06-03',amount:500,desc:'FB Ads',cat:'FB Ads'},
+      {id:7,date:'2026-06-03',amount:3050,desc:'Restock palengke',cat:'Restock'},
+      {id:103,date:'2026-06-03',amount:11533,desc:'Expenses from Kamayan Sales',cat:'Other'},
+      {id:8,date:'2026-06-04',amount:500,desc:'FB Ads',cat:'FB Ads'},
+      {id:9,date:'2026-06-04',amount:3000,desc:'Gas for H100',cat:'Transport'},
+      {id:10,date:'2026-06-04',amount:790,desc:'Restock palengke',cat:'Restock'},
+      {id:104,date:'2026-06-04',amount:8206,desc:'Expenses from Kamayan Sales',cat:'Other'},
+      {id:11,date:'2026-06-05',amount:500,desc:'FB Ads',cat:'FB Ads'},
+      {id:12,date:'2026-06-05',amount:38500,desc:'Puregold Restock',cat:'Restock'},
+      {id:13,date:'2026-06-05',amount:5200,desc:'Restock palengke',cat:'Restock'},
+      {id:105,date:'2026-06-05',amount:6210,desc:'Expenses from Kamayan Sales',cat:'Other'},
+      {id:14,date:'2026-06-06',amount:500,desc:'FB Ads',cat:'FB Ads'},
+      {id:15,date:'2026-06-06',amount:3800,desc:'10 sacks uling',cat:'Restock'},
+      {id:16,date:'2026-06-06',amount:7010,desc:'Restock palengke',cat:'Restock'},
+      {id:106,date:'2026-06-06',amount:8130,desc:'Expenses from Kamayan Sales',cat:'Other'},
+      {id:17,date:'2026-06-07',amount:500,desc:'FB Ads',cat:'FB Ads'},
+      {id:18,date:'2026-06-07',amount:4300,desc:'1000 pcs plastic for restocking',cat:'Restock'},
+      {id:19,date:'2026-06-07',amount:18780,desc:'Restock palengke',cat:'Restock'},
+      {id:20,date:'2026-06-07',amount:3080,desc:'Leche Flan',cat:'Restock'},
+      {id:107,date:'2026-06-07',amount:11321,desc:'Expenses from Kamayan Sales',cat:'Other'},
+      {id:21,date:'2026-06-08',amount:500,desc:'FB Ads',cat:'FB Ads'},
+      {id:22,date:'2026-06-08',amount:3460,desc:'Restock palengke',cat:'Restock'},
+      {id:108,date:'2026-06-08',amount:6530,desc:'Expenses from Kamayan Sales',cat:'Other'},
+      {id:23,date:'2026-06-09',amount:500,desc:'FB Ads',cat:'FB Ads'},
+      {id:24,date:'2026-06-09',amount:3800,desc:'10 sacks uling',cat:'Restock'},
+      {id:25,date:'2026-06-09',amount:6010,desc:'Restock palengke',cat:'Restock'},
+      {id:109,date:'2026-06-09',amount:8601,desc:'Expenses from Kamayan Sales',cat:'Other'},
+      {id:26,date:'2026-06-10',amount:500,desc:'FB Ads',cat:'FB Ads'},
+      {id:27,date:'2026-06-10',amount:28158,desc:'Puregold restock',cat:'Restock'},
+      {id:28,date:'2026-06-10',amount:122000,desc:'Pera kay Gave for Balintawak',cat:'Other'},
+      {id:110,date:'2026-06-10',amount:9392,desc:'Expenses from Kamayan Sales',cat:'Other'},
+      {id:29,date:'2026-06-11',amount:500,desc:'FB Ads',cat:'FB Ads'},
+      {id:30,date:'2026-06-11',amount:8760,desc:'Restock palengke',cat:'Restock'},
+      {id:111,date:'2026-06-11',amount:17682,desc:'Expenses from Kamayan Sales',cat:'Other'},
+      {id:31,date:'2026-06-12',amount:500,desc:'FB Ads',cat:'FB Ads'},
+      {id:32,date:'2026-06-12',amount:5575,desc:'Restock palengke',cat:'Restock'},
+      {id:112,date:'2026-06-12',amount:2853,desc:'Expenses from Kamayan Sales',cat:'Other'},
+      {id:33,date:'2026-06-13',amount:500,desc:'FB Ads',cat:'FB Ads'},
+      {id:34,date:'2026-06-13',amount:47270,desc:'Restock puregold',cat:'Restock'},
+      {id:35,date:'2026-06-13',amount:6810,desc:'Restock palengke',cat:'Restock'},
+      {id:113,date:'2026-06-13',amount:10444,desc:'Expenses from Kamayan Sales',cat:'Other'},
+      {id:36,date:'2026-06-14',amount:500,desc:'FB Ads',cat:'FB Ads'},
+      {id:37,date:'2026-06-14',amount:3620,desc:'Restocking palengke',cat:'Restock'},
+      {id:114,date:'2026-06-14',amount:7601,desc:'Expenses from Kamayan Sales',cat:'Other'},
+      {id:38,date:'2026-06-15',amount:500,desc:'FB Ads',cat:'FB Ads'},
+      {id:39,date:'2026-06-15',amount:16000,desc:'Cash Advance',cat:'Other'},
+      {id:115,date:'2026-06-15',amount:11131,desc:'Expenses from Kamayan Sales',cat:'Other'},
+      {id:40,date:'2026-06-16',amount:500,desc:'FB Ads',cat:'FB Ads'},
+      {id:41,date:'2026-06-16',amount:4500,desc:'Cash Advance',cat:'Other'},
+      {id:42,date:'2026-06-16',amount:5265,desc:'Restock palengke',cat:'Restock'},
+      {id:116,date:'2026-06-16',amount:2803,desc:'Expenses from Kamayan Sales',cat:'Other'},
+      {id:43,date:'2026-06-16',amount:500000,desc:'Payment for Meat Jun 1-15',cat:'Restock'},
+      {id:44,date:'2026-06-17',amount:500,desc:'FB Ads',cat:'FB Ads'},
+      {id:45,date:'2026-06-17',amount:38000,desc:'Restock puregold',cat:'Restock'},
+      {id:117,date:'2026-06-17',amount:8858,desc:'Expenses from Kamayan Sales',cat:'Other'},
+      {id:46,date:'2026-06-18',amount:500,desc:'FB Ads',cat:'FB Ads'},
+      {id:47,date:'2026-06-18',amount:12345,desc:'Restock palengke',cat:'Restock'},
+      {id:118,date:'2026-06-18',amount:8573,desc:'Expenses from Kamayan Sales',cat:'Other'},
+      {id:48,date:'2026-06-19',amount:500,desc:'FB Ads',cat:'FB Ads'},
+      {id:49,date:'2026-06-19',amount:13500,desc:'Cash Advance',cat:'Other'},
+      {id:119,date:'2026-06-19',amount:12203,desc:'Expenses from Kamayan Sales',cat:'Other'},
+      {id:50,date:'2026-06-20',amount:500,desc:'FB Ads',cat:'FB Ads'},
+      {id:51,date:'2026-06-20',amount:7500,desc:'Cash Advance',cat:'Other'},
+      {id:52,date:'2026-06-20',amount:4930,desc:'Restock palengke',cat:'Restock'},
+      {id:53,date:'2026-06-21',amount:500,desc:'FB Ads',cat:'FB Ads'},
+      {id:120,date:'2026-06-21',amount:18612,desc:'Expenses from Kamayan Sales',cat:'Other'},
+      {id:54,date:'2026-06-22',amount:500,desc:'FB Ads',cat:'FB Ads'},
+      {id:55,date:'2026-06-22',amount:5965,desc:'Restock palengke',cat:'Restock'},
+      {id:56,date:'2026-06-22',amount:53355,desc:'Restock puregold',cat:'Restock'},
+      {id:57,date:'2026-06-23',amount:500,desc:'FB Ads',cat:'FB Ads'},
+    ]);
+  }
+  if(!getS(K_OTHER).length){
+    setS(K_OTHER,[
+      {id:1,desc:'Receivable from Kamayan sa Cainta Stocks',amount:280760,notes:''},
+      {id:2,desc:'Receivable from Kamayan sa Marikina Stocks',amount:48680,notes:''},
+      {id:3,desc:'Receivable from Kamayan sa Antipolo Stocks',amount:756003.67,notes:''},
+      {id:4,desc:'Receivable from Kamayan sa Taytay Stocks',amount:366261,notes:''},
+      {id:5,desc:'Additional Fund for Back Up',amount:500000,notes:''},
+    ]);
+  }
+  if(!getS(K_SAL).length){
+    setS(K_SAL,[
+      {id:1,month:'2026-06',name:'Chef Yvann',earned:32000,ca:10000},
+      {id:2,month:'2026-06',name:'J',earned:14725,ca:1000},
+      {id:3,month:'2026-06',name:'Joems',earned:8602,ca:0},
+      {id:4,month:'2026-06',name:'Dang',earned:10725,ca:5000},
+      {id:5,month:'2026-06',name:'Remrose',earned:15830,ca:500},
+      {id:6,month:'2026-06',name:'Lea',earned:8250,ca:4000},
+      {id:7,month:'2026-06',name:'Leo',earned:10335,ca:4000},
+      {id:8,month:'2026-06',name:'Nicolei',earned:12902,ca:1000},
+      {id:9,month:'2026-06',name:'Lorenz',earned:12945,ca:0},
+      {id:10,month:'2026-06',name:'Nicole',earned:11900,ca:2000},
+      {id:11,month:'2026-06',name:'Andrew',earned:15465,ca:0},
+      {id:12,month:'2026-06',name:'Melvin',earned:13595,ca:1000},
+      {id:13,month:'2026-06',name:'JC',earned:14727,ca:1000},
+      {id:14,month:'2026-06',name:'Chris',earned:12930,ca:2100},
+      {id:15,month:'2026-06',name:'Edelyn',earned:13505,ca:1000},
+      {id:16,month:'2026-06',name:'Kate',earned:15680,ca:1000},
+      {id:17,month:'2026-06',name:'Joy',earned:11030,ca:4000},
+      {id:18,month:'2026-06',name:'Jefferson',earned:12790,ca:2500},
+      {id:19,month:'2026-06',name:'Prince',earned:5645,ca:2000},
+      {id:20,month:'2026-06',name:'Cath',earned:11595,ca:3000},
+      {id:21,month:'2026-06',name:'JV',earned:8925,ca:1500},
+      {id:22,month:'2026-06',name:'Kelvin',earned:6035,ca:3000},
+      {id:23,month:'2026-06',name:'Elvin',earned:14680,ca:2000},
+      {id:24,month:'2026-06',name:'RAFF',earned:14595,ca:0},
+      {id:25,month:'2026-06',name:'GAVE',earned:9730,ca:0},
+    ]);
+  }
+}
+
+// ── HELPERS ──
+function fmt(n){ return '₱'+(n||0).toLocaleString('en-PH',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function fmtK(n){ if(n>=1000000) return '₱'+(n/1000000).toFixed(2)+'M'; if(n>=1000) return '₱'+(n/1000).toFixed(1)+'K'; return fmt(n); }
+function dayName(ds){ return ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][new Date(ds+'T00:00:00').getDay()]; }
+function dayClass(ds){ return ['pill-sun','pill-mon','pill-tue','pill-wed','pill-thu','pill-fri','pill-sat'][new Date(ds+'T00:00:00').getDay()]; }
+function fmtDate(ds){ return new Date(ds+'T00:00:00').toLocaleDateString('en-PH',{day:'numeric',month:'short',year:'numeric'}); }
+function monthKey(ds){ return ds.substring(0,7); }
+function monthLabel(ym){ const [y,m]=ym.split('-'); return new Date(y,m-1,1).toLocaleDateString('en-PH',{month:'long',year:'numeric'}); }
+function allMonths(data,field){ const s=new Set(); data.forEach(d=>s.add(field==='month'?d.month:monthKey(d[field]))); return [...s].sort().reverse(); }
+function catClass(cat){ if(!cat) return 'cat-Other'; if(cat.startsWith('FB')) return 'cat-FB'; return 'cat-'+cat.split(' ')[0]; }
+
+function populateMonthSel(selId, months, curr){
+  const sel=document.getElementById(selId);
+  const prev=sel.value||curr;
+  sel.innerHTML=months.map(m=>`<option value="${m}">${monthLabel(m)}</option>`).join('');
+  if(prev&&months.includes(prev)) sel.value=prev;
+}
+
+// ── TABS ──
+function showTab(tab){
+  ['dashboard','sales','expenses','salary','others'].forEach((t,i)=>{
+    document.getElementById('tab-'+t).style.display=t===tab?'':'none';
+    document.querySelectorAll('.nav-item')[i].classList.toggle('active',t===tab);
+  });
+  if(tab==='dashboard') renderDashboard();
+  if(tab==='sales')     renderSales();
+  if(tab==='expenses')  renderExpenses();
+  if(tab==='salary')    renderSalary();
+  if(tab==='others')    renderOther();
+}
+
+// ── CHART ──
+function drawBarChart(canvasId, labels, values){
+  const canvas=document.getElementById(canvasId);
+  if(!canvas||!values.length) return;
+  const dpr=window.devicePixelRatio||1;
+  const W=canvas.offsetWidth||canvas.parentElement.offsetWidth;
+  const H=160;
+  canvas.width=W*dpr; canvas.height=H*dpr;
+  canvas.style.width=W+'px'; canvas.style.height=H+'px';
+  const ctx=canvas.getContext('2d');
+  ctx.scale(dpr,dpr);
+
+  const pad={top:14,right:12,bottom:30,left:58};
+  const cW=W-pad.left-pad.right;
+  const cH=H-pad.top-pad.bottom;
+  const max=Math.max(...values)||1;
+
+  // Grid lines + Y axis labels
+  ctx.setLineDash([2,3]);
+  ctx.strokeStyle='#e5e7eb';
+  ctx.lineWidth=1;
+  ctx.font='9px Inter,sans-serif';
+  ctx.fillStyle='#9ca3af';
+  ctx.textAlign='right';
+  for(let i=0;i<=4;i++){
+    const y=pad.top+cH*(1-i/4);
+    ctx.beginPath(); ctx.moveTo(pad.left,y); ctx.lineTo(W-pad.right,y); ctx.stroke();
+    const val=max*i/4;
+    ctx.fillText(val>=1000?'₱'+(val/1000).toFixed(0)+'K':'₱'+val.toFixed(0), pad.left-5, y+3);
+  }
+  ctx.setLineDash([]);
+
+  // Bars
+  const barW=Math.max(3, cW/values.length*0.55);
+  const gap=cW/values.length;
+  values.forEach((v,i)=>{
+    const bH=(v/max)*cH;
+    const x=pad.left+gap*i+(gap-barW)/2;
+    const y=pad.top+cH-bH;
+    // Bar gradient
+    const grad=ctx.createLinearGradient(0,y,0,pad.top+cH);
+    grad.addColorStop(0,'#2563eb');
+    grad.addColorStop(1,'#3b82f6');
+    ctx.fillStyle=grad;
+    ctx.beginPath();
+    ctx.moveTo(x+3,y); ctx.lineTo(x+barW-3,y);
+    ctx.quadraticCurveTo(x+barW,y,x+barW,y+3);
+    ctx.lineTo(x+barW,y+bH); ctx.lineTo(x,y+bH);
+    ctx.lineTo(x,y+3);
+    ctx.quadraticCurveTo(x,y,x+3,y);
+    ctx.closePath();
+    ctx.fill();
+    // X label
+    ctx.fillStyle='#9ca3af';
+    ctx.font='8px Inter,sans-serif';
+    ctx.textAlign='center';
+    ctx.fillText(labels[i], pad.left+gap*i+gap/2, H-pad.bottom+13);
+  });
+}
+
+// ── DASHBOARD ──
+function renderDashboard(){
+  const sales=getS(K_SALES), exps=getS(K_EXP), sals=getS(K_SAL);
+  const allM=[...new Set([...sales.map(s=>monthKey(s.date)),...exps.map(e=>monthKey(e.date))])].sort().reverse();
+  if(!allM.length) allM.push(monthKey(new Date().toISOString().slice(0,10)));
+  populateMonthSel('dash-month',allM,allM[0]);
+  const m=document.getElementById('dash-month').value;
+
+  const mSales=sales.filter(s=>monthKey(s.date)===m);
+  const mExps =exps.filter(e=>monthKey(e.date)===m);
+  const mSals =sals.filter(s=>s.month===m);
+
+  const gross   =mSales.reduce((a,s)=>a+s.amount,0);
+  const totalExp=mExps.reduce((a,e)=>a+e.amount,0);
+  const netSales=gross-totalExp;
+  const totalSal=mSals.reduce((a,s)=>a+s.earned,0);
+  const netLess =netSales-totalSal;
+
+  const totalOther=getS(K_OTHER).reduce((a,o)=>a+o.amount,0);
+  const grandTotal=gross+totalOther;
+
+  document.getElementById('dash-period').textContent=monthLabel(m);
+  document.getElementById('dash-cards').innerHTML=`
+    <div class="card"><div class="card-accent ca-blue"></div><div class="card-icon">💰</div><div class="card-lbl">Gross Sales</div><div class="card-val blue">${fmt(gross)}</div><div class="card-sub">${mSales.length} days recorded</div></div>
+    <div class="card"><div class="card-accent ca-red"></div><div class="card-icon">📋</div><div class="card-lbl">Total Expenses</div><div class="card-val red">${fmt(totalExp)}</div><div class="card-sub">${mExps.length} entries</div></div>
+    <div class="card"><div class="card-accent ca-green"></div><div class="card-icon">📈</div><div class="card-lbl">Net Sales</div><div class="card-val ${netSales>=0?'green':'red'}">${fmt(netSales)}</div><div class="card-sub">Sales − Expenses</div></div>
+    <div class="card"><div class="card-accent ca-orange"></div><div class="card-icon">👥</div><div class="card-lbl">Running Salary</div><div class="card-val orange">${fmt(totalSal)}</div><div class="card-sub">${mSals.length} employees</div></div>
+    <div class="card"><div class="card-accent ca-purple"></div><div class="card-icon">✅</div><div class="card-lbl">Net less Salary</div><div class="card-val ${netLess>=0?'green':'red'}">${fmt(netLess)}</div><div class="card-sub">Net − Salary</div></div>
+    <div class="card" style="border-top:3px solid #1E5CA8;background:#EEF3FA"><div class="card-icon">🏦</div><div class="card-lbl" style="font-weight:700">Grand Total</div><div class="card-val" style="color:#1E5CA8">${fmt(grandTotal)}</div><div class="card-sub">Sales + Receivables</div></div>
+  `;
+
+  // Chart data
+  const daySales=mSales.sort((a,b)=>a.date.localeCompare(b.date));
+  const chartLabels=daySales.map(s=>s.date.slice(8)); // day numbers
+  const chartVals=daySales.map(s=>s.amount);
+  setTimeout(()=>drawBarChart('sales-chart',chartLabels,chartVals),0);
+
+  // Table
+  const dayMap={};
+  mSales.forEach(s=>{ dayMap[s.date]=dayMap[s.date]||{sales:0,exp:0}; dayMap[s.date].sales+=s.amount; });
+  mExps.forEach(e=>{ dayMap[e.date]=dayMap[e.date]||{sales:0,exp:0}; dayMap[e.date].exp+=e.amount; });
+  const days=Object.keys(dayMap).sort();
+  document.getElementById('dash-tbl-count').textContent=days.length+' days';
+  document.getElementById('dash-tbody').innerHTML=days.length?days.map(d=>{
+    const r=dayMap[d], net=r.sales-r.exp;
+    return `<tr>
+      <td><span class="day-pill ${dayClass(d)}">${dayName(d)}</span></td>
+      <td style="color:var(--muted);font-size:.78rem">${fmtDate(d)}</td>
+      <td class="amt-blue">${r.sales?fmt(r.sales):'—'}</td>
+      <td class="amt-neg">${r.exp?fmt(r.exp):'—'}</td>
+      <td class="${net>=0?'amt-pos':'amt-neg'}">${fmt(net)}</td>
+    </tr>`;
+  }).join(''):`<tr><td colspan="5" class="empty-row">No data for this month.</td></tr>`;
+}
+
+// ── SALES KPI CARDS ──
+function renderSalesKPI(sales){
+  const el=document.getElementById('sales-kpi');
+  if(!el) return;
+  if(!sales.length){ el.innerHTML=''; return; }
+  const total=sales.reduce((a,s)=>a+s.amount,0);
+  const best=sales.reduce((a,s)=>s.amount>a.amount?s:a,sales[0]);
+  let periodLabel='', periods=1, avg=total;
+  if(salesView==='monthly'){
+    const ms=new Set(sales.map(s=>monthKey(s.date)));
+    periods=ms.size; periodLabel='month'; avg=total/periods;
+  } else if(salesView==='quarterly'){
+    const qs=new Set(sales.map(s=>quarterOf(s.date)));
+    periods=qs.size; periodLabel='quarter'; avg=total/periods;
+  } else if(salesView==='yearly'){
+    const ys=new Set(sales.map(s=>s.date.slice(0,4)));
+    periods=ys.size; periodLabel='year'; avg=total/periods;
+  }
+  el.innerHTML=`
+    <div class="s-kpi k-blue"><div class="s-kpi-icon">💰</div><div class="s-kpi-lbl">Total Sales</div><div class="s-kpi-val blue">${fmt(total)}</div><div class="s-kpi-sub">${sales.length} day records</div></div>
+    <div class="s-kpi k-green"><div class="s-kpi-icon">📊</div><div class="s-kpi-lbl">Avg / ${periodLabel||'period'}</div><div class="s-kpi-val green">${fmt(avg)}</div><div class="s-kpi-sub">${periods} ${periodLabel||'period'}${periods!==1?'s':''} in view</div></div>
+    <div class="s-kpi k-orange"><div class="s-kpi-icon">⭐</div><div class="s-kpi-lbl">Best Single Day</div><div class="s-kpi-val orange">${fmt(best.amount)}</div><div class="s-kpi-sub">${fmtDate(best.date)}</div></div>
+    <div class="s-kpi k-purple"><div class="s-kpi-icon">📅</div><div class="s-kpi-lbl">Days Recorded</div><div class="s-kpi-val purple">${sales.length}</div><div class="s-kpi-sub">across ${periods} ${periodLabel||'period'}${periods!==1?'s':''}</div></div>`;
+}
+
+// ── SALES VIEW TOGGLE ──
+const SALE_VIEWS=['monthly','quarterly','yearly'];
+function setSalesView(v){
+  salesView=v;
+  SALE_VIEWS.forEach(x=>{
+    const el=document.getElementById('vt-'+x);
+    if(el){ el.classList.toggle('active',x===v); }
+  });
+  const useYear=['monthly','quarterly'].includes(v);
+  document.getElementById('sales-year').style.display=useYear?'':'none';
+  renderSales();
+}
+
+// ── WEEK HELPERS ──
+function weekMonday(ds){
+  const d=new Date(ds+'T00:00:00');
+  const day=d.getDay();
+  const diff=day===0?-6:1-day;
+  d.setDate(d.getDate()+diff);
+  return d.toISOString().slice(0,10);
+}
+function weekLabel(mondayDs){
+  const mon=new Date(mondayDs+'T00:00:00');
+  const sun=new Date(mon); sun.setDate(sun.getDate()+6);
+  const opts={day:'numeric',month:'short'};
+  return mon.toLocaleDateString('en-PH',opts)+' – '+sun.toLocaleDateString('en-PH',opts);
+}
+
+// ── YEAR SELECTOR ──
+function populateYearSel(sales){
+  const years=[...new Set(sales.map(s=>s.date.slice(0,4)))].sort().reverse();
+  const sel=document.getElementById('sales-year');
+  const prev=sel.value;
+  sel.innerHTML=years.map(y=>`<option value="${y}">${y}</option>`).join('');
+  if(prev&&years.includes(prev)) sel.value=prev;
+  return sel.value;
+}
+
+// ── SALES ──
+function renderSales(){
+  const sales=getS(K_SALES);
+
+  // show/hide all tables
+  SALE_VIEWS.forEach(v=>{ document.getElementById('sales-table-'+v).style.display=salesView===v?'':'none'; });
+
+  // KPI cards — filter by year for monthly/quarterly, all for yearly
+  const yr=document.getElementById('sales-year').value||sales[0]?.date.slice(0,4)||'';
+  const filtered=salesView==='yearly'?sales:sales.filter(s=>s.date.startsWith(yr));
+  renderSalesKPI(filtered);
+
+  if(salesView==='monthly') renderSalesMonthly(sales);
+  else if(salesView==='quarterly') renderSalesQuarterly(sales);
+  else renderSalesYearly(sales);
+}
+
+// ── DAILY ──
+function resetSalesTotalColor(){ document.getElementById('sales-total-lbl').style.color=''; }
+function renderSalesDaily(sales,allM){
+  resetSalesTotalColor();
+  const m=document.getElementById('sales-month').value;
+  const filtered=sales.filter(s=>monthKey(s.date)===m).sort((a,b)=>a.date.localeCompare(b.date));
+  const total=filtered.reduce((a,s)=>a+s.amount,0);
+  document.getElementById('sales-page-sub').textContent='Gross sales per day';
+  document.getElementById('sales-sec-title').textContent='Sales Records';
+  document.getElementById('sales-count').textContent=filtered.length+' records';
+  document.getElementById('sales-total-lbl').textContent='Total: '+fmt(total);
+  document.getElementById('sales-tbody').innerHTML=filtered.length?filtered.map(s=>`
+    <tr>
+      <td><span class="day-pill ${dayClass(s.date)}">${dayName(s.date)}</span></td>
+      <td style="color:var(--muted);font-size:.78rem">${fmtDate(s.date)}</td>
+      <td class="amt-blue">${fmt(s.amount)}</td>
+      <td style="color:var(--muted)">${s.notes||'—'}</td>
+      <td style="white-space:nowrap">
+        <button class="act-btn" onclick="editSale(${s.id})">Edit</button>
+        <button class="act-btn del-btn" onclick="delSale(${s.id})" style="margin-left:5px">✕</button>
+      </td>
+    </tr>`).join(''):`<tr><td colspan="5" class="empty-row">No sales for this month.</td></tr>`;
+}
+
+// ── WEEKLY ──
+function renderSalesWeekly(sales,allM){
+  resetSalesTotalColor();
+  const m=document.getElementById('sales-month').value;
+  const filtered=sales.filter(s=>monthKey(s.date)===m).sort((a,b)=>a.date.localeCompare(b.date));
+  const total=filtered.reduce((a,s)=>a+s.amount,0);
+  document.getElementById('sales-page-sub').textContent='Gross sales per week';
+  document.getElementById('sales-sec-title').textContent='Weekly Summary';
+  const weekMap={};
+  filtered.forEach(s=>{
+    const wk=weekMonday(s.date);
+    if(!weekMap[wk]) weekMap[wk]={monday:wk,days:[],total:0,best:null};
+    weekMap[wk].days.push(s);
+    weekMap[wk].total+=s.amount;
+    if(!weekMap[wk].best||s.amount>weekMap[wk].best.amount) weekMap[wk].best=s;
+  });
+  const weeks=Object.values(weekMap).sort((a,b)=>a.monday.localeCompare(b.monday));
+  document.getElementById('sales-count').textContent=weeks.length+' week'+(weeks.length!==1?'s':'');
+  document.getElementById('sales-total-lbl').textContent='Total: '+fmt(total);
+
+  if(!weeks.length){
+    document.getElementById('sales-tbody-weekly').innerHTML=`<tr><td colspan="7" class="empty-row">No sales for this month.</td></tr>`;
+    return;
+  }
+
+  let rows='';
+  weeks.forEach((w,i)=>{
+    const avg=w.total/w.days.length;
+    const detailId='wk-detail-'+i;
+    const chevId='wk-chev-'+i;
+    // summary row
+    rows+=`<tr class="week-row" onclick="toggleWeekDetail('${detailId}','${chevId}')">
+      <td><span class="week-chevron" id="${chevId}">▶</span><strong>Week ${i+1}</strong></td>
+      <td><span class="week-range">${weekLabel(w.monday)}</span></td>
+      <td style="color:var(--muted)">${w.days.length} day${w.days.length!==1?'s':''}</td>
+      <td class="amt-blue">${fmt(w.total)}</td>
+      <td style="color:var(--muted);font-weight:600">${fmt(avg)}</td>
+      <td>${w.best?`<span class="best-day-chip">${dayName(w.best.date)} ${w.best.date.slice(8)} — ${fmt(w.best.amount)}</span>`:'—'}</td>
+      <td style="color:var(--light);font-size:.72rem">Click to expand</td>
+    </tr>`;
+    // detail row (hidden by default)
+    const dayRows=w.days.sort((a,b)=>a.date.localeCompare(b.date)).map(s=>`
+      <tr>
+        <td><span class="day-pill ${dayClass(s.date)}">${dayName(s.date)}</span></td>
+        <td style="color:var(--muted)">${fmtDate(s.date)}</td>
+        <td class="amt-blue">${fmt(s.amount)}</td>
+        <td style="color:var(--muted)">${s.notes||'—'}</td>
+        <td style="white-space:nowrap">
+          <button class="act-btn" onclick="event.stopPropagation();editSale(${s.id})">Edit</button>
+          <button class="act-btn del-btn" onclick="event.stopPropagation();delSale(${s.id})" style="margin-left:4px">✕</button>
+        </td>
+      </tr>`).join('');
+    rows+=`<tr class="week-detail-row" id="${detailId}" style="display:none">
+      <td colspan="7">
+        <div class="week-detail-inner">
+          <table>
+            <thead><tr><th>Day</th><th>Date</th><th>Gross Sales</th><th>Notes</th><th></th></tr></thead>
+            <tbody>${dayRows}</tbody>
+          </table>
+        </div>
+      </td>
+    </tr>`;
+  });
+  document.getElementById('sales-tbody-weekly').innerHTML=rows;
+}
+
+function toggleDetail(detailId, chevId){
+  const row=document.getElementById(detailId);
+  const chev=document.getElementById(chevId);
+  const isOpen=row.style.display!=='none';
+  row.style.display=isOpen?'none':'';
+  chev.classList.toggle('open',!isOpen);
+}
+// keep alias for weekly rows
+function toggleWeekDetail(detailId,chevId){ toggleDetail(detailId,chevId); }
+
+// ── MONTHLY ──
+function renderSalesMonthly(sales){
+  resetSalesTotalColor();
+  const yr=populateYearSel(sales);
+  const filtered=sales.filter(s=>s.date.startsWith(yr)).sort((a,b)=>a.date.localeCompare(b.date));
+  const total=filtered.reduce((a,s)=>a+s.amount,0);
+  document.getElementById('sales-page-sub').textContent='Gross sales per month — '+yr;
+  document.getElementById('sales-sec-title').textContent='Monthly Summary';
+  const mMap={};
+  filtered.forEach(s=>{
+    const mk=monthKey(s.date);
+    if(!mMap[mk]) mMap[mk]={key:mk,days:[],total:0,best:null,weekData:{}};
+    mMap[mk].days.push(s);
+    mMap[mk].total+=s.amount;
+    if(!mMap[mk].best||s.amount>mMap[mk].best.amount) mMap[mk].best=s;
+    const wk=weekMonday(s.date);
+    if(!mMap[mk].weekData[wk]) mMap[mk].weekData[wk]={monday:wk,days:[],total:0,best:null};
+    mMap[mk].weekData[wk].days.push(s);
+    mMap[mk].weekData[wk].total+=s.amount;
+    if(!mMap[mk].weekData[wk].best||s.amount>mMap[mk].weekData[wk].best.amount) mMap[mk].weekData[wk].best=s;
+  });
+  const months=Object.values(mMap).sort((a,b)=>a.key.localeCompare(b.key));
+  document.getElementById('sales-count').textContent=months.length+' month'+(months.length!==1?'s':'');
+  document.getElementById('sales-total-lbl').textContent='Total: '+fmt(total);
+  if(!months.length){ document.getElementById('sales-tbody-monthly').innerHTML=`<tr><td colspan="5" class="empty-row">No sales for ${yr}.</td></tr>`; return; }
+  let rows='';
+  months.forEach((m,i)=>{
+    const avg=m.total/m.days.length;
+    const weeks=Object.values(m.weekData).sort((a,b)=>a.monday.localeCompare(b.monday));
+    const detailId='mo-detail-'+i, chevId='mo-chev-'+i;
+    rows+=`<tr class="week-row" onclick="toggleDetail('${detailId}','${chevId}')">
+      <td><span class="week-chevron" id="${chevId}">▶</span><strong>${monthLabel(m.key)}</strong></td>
+      <td style="color:var(--muted)">${weeks.length} week${weeks.length!==1?'s':''}</td>
+      <td class="amt-blue">${fmt(m.total)}</td>
+      <td style="color:var(--muted);font-weight:600">${fmt(avg)}/day avg</td>
+      <td>${m.best?`<span class="best-day-chip">${dayName(m.best.date)} ${m.best.date.slice(8)} — ${fmt(m.best.amount)}</span>`:'—'}</td>
+    </tr>`;
+    rows+=`<tr class="week-detail-row" id="${detailId}" style="display:none">
+      <td colspan="5"><div class="week-detail-inner"><table>
+        <thead><tr><th>Week</th><th>Date Range</th><th>Days</th><th>Total Sales</th><th>Avg / Day</th><th>Best Day</th></tr></thead>
+        <tbody>${buildWeekRows(weeks,'mo'+i)}</tbody>
+      </table></div></td>
+    </tr>`;
+  });
+  document.getElementById('sales-tbody-monthly').innerHTML=rows;
+}
+
+// ── HELPERS: build nested month→week→day HTML ──
+function buildWeekRows(weeks, pfx){
+  let html='';
+  weeks.forEach((w,wi)=>{
+    const wDid=`${pfx}-wd${wi}`, wCid=`${pfx}-wc${wi}`;
+    const wavg=w.total/w.days.length;
+    html+=`<tr class="week-row" onclick="event.stopPropagation();toggleDetail('${wDid}','${wCid}')">
+      <td><span class="week-chevron" id="${wCid}">▶</span><strong>Week ${wi+1}</strong></td>
+      <td style="color:var(--muted);font-size:.78rem">${weekLabel(w.monday)}</td>
+      <td style="color:var(--muted)">${w.days.length} day${w.days.length!==1?'s':''}</td>
+      <td class="amt-blue">${fmt(w.total)}</td>
+      <td style="color:var(--muted);font-weight:600">${fmt(wavg)}/day</td>
+      <td>${w.best?`<span class="best-day-chip">${dayName(w.best.date)} ${w.best.date.slice(8)} — ${fmt(w.best.amount)}</span>`:'—'}</td>
+    </tr>`;
+    const dayRows=w.days.sort((a,b)=>a.date.localeCompare(b.date)).map(s=>`
+      <tr>
+        <td><span class="day-pill ${dayClass(s.date)}">${dayName(s.date)}</span></td>
+        <td style="color:var(--muted)">${fmtDate(s.date)}</td>
+        <td class="amt-blue">${fmt(s.amount)}</td>
+        <td style="color:var(--muted)">${s.notes||'—'}</td>
+        <td style="white-space:nowrap">
+          <button class="act-btn" onclick="event.stopPropagation();editSale(${s.id})">Edit</button>
+          <button class="act-btn del-btn" onclick="event.stopPropagation();delSale(${s.id})" style="margin-left:4px">✕</button>
+        </td>
+      </tr>`).join('');
+    html+=`<tr class="week-detail-row" id="${wDid}" style="display:none">
+      <td colspan="6"><div class="week-detail-inner"><table>
+        <thead><tr><th>Day</th><th>Date</th><th>Gross Sales</th><th>Notes</th><th></th></tr></thead>
+        <tbody>${dayRows}</tbody>
+      </table></div></td></tr>`;
+  });
+  return html;
+}
+
+function buildMonthRows(months, pfx, outerCols){
+  let html='';
+  months.forEach((m,mi)=>{
+    const mDid=`${pfx}-md${mi}`, mCid=`${pfx}-mc${mi}`;
+    const mavg=m.total/m.days.length;
+    const weeks=Object.values(m.weekData).sort((a,b)=>a.monday.localeCompare(b.monday));
+    html+=`<tr class="week-row" onclick="event.stopPropagation();toggleDetail('${mDid}','${mCid}')">
+      <td><span class="week-chevron" id="${mCid}">▶</span><strong>${monthLabel(m.key)}</strong></td>
+      <td style="color:var(--muted)">${weeks.length} week${weeks.length!==1?'s':''}</td>
+      <td style="color:var(--muted)">${m.days.length} day${m.days.length!==1?'s':''}</td>
+      <td class="amt-blue">${fmt(m.total)}</td>
+      <td style="color:var(--muted);font-weight:600">${fmt(mavg)}/day</td>
+      <td>${m.best?`<span class="best-day-chip">${dayName(m.best.date)} ${m.best.date.slice(8)} — ${fmt(m.best.amount)}</span>`:'—'}</td>
+    </tr>`;
+    html+=`<tr class="week-detail-row" id="${mDid}" style="display:none">
+      <td colspan="${outerCols}"><div class="week-detail-inner"><table>
+        <thead><tr><th>Week</th><th>Date Range</th><th>Days</th><th>Total Sales</th><th>Avg / Day</th><th>Best Day</th></tr></thead>
+        <tbody>${buildWeekRows(weeks,`${pfx}-md${mi}`)}</tbody>
+      </table></div></td></tr>`;
+  });
+  return html;
+}
+
+function groupMonthData(sales){
+  const mMap={};
+  sales.forEach(s=>{
+    const mk=monthKey(s.date);
+    if(!mMap[mk]) mMap[mk]={key:mk,days:[],total:0,best:null,weekData:{}};
+    mMap[mk].days.push(s);
+    mMap[mk].total+=s.amount;
+    if(!mMap[mk].best||s.amount>mMap[mk].best.amount) mMap[mk].best=s;
+    const wk=weekMonday(s.date);
+    if(!mMap[mk].weekData[wk]) mMap[mk].weekData[wk]={monday:wk,days:[],total:0,best:null};
+    mMap[mk].weekData[wk].days.push(s);
+    mMap[mk].weekData[wk].total+=s.amount;
+    if(!mMap[mk].weekData[wk].best||s.amount>mMap[mk].weekData[wk].best.amount) mMap[mk].weekData[wk].best=s;
+  });
+  return mMap;
+}
+
+// ── QUARTERLY ──
+const Q_LABELS=['Q1 (Jan–Mar)','Q2 (Apr–Jun)','Q3 (Jul–Sep)','Q4 (Oct–Dec)'];
+function quarterOf(ds){ return Math.floor((parseInt(ds.slice(5,7))-1)/3); }
+function renderSalesQuarterly(sales){
+  resetSalesTotalColor();
+  const yr=populateYearSel(sales);
+  const filtered=sales.filter(s=>s.date.startsWith(yr));
+  const total=filtered.reduce((a,s)=>a+s.amount,0);
+  document.getElementById('sales-page-sub').textContent='Gross sales per quarter — '+yr;
+  document.getElementById('sales-sec-title').textContent='Quarterly Summary';
+  const qMap={0:null,1:null,2:null,3:null};
+  filtered.forEach(s=>{
+    const q=quarterOf(s.date);
+    if(!qMap[q]) qMap[q]={q,months:new Set(),days:[],total:0,bestM:null,bestMTotal:0,monthData:{}};
+    qMap[q].months.add(monthKey(s.date));
+    qMap[q].days.push(s);
+    qMap[q].total+=s.amount;
+    // build month→week→day
+    const mk=monthKey(s.date);
+    if(!qMap[q].monthData[mk]) qMap[q].monthData[mk]={key:mk,days:[],total:0,best:null,weekData:{}};
+    qMap[q].monthData[mk].days.push(s);
+    qMap[q].monthData[mk].total+=s.amount;
+    if(!qMap[q].monthData[mk].best||s.amount>qMap[q].monthData[mk].best.amount) qMap[q].monthData[mk].best=s;
+    const wk=weekMonday(s.date);
+    if(!qMap[q].monthData[mk].weekData[wk]) qMap[q].monthData[mk].weekData[wk]={monday:wk,days:[],total:0,best:null};
+    qMap[q].monthData[mk].weekData[wk].days.push(s);
+    qMap[q].monthData[mk].weekData[wk].total+=s.amount;
+    if(!qMap[q].monthData[mk].weekData[wk].best||s.amount>qMap[q].monthData[mk].weekData[wk].best.amount) qMap[q].monthData[mk].weekData[wk].best=s;
+  });
+  Object.values(qMap).filter(Boolean).forEach(q=>{
+    let bm=null,bmT=0;
+    Object.entries(q.monthData).forEach(([mk,md])=>{ if(md.total>bmT){bmT=md.total;bm=mk;} });
+    q.bestM=bm; q.bestMTotal=bmT;
+  });
+  const quarters=Object.values(qMap).filter(Boolean).sort((a,b)=>a.q-b.q);
+  document.getElementById('sales-count').textContent=quarters.length+' quarter'+(quarters.length!==1?'s':'');
+  document.getElementById('sales-total-lbl').textContent='Total: '+fmt(total);
+  if(!quarters.length){ document.getElementById('sales-tbody-quarterly').innerHTML=`<tr><td colspan="6" class="empty-row">No sales for ${yr}.</td></tr>`; return; }
+  let rows='';
+  quarters.forEach((q,qi)=>{
+    const avgM=q.total/q.months.size;
+    const qDid=`qd${qi}`, qCid=`qc${qi}`;
+    rows+=`<tr class="week-row" onclick="toggleDetail('${qDid}','${qCid}')">
+      <td><span class="week-chevron" id="${qCid}">▶</span><strong style="color:var(--purple)">${Q_LABELS[q.q]}</strong></td>
+      <td style="color:var(--muted)">${q.months.size} month${q.months.size!==1?'s':''}</td>
+      <td style="color:var(--muted)">${q.days.length} days</td>
+      <td class="amt-blue">${fmt(q.total)}</td>
+      <td style="color:var(--muted);font-weight:600">${fmt(avgM)}/mo</td>
+      <td>${q.bestM?`<span class="best-day-chip">${monthLabel(q.bestM)} — ${fmt(q.bestMTotal)}</span>`:'—'}</td>
+    </tr>`;
+    const mList=Object.values(q.monthData).sort((a,b)=>a.key.localeCompare(b.key));
+    rows+=`<tr class="week-detail-row" id="${qDid}" style="display:none">
+      <td colspan="6"><div class="week-detail-inner"><table>
+        <thead><tr><th>Month</th><th>Weeks</th><th>Days</th><th>Total Sales</th><th>Avg / Day</th><th>Best Day</th></tr></thead>
+        <tbody>${buildMonthRows(mList,'q'+qi,6)}</tbody>
+      </table></div></td></tr>`;
+  });
+  document.getElementById('sales-tbody-quarterly').innerHTML=rows;
+}
+
+// ── YEARLY ──
+function renderSalesYearly(sales){
+  resetSalesTotalColor();
+  document.getElementById('sales-page-sub').textContent='Gross sales per year — all time';
+  document.getElementById('sales-sec-title').textContent='Yearly Summary';
+  const yMap={};
+  sales.forEach(s=>{
+    const yr=s.date.slice(0,4);
+    if(!yMap[yr]) yMap[yr]={yr,months:new Set(),monthData:{},days:[],total:0,bestM:null,bestMTotal:0};
+    yMap[yr].months.add(monthKey(s.date));
+    yMap[yr].days.push(s);
+    yMap[yr].total+=s.amount;
+    const mk=monthKey(s.date);
+    if(!yMap[yr].monthData[mk]) yMap[yr].monthData[mk]={key:mk,days:[],total:0,best:null,weekData:{}};
+    yMap[yr].monthData[mk].days.push(s);
+    yMap[yr].monthData[mk].total+=s.amount;
+    if(!yMap[yr].monthData[mk].best||s.amount>yMap[yr].monthData[mk].best.amount) yMap[yr].monthData[mk].best=s;
+    const wk=weekMonday(s.date);
+    if(!yMap[yr].monthData[mk].weekData[wk]) yMap[yr].monthData[mk].weekData[wk]={monday:wk,days:[],total:0,best:null};
+    yMap[yr].monthData[mk].weekData[wk].days.push(s);
+    yMap[yr].monthData[mk].weekData[wk].total+=s.amount;
+    if(!yMap[yr].monthData[mk].weekData[wk].best||s.amount>yMap[yr].monthData[mk].weekData[wk].best.amount) yMap[yr].monthData[mk].weekData[wk].best=s;
+  });
+  Object.values(yMap).forEach(y=>{
+    let bm=null,bmT=0;
+    Object.entries(y.monthData).forEach(([mk,md])=>{ if(md.total>bmT){bmT=md.total;bm=mk;} });
+    y.bestM=bm; y.bestMTotal=bmT;
+  });
+  const years=Object.values(yMap).sort((a,b)=>b.yr.localeCompare(a.yr));
+  const grandTotal=years.reduce((a,y)=>a+y.total,0);
+  document.getElementById('sales-count').textContent=years.length+' year'+(years.length!==1?'s':'');
+  document.getElementById('sales-total-lbl').textContent='All-time: '+fmt(grandTotal);
+  if(!years.length){ document.getElementById('sales-tbody-yearly').innerHTML=`<tr><td colspan="6" class="empty-row">No sales data found.</td></tr>`; return; }
+  let rows='';
+  years.forEach((y,yi)=>{
+    const avgM=y.total/y.months.size;
+    const yDid=`yd${yi}`, yCid=`yc${yi}`;
+    rows+=`<tr class="week-row" onclick="toggleDetail('${yDid}','${yCid}')">
+      <td><span class="week-chevron" id="${yCid}">▶</span><strong style="font-size:1rem">${y.yr}</strong></td>
+      <td style="color:var(--muted)">${y.months.size} month${y.months.size!==1?'s':''}</td>
+      <td style="color:var(--muted)">${y.days.length} days</td>
+      <td class="amt-blue">${fmt(y.total)}</td>
+      <td style="color:var(--muted);font-weight:600">${fmt(avgM)}/mo</td>
+      <td>${y.bestM?`<span class="best-day-chip">${monthLabel(y.bestM)} — ${fmt(y.bestMTotal)}</span>`:'—'}</td>
+    </tr>`;
+    const mList=Object.values(y.monthData).sort((a,b)=>a.key.localeCompare(b.key));
+    rows+=`<tr class="week-detail-row" id="${yDid}" style="display:none">
+      <td colspan="6"><div class="week-detail-inner"><table>
+        <thead><tr><th>Month</th><th>Weeks</th><th>Days</th><th>Total Sales</th><th>Avg / Day</th><th>Best Day</th></tr></thead>
+        <tbody>${buildMonthRows(mList,'y'+yi,6)}</tbody>
+      </table></div></td></tr>`;
+  });
+  document.getElementById('sales-tbody-yearly').innerHTML=rows;
+}
+
+function openSaleModal(prefill){
+  editSaleId=null;
+  document.getElementById('sale-modal-title').textContent='Add Sale';
+  document.getElementById('s-date').value=prefill||new Date().toISOString().slice(0,10);
+  document.getElementById('s-amt').value='';
+  document.getElementById('s-notes').value='';
+  document.getElementById('sale-modal').classList.add('open');
+}
+function editSale(id){
+  const s=getS(K_SALES).find(x=>x.id===id); if(!s) return;
+  editSaleId=id;
+  document.getElementById('sale-modal-title').textContent='Edit Sale';
+  document.getElementById('s-date').value=s.date;
+  document.getElementById('s-amt').value=s.amount;
+  document.getElementById('s-notes').value=s.notes||'';
+  document.getElementById('sale-modal').classList.add('open');
+}
+function saveSale(){
+  const date=document.getElementById('s-date').value;
+  const amount=parseFloat(document.getElementById('s-amt').value);
+  const notes=document.getElementById('s-notes').value.trim();
+  if(!date||isNaN(amount)){ alert('Date and amount required.'); return; }
+  const data=getS(K_SALES);
+  if(editSaleId!==null){ const i=data.findIndex(x=>x.id===editSaleId); if(i>=0) data[i]={...data[i],date,amount,notes}; }
+  else data.push({id:Date.now(),date,amount,notes});
+  setS(K_SALES,data); closeModal('sale-modal'); renderSales(); renderDashboard();
+}
+function delSale(id){
+  if(!confirm('Delete this sale?')) return;
+  setS(K_SALES,getS(K_SALES).filter(x=>x.id!==id));
+  renderSales(); renderDashboard();
+}
+
+// ── OTHER / RECEIVABLES PAGE ──
+function renderOther(){
+  const items=getS(K_OTHER);
+  const total=items.reduce((a,o)=>a+o.amount,0);
+  const avg=items.length?total/items.length:0;
+  const best=items.reduce((a,o)=>o.amount>a?o.amount:a,0);
+  const allSalesTotal=getS(K_SALES).reduce((a,s)=>a+s.amount,0);
+  const grandTotal=allSalesTotal+total;
+  // KPI cards
+  const kpiEl=document.getElementById('other-kpi');
+  if(kpiEl) kpiEl.innerHTML=`
+    <div class="s-kpi k-blue"><div class="s-kpi-icon">📋</div><div class="s-kpi-lbl">Total Receivables</div><div class="s-kpi-val blue">${fmt(total)}</div><div class="s-kpi-sub">${items.length} items</div></div>
+    <div class="s-kpi k-green"><div class="s-kpi-icon">📊</div><div class="s-kpi-lbl">Average Amount</div><div class="s-kpi-val green">${fmt(avg)}</div><div class="s-kpi-sub">per item</div></div>
+    <div class="s-kpi k-orange"><div class="s-kpi-icon">⭐</div><div class="s-kpi-lbl">Highest Item</div><div class="s-kpi-val orange">${fmt(best)}</div><div class="s-kpi-sub">single entry</div></div>
+    <div class="s-kpi k-purple"><div class="s-kpi-icon">🗂️</div><div class="s-kpi-lbl">Item Count</div><div class="s-kpi-val purple">${items.length}</div><div class="s-kpi-sub">receivable entries</div></div>
+    <div class="s-kpi" style="border-left-color:#1E5CA8;background:#EEF3FA"><div class="s-kpi-icon">🏦</div><div class="s-kpi-lbl" style="font-weight:700">Grand Total</div><div class="s-kpi-val" style="color:#1E5CA8;font-size:1.15rem">${fmt(grandTotal)}</div><div class="s-kpi-sub">Sales + Receivables</div></div>`;
+  // Table
+  document.getElementById('other-count').textContent=items.length+' item'+(items.length!==1?'s':'');
+  document.getElementById('other-total-lbl').textContent='Total: '+fmt(total);
+  document.getElementById('other-tbody').innerHTML=items.length?items.map(o=>`
+    <tr>
+      <td style="font-weight:600">${o.desc}</td>
+      <td class="amt-blue">${fmt(o.amount)}</td>
+      <td style="color:var(--muted)">${o.notes||'—'}</td>
+      <td style="white-space:nowrap">
+        <button class="act-btn" onclick="editOther(${o.id})">Edit</button>
+        <button class="act-btn del-btn" onclick="delOther(${o.id})" style="margin-left:5px">✕</button>
+      </td>
+    </tr>`).join(''):`<tr><td colspan="4" class="empty-row">No other items yet.</td></tr>`;
+}
+function openOtherModal(){
+  editOtherId=null;
+  document.getElementById('other-modal-title').textContent='Add Other / Receivable';
+  document.getElementById('ot-desc').value='';
+  document.getElementById('ot-amt').value='';
+  document.getElementById('ot-notes').value='';
+  document.getElementById('other-modal').classList.add('open');
+}
+function editOther(id){
+  const o=getS(K_OTHER).find(x=>x.id===id); if(!o) return;
+  editOtherId=id;
+  document.getElementById('other-modal-title').textContent='Edit Item';
+  document.getElementById('ot-desc').value=o.desc;
+  document.getElementById('ot-amt').value=o.amount;
+  document.getElementById('ot-notes').value=o.notes||'';
+  document.getElementById('other-modal').classList.add('open');
+}
+function saveOther(){
+  const desc=document.getElementById('ot-desc').value.trim();
+  const amount=parseFloat(document.getElementById('ot-amt').value);
+  const notes=document.getElementById('ot-notes').value.trim();
+  if(!desc||isNaN(amount)){ alert('Description and amount required.'); return; }
+  const data=getS(K_OTHER);
+  if(editOtherId!==null){ const i=data.findIndex(x=>x.id===editOtherId); if(i>=0) data[i]={...data[i],desc,amount,notes}; }
+  else data.push({id:Date.now(),desc,amount,notes});
+  setS(K_OTHER,data); closeModal('other-modal'); renderOther(); renderDashboard();
+}
+function delOther(id){
+  if(!confirm('Delete this item?')) return;
+  setS(K_OTHER,getS(K_OTHER).filter(x=>x.id!==id));
+  renderOther(); renderDashboard();
+}
+
+// ── EXPENSES ──
+function renderExpenses(){
+  const exps=getS(K_EXP);
+  const allM=allMonths(exps,'date');
+  if(!allM.length) allM.push(monthKey(new Date().toISOString().slice(0,10)));
+  populateMonthSel('exp-month',allM,allM[0]);
+  const m=document.getElementById('exp-month').value;
+  const filtered=exps.filter(e=>monthKey(e.date)===m).sort((a,b)=>a.date.localeCompare(b.date)||b.amount-a.amount);
+  const total=filtered.reduce((a,e)=>a+e.amount,0);
+  document.getElementById('exp-count').textContent=filtered.length+' records';
+  document.getElementById('exp-total-lbl').textContent='Total: '+fmt(total);
+  document.getElementById('exp-tbody').innerHTML=filtered.length?filtered.map(e=>`
+    <tr>
+      <td><span class="day-pill ${dayClass(e.date)}">${dayName(e.date)}</span></td>
+      <td style="color:var(--muted);font-size:.78rem">${fmtDate(e.date)}</td>
+      <td class="amt-neg">${fmt(e.amount)}</td>
+      <td>${e.desc||'—'} ${e.cat?`<span class="cat-badge ${catClass(e.cat)}">${e.cat}</span>`:''}</td>
+      <td style="white-space:nowrap">
+        <button class="act-btn" onclick="editExp(${e.id})">Edit</button>
+        <button class="act-btn del-btn" onclick="delExp(${e.id})" style="margin-left:5px">✕</button>
+      </td>
+    </tr>`).join(''):`<tr><td colspan="5" class="empty-row">No expenses for this month.</td></tr>`;
+}
+
+function openExpModal(){
+  editExpId=null;
+  document.getElementById('exp-modal-title').textContent='Add Expense';
+  document.getElementById('e-date').value=new Date().toISOString().slice(0,10);
+  document.getElementById('e-amt').value='';
+  document.getElementById('e-desc').value='';
+  document.getElementById('exp-modal').classList.add('open');
+}
+function editExp(id){
+  const e=getS(K_EXP).find(x=>x.id===id); if(!e) return;
+  editExpId=id;
+  document.getElementById('exp-modal-title').textContent='Edit Expense';
+  document.getElementById('e-date').value=e.date;
+  document.getElementById('e-amt').value=e.amount;
+  document.getElementById('e-desc').value=e.desc||'';
+  document.getElementById('e-cat').value=e.cat||'Other';
+  document.getElementById('exp-modal').classList.add('open');
+}
+function saveExp(){
+  const date=document.getElementById('e-date').value;
+  const amount=parseFloat(document.getElementById('e-amt').value);
+  const desc=document.getElementById('e-desc').value.trim();
+  const cat=document.getElementById('e-cat').value;
+  if(!date||isNaN(amount)){ alert('Date and amount required.'); return; }
+  const data=getS(K_EXP);
+  if(editExpId!==null){ const i=data.findIndex(x=>x.id===editExpId); if(i>=0) data[i]={...data[i],date,amount,desc,cat}; }
+  else data.push({id:Date.now(),date,amount,desc,cat});
+  setS(K_EXP,data); closeModal('exp-modal'); renderExpenses(); renderDashboard();
+}
+function delExp(id){
+  if(!confirm('Delete this expense?')) return;
+  setS(K_EXP,getS(K_EXP).filter(x=>x.id!==id));
+  renderExpenses(); renderDashboard();
+}
+
+// ── SALARY ──
+function renderSalary(){
+  const sals=getS(K_SAL);
+  const allM=allMonths(sals,'month');
+  if(!allM.length) allM.push(new Date().toISOString().slice(0,7));
+  populateMonthSel('sal-month',allM,allM[0]);
+  const m=document.getElementById('sal-month').value;
+  const filtered=sals.filter(s=>s.month===m).sort((a,b)=>b.earned-a.earned);
+  const totalEarned=filtered.reduce((a,s)=>a+s.earned,0);
+  document.getElementById('sal-count').textContent=filtered.length+' employees';
+  document.getElementById('sal-total-lbl').textContent='Total Payroll: '+fmt(totalEarned);
+  document.getElementById('sal-tbody').innerHTML=filtered.length?filtered.map(s=>{
+    const net=s.earned-(s.ca||0);
+    const initials=s.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+    return `<tr>
+      <td style="display:flex;align-items:center"><span class="emp-pill">${initials}</span><span style="font-weight:600">${s.name}</span></td>
+      <td class="amt-blue">${fmt(s.earned)}</td>
+      <td class="amt-neg">${s.ca?fmt(s.ca):'—'}</td>
+      <td class="${net>=0?'amt-pos':'amt-neg'}">${fmt(net)}</td>
+      <td style="white-space:nowrap">
+        <button class="act-btn" onclick="editSal(${s.id})">Edit</button>
+        <button class="act-btn del-btn" onclick="delSal(${s.id})" style="margin-left:5px">✕</button>
+      </td>
+    </tr>`;
+  }).join(''):`<tr><td colspan="5" class="empty-row">No salary records for this month.</td></tr>`;
+}
+
+function openSalModal(){
+  editSalId=null;
+  document.getElementById('sal-modal-title').textContent='Add Salary Record';
+  document.getElementById('sl-month').value=new Date().toISOString().slice(0,7);
+  document.getElementById('sl-name').value='';
+  document.getElementById('sl-earned').value='';
+  document.getElementById('sl-ca').value='';
+  document.getElementById('sal-modal').classList.add('open');
+}
+function editSal(id){
+  const s=getS(K_SAL).find(x=>x.id===id); if(!s) return;
+  editSalId=id;
+  document.getElementById('sal-modal-title').textContent='Edit Salary Record';
+  document.getElementById('sl-month').value=s.month;
+  document.getElementById('sl-name').value=s.name;
+  document.getElementById('sl-earned').value=s.earned;
+  document.getElementById('sl-ca').value=s.ca||0;
+  document.getElementById('sal-modal').classList.add('open');
+}
+function saveSal(){
+  const month=document.getElementById('sl-month').value;
+  const name=document.getElementById('sl-name').value.trim();
+  const earned=parseFloat(document.getElementById('sl-earned').value)||0;
+  const ca=parseFloat(document.getElementById('sl-ca').value)||0;
+  if(!month||!name){ alert('Month and name required.'); return; }
+  const data=getS(K_SAL);
+  if(editSalId!==null){ const i=data.findIndex(x=>x.id===editSalId); if(i>=0) data[i]={...data[i],month,name,earned,ca}; }
+  else data.push({id:Date.now(),month,name,earned,ca});
+  setS(K_SAL,data); closeModal('sal-modal'); renderSalary(); renderDashboard();
+}
+function delSal(id){
+  if(!confirm('Delete this salary record?')) return;
+  setS(K_SAL,getS(K_SAL).filter(x=>x.id!==id));
+  renderSalary(); renderDashboard();
+}
+
+// ── MODAL ──
+function closeModal(id){
+  document.getElementById(id).classList.remove('open');
+  editSaleId=editExpId=editSalId=editOtherId=null;
+}
+['sale-modal','exp-modal','sal-modal','other-modal'].forEach(id=>{
+  document.getElementById(id).addEventListener('click',e=>{
+    if(e.target===document.getElementById(id)) closeModal(id);
+  });
+});
+
+// ── MIGRATE: patch missing "Expenses from Kamayan Sales" entries ──
+function migrateExpenses(){
+  const MISSING=[
+    {id:101,date:'2026-06-01',amount:5026,desc:'Expenses from Kamayan Sales',cat:'Other'},
+    {id:102,date:'2026-06-02',amount:7994,desc:'Expenses from Kamayan Sales',cat:'Other'},
+    {id:103,date:'2026-06-03',amount:11533,desc:'Expenses from Kamayan Sales',cat:'Other'},
+    {id:104,date:'2026-06-04',amount:8206,desc:'Expenses from Kamayan Sales',cat:'Other'},
+    {id:105,date:'2026-06-05',amount:6210,desc:'Expenses from Kamayan Sales',cat:'Other'},
+    {id:106,date:'2026-06-06',amount:8130,desc:'Expenses from Kamayan Sales',cat:'Other'},
+    {id:107,date:'2026-06-07',amount:11321,desc:'Expenses from Kamayan Sales',cat:'Other'},
+    {id:108,date:'2026-06-08',amount:6530,desc:'Expenses from Kamayan Sales',cat:'Other'},
+    {id:109,date:'2026-06-09',amount:8601,desc:'Expenses from Kamayan Sales',cat:'Other'},
+    {id:110,date:'2026-06-10',amount:9392,desc:'Expenses from Kamayan Sales',cat:'Other'},
+    {id:111,date:'2026-06-11',amount:17682,desc:'Expenses from Kamayan Sales',cat:'Other'},
+    {id:112,date:'2026-06-12',amount:2853,desc:'Expenses from Kamayan Sales',cat:'Other'},
+    {id:113,date:'2026-06-13',amount:10444,desc:'Expenses from Kamayan Sales',cat:'Other'},
+    {id:114,date:'2026-06-14',amount:7601,desc:'Expenses from Kamayan Sales',cat:'Other'},
+    {id:115,date:'2026-06-15',amount:11131,desc:'Expenses from Kamayan Sales',cat:'Other'},
+    {id:116,date:'2026-06-16',amount:2803,desc:'Expenses from Kamayan Sales',cat:'Other'},
+    {id:117,date:'2026-06-17',amount:8858,desc:'Expenses from Kamayan Sales',cat:'Other'},
+    {id:118,date:'2026-06-18',amount:8573,desc:'Expenses from Kamayan Sales',cat:'Other'},
+    {id:119,date:'2026-06-19',amount:12203,desc:'Expenses from Kamayan Sales',cat:'Other'},
+    {id:120,date:'2026-06-21',amount:18612,desc:'Expenses from Kamayan Sales',cat:'Other'},
+  ];
+  const existing=getS(K_EXP);
+  const existingIds=new Set(existing.map(e=>e.id));
+  const toAdd=MISSING.filter(e=>!existingIds.has(e.id));
+  if(toAdd.length){ setS(K_EXP,[...existing,...toAdd]); }
+}
+
+// ── MIGRATE: rename Emerot → Remrose ──
+function migrateSalaryNames(){
+  const data=getS(K_SAL);
+  let changed=false;
+  data.forEach(s=>{ if(s.name==='Emerot'){ s.name='Remrose'; changed=true; } });
+  if(changed) setS(K_SAL,data);
+}
+
+// ── INIT ──
+function init(){ seed(); migrateExpenses(); migrateSalaryNames(); showTab('dashboard'); }
+
+// ── CROSS-TAB / AUTO-SYNC ──
+// Re-render whichever section is currently visible whenever localStorage changes
+// (covers edits made in another tab or browser window)
+window.addEventListener('storage', e=>{
+  if(![K_SALES,K_EXP,K_SAL,K_OTHER].includes(e.key)) return;
+  if(sessionStorage.getItem('ksq_auth')!=='1') return;
+  const active=['dashboard','sales','expenses','salary','others'].find(t=>
+    document.getElementById('tab-'+t)?.style.display!=='none');
+  if(active==='dashboard') renderDashboard();
+  else if(active==='sales'){ renderSales(); }
+  else if(active==='expenses') renderExpenses();
+  else if(active==='salary') renderSalary();
+});
+
+window.onload=()=>{
+  if(sessionStorage.getItem('ksq_auth')==='1'){
+    document.getElementById('login').style.display='none';
+    document.getElementById('app').style.display='block';
+    init();
+  } else {
+    setTimeout(()=>document.getElementById('pin').focus(),100);
+  }
+};
+</script>
+</body>
+</html>
