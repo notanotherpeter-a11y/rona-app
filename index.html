@@ -976,7 +976,7 @@ function renderDashboard(){
   const totalSal=mSals.reduce((a,s)=>a+s.earned,0);
   const netLess =netSales-totalSal;
 
-  const totalOther=getS(K_OTHER).reduce((a,o)=>a+o.amount,0);
+  const totalOther=getS(K_OTHER).filter(o=>!o.desc.toLowerCase().includes('additional fund')).reduce((a,o)=>a+o.amount,0);
   const grandTotal=gross+totalOther;
 
   document.getElementById('dash-period').textContent=monthLabel(m);
@@ -1469,7 +1469,8 @@ function renderOther(){
   const avg=items.length?total/items.length:0;
   const best=items.reduce((a,o)=>o.amount>a?o.amount:a,0);
   const allSalesTotal=getS(K_SALES).reduce((a,s)=>a+s.amount,0);
-  const grandTotal=allSalesTotal+total;
+  const receivablesOnly=items.filter(o=>!o.desc.toLowerCase().includes('additional fund')).reduce((a,o)=>a+o.amount,0);
+  const grandTotal=allSalesTotal+receivablesOnly;
   // KPI cards
   const kpiEl=document.getElementById('other-kpi');
   if(kpiEl) kpiEl.innerHTML=`
