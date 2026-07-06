@@ -333,6 +333,18 @@ th { background: #F3F5F8; color: #374151; border-bottom-color: #C8D0DB; }
 .month-sel:focus { border-color: #1E5CA8; }
 .act-btn:hover { border-color: #1E5CA8; color: #1E5CA8; background: #EBF0FA; }
 
+/* ── USER CARDS (login) ── */
+.user-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px; }
+.user-btn { background:var(--white); border:1.5px solid var(--border); border-radius:var(--r-sm); padding:12px 10px; cursor:pointer; font-family:inherit; font-size:.8rem; font-weight:600; color:var(--text); text-align:center; display:flex; flex-direction:column; align-items:center; gap:4px; transition:all .15s; width:100%; }
+.user-btn:hover { border-color:var(--red); background:var(--red-light); }
+.user-btn.sel { border-color:var(--red); background:var(--red-light); color:var(--red); box-shadow:0 0 0 3px rgba(192,57,43,.1); }
+.user-btn .ub-ic { font-size:1.5rem; }
+.user-btn.admin-btn { grid-column:1/-1; }
+.pin-section { margin-top:14px; }
+.sb-user { padding:10px 12px; border-bottom:1px solid rgba(255,255,255,.06); margin-bottom:8px; display:flex; align-items:center; gap:8px; }
+.sb-user-name { font-size:.78rem; color:rgba(255,255,255,.7); font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.sb-user-role { font-size:.65rem; color:rgba(255,255,255,.3); text-transform:uppercase; letter-spacing:.06em; }
+
 /* RESPONSIVE */
 @media (max-width: 1200px) { .cards { grid-template-columns: repeat(3,1fr); } }
 @media (max-width: 960px)  { .cards { grid-template-columns: repeat(2,1fr); } }
@@ -347,16 +359,39 @@ th { background: #F3F5F8; color: #374151; border-bottom-color: #C8D0DB; }
 
 <!-- ── LOGIN ── -->
 <div id="login">
-  <div class="login-card">
+  <div class="login-card" style="max-width:400px">
     <div class="login-logo">🍽️</div>
     <div class="login-brand">Kamayan sa Qyusi</div>
     <div class="login-sub">Business Manager</div>
     <div class="login-inp-wrap">
-      <label class="f-lbl">Password</label>
-      <input type="password" id="pin" class="f-inp" placeholder="Enter password" maxlength="20"
-        onkeypress="if(event.key==='Enter')login()" autofocus />
+      <label class="f-lbl">Select Account</label>
+      <div class="user-grid" id="user-grid">
+        <button class="user-btn admin-btn" onclick="selectUser('admin')" id="ubtn-admin">
+          <span class="ub-ic">👑</span><span>Admin</span>
+        </button>
+        <button class="user-btn" onclick="selectUser('cainta')" id="ubtn-cainta">
+          <span class="ub-ic">🏪</span><span>Cainta</span>
+        </button>
+        <button class="user-btn" onclick="selectUser('marikina')" id="ubtn-marikina">
+          <span class="ub-ic">🏪</span><span>Marikina</span>
+        </button>
+        <button class="user-btn" onclick="selectUser('antipolo')" id="ubtn-antipolo">
+          <span class="ub-ic">🏪</span><span>Antipolo</span>
+        </button>
+        <button class="user-btn" onclick="selectUser('taytay')" id="ubtn-taytay">
+          <span class="ub-ic">🏪</span><span>Taytay</span>
+        </button>
+      </div>
     </div>
-    <button class="login-btn" onclick="login()">Sign In</button>
+    <input type="hidden" id="selected-role" value="" />
+    <div class="pin-section" id="pin-section" style="display:none">
+      <div class="login-inp-wrap">
+        <label class="f-lbl" id="pin-label">Password</label>
+        <input type="password" id="pin" class="f-inp" placeholder="Enter PIN" maxlength="10"
+          onkeypress="if(event.key==='Enter')login()" />
+      </div>
+      <button class="login-btn" onclick="login()">Sign In →</button>
+    </div>
     <div class="login-err" id="login-err"></div>
   </div>
 </div>
@@ -372,38 +407,45 @@ th { background: #F3F5F8; color: #374151; border-bottom-color: #C8D0DB; }
         <div class="sb-tagline">Business Manager</div>
       </div>
       <nav class="sb-nav">
-        <div class="nav-section">Overview</div>
-        <div class="nav-item active" onclick="showTab('dashboard')">
+        <div class="nav-section" data-access="admin">Overview</div>
+        <div class="nav-item active" onclick="showTab('dashboard')" data-access="admin">
           <span class="ni">📊</span><span>Dashboard</span>
         </div>
-        <div class="nav-section">Records</div>
-        <div class="nav-item" onclick="showTab('sales')">
+        <div class="nav-section" data-access="admin">Records</div>
+        <div class="nav-item" onclick="showTab('sales')" data-access="admin">
           <span class="ni">💰</span><span>Sales</span>
         </div>
-        <div class="nav-item" onclick="showTab('expenses')">
+        <div class="nav-item" onclick="showTab('expenses')" data-access="admin">
           <span class="ni">📋</span><span>Expenses</span>
         </div>
-        <div class="nav-item" onclick="showTab('salary')">
+        <div class="nav-item" onclick="showTab('salary')" data-access="admin">
           <span class="ni">👥</span><span>Salary</span>
         </div>
-        <div class="nav-item" onclick="showTab('others')">
+        <div class="nav-item" onclick="showTab('others')" data-access="admin">
           <span class="ni">📋</span><span>Others</span>
         </div>
-        <div class="nav-section">Branches</div>
-        <div class="nav-item" onclick="showTab('cainta')">
+        <div class="nav-section" data-access="branches">Branches</div>
+        <div class="nav-item" onclick="showTab('cainta')" data-access="branch-cainta">
           <span class="ni">🏪</span><span>Cainta</span>
         </div>
-        <div class="nav-item" onclick="showTab('marikina')">
+        <div class="nav-item" onclick="showTab('marikina')" data-access="branch-marikina">
           <span class="ni">🏪</span><span>Marikina</span>
         </div>
-        <div class="nav-item" onclick="showTab('antipolo')">
+        <div class="nav-item" onclick="showTab('antipolo')" data-access="branch-antipolo">
           <span class="ni">🏪</span><span>Antipolo</span>
         </div>
-        <div class="nav-item" onclick="showTab('taytay')">
+        <div class="nav-item" onclick="showTab('taytay')" data-access="branch-taytay">
           <span class="ni">🏪</span><span>Taytay</span>
         </div>
       </nav>
       <div class="sb-footer">
+        <div class="sb-user">
+          <span id="sb-user-ic" style="font-size:1.1rem">👤</span>
+          <div>
+            <div class="sb-user-name" id="sb-user-name">—</div>
+            <div class="sb-user-role" id="sb-user-role">Not signed in</div>
+          </div>
+        </div>
         <div class="sb-logout" onclick="logout()">
           <span>🔒</span><span>Lock</span>
         </div>
@@ -764,7 +806,13 @@ th { background: #F3F5F8; color: #374151; border-bottom-color: #C8D0DB; }
 </div>
 
 <script>
-const PIN    = '3236';
+const USERS = [
+  { role:'admin',    pin:'3236', label:'Admin',    emoji:'👑', access:'admin'    },
+  { role:'cainta',   pin:'1001', label:'Cainta',   emoji:'🏪', access:'branch'   },
+  { role:'marikina', pin:'2002', label:'Marikina', emoji:'🏪', access:'branch'   },
+  { role:'antipolo', pin:'3003', label:'Antipolo', emoji:'🏪', access:'branch'   },
+  { role:'taytay',   pin:'4004', label:'Taytay',   emoji:'🏪', access:'branch'   },
+];
 const K_SALES = 'ksq_sales';
 const K_EXP   = 'ksq_expenses';
 const K_SAL   = 'ksq_salary';
@@ -781,23 +829,65 @@ let editSaleId = null, editExpId = null, editSalId = null, editOtherId = null, e
 let salesView = 'monthly';
 
 // ── AUTH ──
+let _selectedRole = '';
+function selectUser(role){
+  _selectedRole = role;
+  document.querySelectorAll('.user-btn').forEach(b=>b.classList.remove('sel'));
+  const btn = document.getElementById('ubtn-'+role);
+  if(btn) btn.classList.add('sel');
+  const u = USERS.find(x=>x.role===role);
+  document.getElementById('pin-label').textContent = (u?u.emoji+' '+u.label:'') + ' — PIN';
+  document.getElementById('pin-section').style.display = '';
+  document.getElementById('login-err').textContent = '';
+  document.getElementById('pin').value = '';
+  setTimeout(()=>document.getElementById('pin').focus(), 50);
+}
 function login() {
-  if (document.getElementById('pin').value === PIN) {
+  const role = _selectedRole;
+  const pin  = document.getElementById('pin').value;
+  const user = USERS.find(u=>u.role===role && u.pin===pin);
+  if(user){
     sessionStorage.setItem('ksq_auth','1');
+    sessionStorage.setItem('ksq_role', role);
     document.getElementById('login').style.display = 'none';
     document.getElementById('app').style.display = 'block';
+    // reset login form for next time
+    document.getElementById('pin').value='';
+    document.getElementById('pin-section').style.display='none';
+    document.querySelectorAll('.user-btn').forEach(b=>b.classList.remove('sel'));
+    _selectedRole='';
     init();
   } else {
-    document.getElementById('login-err').textContent = 'Incorrect password.';
+    document.getElementById('login-err').textContent = role ? 'Incorrect PIN.' : 'Select an account first.';
     document.getElementById('pin').value = '';
   }
 }
 function logout() {
   sessionStorage.removeItem('ksq_auth');
+  sessionStorage.removeItem('ksq_role');
   document.getElementById('app').style.display = 'none';
   document.getElementById('login').style.display = 'flex';
   document.getElementById('pin').value = '';
+  document.getElementById('pin-section').style.display = 'none';
+  document.querySelectorAll('.user-btn').forEach(b=>b.classList.remove('sel'));
   document.getElementById('login-err').textContent = '';
+  _selectedRole = '';
+}
+function applyRoleUI(role){
+  const isAdmin = role==='admin';
+  document.querySelectorAll('[data-access]').forEach(el=>{
+    const a=el.dataset.access;
+    if(a==='admin')          el.style.display = isAdmin?'':'none';
+    else if(a==='branches')  el.style.display = '';
+    else if(a.startsWith('branch-')){
+      const bk=a.replace('branch-','');
+      el.style.display=(isAdmin||role===bk)?'':'none';
+    }
+  });
+  const u=USERS.find(x=>x.role===role);
+  document.getElementById('sb-user-ic').textContent  = u?u.emoji:'👤';
+  document.getElementById('sb-user-name').textContent = u?u.label:role;
+  document.getElementById('sb-user-role').textContent = isAdmin?'Administrator':'Branch User';
 }
 
 // ── STORAGE ──
@@ -974,6 +1064,9 @@ function populateMonthSel(selId, months, curr){
 
 // ── TABS ──
 function showTab(tab){
+  const role=sessionStorage.getItem('ksq_role')||'admin';
+  // Branch users can only access their own page
+  if(role!=='admin' && tab!==role) tab=role;
   ALL_TABS.forEach((t,i)=>{
     document.getElementById('tab-'+t).style.display=t===tab?'':'none';
     document.querySelectorAll('.nav-item')[i].classList.toggle('active',t===tab);
@@ -1959,7 +2052,12 @@ function migrateSalaryNames(){
 }
 
 // ── INIT ──
-function init(){ seed(); migrateExpenses(); migrateSalaryNames(); showTab('dashboard'); }
+function init(){
+  seed(); migrateExpenses(); migrateSalaryNames();
+  const role=sessionStorage.getItem('ksq_role')||'admin';
+  applyRoleUI(role);
+  showTab(role==='admin'?'dashboard':role);
+}
 
 // ── CROSS-TAB / AUTO-SYNC ──
 // Re-render whichever section is currently visible whenever localStorage changes
@@ -1984,9 +2082,8 @@ window.onload=()=>{
     document.getElementById('login').style.display='none';
     document.getElementById('app').style.display='block';
     init();
-  } else {
-    setTimeout(()=>document.getElementById('pin').focus(),100);
   }
+  // no autofocus on PIN — user must select account card first
 };
 </script>
 </body>
