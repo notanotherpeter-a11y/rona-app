@@ -387,10 +387,60 @@ th { background: #F3F5F8; color: #374151; border-bottom-color: #C8D0DB; }
 /* RESPONSIVE */
 @media (max-width: 1200px) { .cards { grid-template-columns: repeat(3,1fr); } }
 @media (max-width: 960px)  { .cards { grid-template-columns: repeat(2,1fr); } }
-@media (max-width: 900px) {
-  .sidebar { width: 64px; }
-  .sb-name,.sb-tagline,.nav-item span,.sb-logout span,.nav-section,.sb-logo-text { display: none; }
-  .main { margin-left: 64px; padding: 20px; }
+
+/* MOBILE HAMBURGER TOP BAR */
+.mob-topbar { display: none; }
+.mob-backdrop { display: none; }
+
+@media (max-width: 768px) {
+  /* show mobile top bar */
+  .mob-topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    position: fixed; top: 0; left: 0; right: 0; height: 52px;
+    background: #1a2235; z-index: 200; padding: 0 14px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.3);
+  }
+  .mob-brand {
+    font-size: .88rem; font-weight: 700; color: #f9fafb;
+    letter-spacing: -.01em;
+  }
+  .mob-hamburger {
+    background: none; border: none; cursor: pointer;
+    display: flex; flex-direction: column; gap: 5px; padding: 4px;
+  }
+  .mob-hamburger span {
+    display: block; width: 22px; height: 2px;
+    background: #f9fafb; border-radius: 2px; transition: all .2s;
+  }
+  /* sidebar becomes slide-in overlay */
+  .sidebar {
+    transform: translateX(-100%);
+    transition: transform .25s ease;
+    z-index: 300; box-shadow: none;
+  }
+  .sidebar.mob-open {
+    transform: translateX(0);
+    box-shadow: 4px 0 24px rgba(0,0,0,.4);
+  }
+  /* backdrop */
+  .mob-backdrop {
+    display: block; position: fixed; inset: 0;
+    background: rgba(0,0,0,.45); z-index: 250;
+    opacity: 0; pointer-events: none; transition: opacity .25s;
+  }
+  .mob-backdrop.mob-open { opacity: 1; pointer-events: auto; }
+  /* main content fills full width, push down for top bar */
+  .main { margin-left: 0; padding: 16px; padding-top: 68px; }
+  /* responsive tweaks */
+  .cards { grid-template-columns: 1fr 1fr; }
+  .topbar { flex-direction: column; align-items: flex-start; gap: 10px; }
+  .topbar-right { flex-wrap: wrap; gap: 8px; }
+  .sal-search-inp { width: 100%; }
+  .emp-cal-wrap { padding: 0 12px 24px; }
+  .emp-cal-title { font-size: 1.3rem; min-width: 200px; }
+  .emp-cal-summary { flex-wrap: wrap; gap: 16px; }
+  .section { padding: 16px; }
+  table { font-size: .78rem; }
 }
 </style>
 </head>
@@ -419,9 +469,20 @@ th { background: #F3F5F8; color: #374151; border-bottom-color: #C8D0DB; }
 
 <!-- ── APP ── -->
 <div id="app">
+  <!-- MOBILE TOP BAR -->
+  <div class="mob-topbar" id="mob-topbar">
+    <button class="mob-hamburger" onclick="toggleMobSidebar()" aria-label="Menu">
+      <span></span><span></span><span></span>
+    </button>
+    <div class="mob-brand">Kamayan sa Qyusi</div>
+    <div style="width:40px"></div>
+  </div>
+  <!-- SIDEBAR BACKDROP -->
+  <div class="mob-backdrop" id="mob-backdrop" onclick="closeMobSidebar()"></div>
+
   <div class="layout">
     <!-- SIDEBAR -->
-    <div class="sidebar">
+    <div class="sidebar" id="main-sidebar">
       <div class="sb-brand">
         <div class="sb-brand-icon" style="background:none;box-shadow:none;padding:2px;"><img src="logo.png" alt="" style="width:32px;height:32px;object-fit:contain;" /></div>
         <div class="sb-brand-text">
@@ -431,33 +492,33 @@ th { background: #F3F5F8; color: #374151; border-bottom-color: #C8D0DB; }
       </div>
       <nav class="sb-nav">
         <div class="nav-section" data-access="admin">Overview</div>
-        <div class="nav-item active" onclick="showTab('dashboard')" data-access="admin">
+        <div class="nav-item active" onclick="showTab('dashboard');closeMobSidebar()" data-access="admin">
           <span class="ni">📊</span><span>Dashboard</span>
         </div>
         <div class="nav-section" data-access="admin">Records</div>
-        <div class="nav-item" onclick="showTab('sales')" data-access="admin">
+        <div class="nav-item" onclick="showTab('sales');closeMobSidebar()" data-access="admin">
           <span class="ni">💰</span><span>Sales</span>
         </div>
-        <div class="nav-item" onclick="showTab('expenses')" data-access="admin">
+        <div class="nav-item" onclick="showTab('expenses');closeMobSidebar()" data-access="admin">
           <span class="ni">📋</span><span>Expenses</span>
         </div>
-        <div class="nav-item" onclick="showTab('salary')" data-access="admin">
+        <div class="nav-item" onclick="showTab('salary');closeMobSidebar()" data-access="admin">
           <span class="ni">👥</span><span>Salary</span>
         </div>
-        <div class="nav-item" onclick="showTab('others')" data-access="admin">
+        <div class="nav-item" onclick="showTab('others');closeMobSidebar()" data-access="admin">
           <span class="ni">📋</span><span>Others</span>
         </div>
         <div class="nav-section" data-access="branches">Branches</div>
-        <div class="nav-item" onclick="showTab('cainta')" data-access="branch-cainta">
+        <div class="nav-item" onclick="showTab('cainta');closeMobSidebar()" data-access="branch-cainta">
           <span class="ni">🏪</span><span>Cainta</span>
         </div>
-        <div class="nav-item" onclick="showTab('marikina')" data-access="branch-marikina">
+        <div class="nav-item" onclick="showTab('marikina');closeMobSidebar()" data-access="branch-marikina">
           <span class="ni">🏪</span><span>Marikina</span>
         </div>
-        <div class="nav-item" onclick="showTab('antipolo')" data-access="branch-antipolo">
+        <div class="nav-item" onclick="showTab('antipolo');closeMobSidebar()" data-access="branch-antipolo">
           <span class="ni">🏪</span><span>Antipolo</span>
         </div>
-        <div class="nav-item" onclick="showTab('taytay')" data-access="branch-taytay">
+        <div class="nav-item" onclick="showTab('taytay');closeMobSidebar()" data-access="branch-taytay">
           <span class="ni">🏪</span><span>Taytay</span>
         </div>
       </nav>
@@ -956,6 +1017,16 @@ function applyRoleUI(role){
   document.getElementById('sb-user-ic').textContent  = u?u.emoji:'👤';
   document.getElementById('sb-user-name').textContent = u?u.label:role;
   document.getElementById('sb-user-role').textContent = isAdmin?'Administrator':'Branch User';
+}
+
+// ── MOBILE SIDEBAR ──
+function toggleMobSidebar(){
+  document.getElementById('main-sidebar').classList.toggle('mob-open');
+  document.getElementById('mob-backdrop').classList.toggle('mob-open');
+}
+function closeMobSidebar(){
+  document.getElementById('main-sidebar').classList.remove('mob-open');
+  document.getElementById('mob-backdrop').classList.remove('mob-open');
 }
 
 // ── STORAGE ──
