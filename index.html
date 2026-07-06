@@ -389,6 +389,19 @@ th { background: #F3F5F8; color: #374151; border-bottom-color: #C8D0DB; }
         <div class="nav-item" onclick="showTab('others')">
           <span class="ni">📋</span><span>Others</span>
         </div>
+        <div class="nav-section">Branches</div>
+        <div class="nav-item" onclick="showTab('cainta')">
+          <span class="ni">🏪</span><span>Cainta</span>
+        </div>
+        <div class="nav-item" onclick="showTab('marikina')">
+          <span class="ni">🏪</span><span>Marikina</span>
+        </div>
+        <div class="nav-item" onclick="showTab('antipolo')">
+          <span class="ni">🏪</span><span>Antipolo</span>
+        </div>
+        <div class="nav-item" onclick="showTab('taytay')">
+          <span class="ni">🏪</span><span>Taytay</span>
+        </div>
       </nav>
       <div class="sb-footer">
         <div class="sb-logout" onclick="logout()">
@@ -570,7 +583,41 @@ th { background: #F3F5F8; color: #374151; border-bottom-color: #C8D0DB; }
         </div>
       </div>
 
+      <!-- BRANCH PAGES (cainta / marikina / antipolo / taytay) -->
+      <div id="tab-cainta"   style="display:none" data-branch="cainta"></div>
+      <div id="tab-marikina" style="display:none" data-branch="marikina"></div>
+      <div id="tab-antipolo" style="display:none" data-branch="antipolo"></div>
+      <div id="tab-taytay"   style="display:none" data-branch="taytay"></div>
+
     </div><!-- /main -->
+  </div>
+</div>
+
+<!-- BRANCH MODAL -->
+<div class="overlay" id="branch-modal">
+  <div class="modal">
+    <h3 id="branch-modal-title">Add Entry</h3>
+    <input type="hidden" id="br-key" />
+    <div class="modal-field">
+      <label class="f-lbl">Date</label>
+      <input type="date" id="br-date" class="f-inp" />
+    </div>
+    <div class="modal-field">
+      <label class="f-lbl">Description</label>
+      <input type="text" id="br-desc" class="f-inp" placeholder="e.g. Stock delivery..." />
+    </div>
+    <div class="modal-field">
+      <label class="f-lbl">Amount (₱)</label>
+      <input type="number" id="br-amt" class="f-inp" placeholder="0" />
+    </div>
+    <div class="modal-field">
+      <label class="f-lbl">Notes</label>
+      <input type="text" id="br-notes" class="f-inp" placeholder="Optional..." />
+    </div>
+    <div class="modal-btns">
+      <button class="btn btn-ghost" onclick="closeModal('branch-modal')">Cancel</button>
+      <button class="btn btn-red" onclick="saveBranchEntry()">Save</button>
+    </div>
   </div>
 </div>
 
@@ -691,7 +738,14 @@ const K_SALES = 'ksq_sales';
 const K_EXP   = 'ksq_expenses';
 const K_SAL   = 'ksq_salary';
 const K_OTHER = 'ksq_other';
-let editSaleId = null, editExpId = null, editSalId = null, editOtherId = null;
+const BRANCHES = [
+  { key:'cainta',   label:'Cainta',   kKey:'ksq_cainta',   initAmount:280760,    initDesc:'Initial Stock Receivable' },
+  { key:'marikina', label:'Marikina', kKey:'ksq_marikina', initAmount:48680,     initDesc:'Initial Stock Receivable' },
+  { key:'antipolo', label:'Antipolo', kKey:'ksq_antipolo', initAmount:756003.67, initDesc:'Initial Stock Receivable' },
+  { key:'taytay',   label:'Taytay',   kKey:'ksq_taytay',   initAmount:366261,    initDesc:'Initial Stock Receivable' },
+];
+const ALL_TABS = ['dashboard','sales','expenses','salary','others','cainta','marikina','antipolo','taytay'];
+let editSaleId = null, editExpId = null, editSalId = null, editOtherId = null, editBranchId = null;
 let salesView = 'monthly';
 
 // ── AUTH ──
@@ -836,6 +890,11 @@ function seed(){
       {id:5,desc:'Additional Fund for Back Up',amount:500000,notes:''},
     ]);
   }
+  BRANCHES.forEach(b=>{
+    if(!getS(b.kKey).length){
+      setS(b.kKey,[{id:1,date:'2026-06-01',desc:b.initDesc,amount:b.initAmount,notes:'Opening balance'}]);
+    }
+  });
   if(!getS(K_SAL).length){
     setS(K_SAL,[
       {id:1,month:'2026-06',name:'Chef Yvann',earned:32000,ca:10000},
@@ -887,15 +946,16 @@ function populateMonthSel(selId, months, curr){
 
 // ── TABS ──
 function showTab(tab){
-  ['dashboard','sales','expenses','salary','others'].forEach((t,i)=>{
+  ALL_TABS.forEach((t,i)=>{
     document.getElementById('tab-'+t).style.display=t===tab?'':'none';
     document.querySelectorAll('.nav-item')[i].classList.toggle('active',t===tab);
   });
   if(tab==='dashboard') renderDashboard();
-  if(tab==='sales')     renderSales();
-  if(tab==='expenses')  renderExpenses();
-  if(tab==='salary')    renderSalary();
-  if(tab==='others')    renderOther();
+  else if(tab==='sales')     renderSales();
+  else if(tab==='expenses')  renderExpenses();
+  else if(tab==='salary')    renderSalary();
+  else if(tab==='others')    renderOther();
+  else { const b=BRANCHES.find(x=>x.key===tab); if(b) renderBranch(b); }
 }
 
 // ── CHART ──
@@ -1526,6 +1586,93 @@ function delOther(id){
   renderOther(); renderDashboard();
 }
 
+// ── BRANCH PAGES ──
+function renderBranch(b){
+  const el=document.getElementById('tab-'+b.key);
+  const items=getS(b.kKey);
+  const total=items.reduce((a,x)=>a+x.amount,0);
+  const avg=items.length?total/items.length:0;
+  const best=items.reduce((a,x)=>x.amount>a?x.amount:a,0);
+  const latest=items.slice().sort((a,z)=>z.date.localeCompare(a.date))[0];
+  el.innerHTML=`
+    <div class="topbar">
+      <div class="topbar-left">
+        <div class="page-title">🏪 Kamayan sa ${b.label}</div>
+        <div class="page-sub">${b.label} branch — stock &amp; receivables</div>
+      </div>
+      <div class="topbar-right">
+        <button class="btn btn-red" onclick="openBranchModal('${b.key}')">＋ Add Entry</button>
+      </div>
+    </div>
+    <div class="sales-kpi">
+      <div class="s-kpi k-blue"><div class="s-kpi-icon">💰</div><div class="s-kpi-lbl">Total</div><div class="s-kpi-val blue">${fmt(total)}</div><div class="s-kpi-sub">${items.length} entr${items.length!==1?'ies':'y'}</div></div>
+      <div class="s-kpi k-green"><div class="s-kpi-icon">📊</div><div class="s-kpi-lbl">Average</div><div class="s-kpi-val green">${fmt(avg)}</div><div class="s-kpi-sub">per entry</div></div>
+      <div class="s-kpi k-orange"><div class="s-kpi-icon">⭐</div><div class="s-kpi-lbl">Highest</div><div class="s-kpi-val orange">${fmt(best)}</div><div class="s-kpi-sub">single entry</div></div>
+      <div class="s-kpi k-purple"><div class="s-kpi-icon">📅</div><div class="s-kpi-lbl">Latest</div><div class="s-kpi-val purple" style="font-size:.85rem">${latest?fmtDate(latest.date):'—'}</div><div class="s-kpi-sub">last recorded</div></div>
+    </div>
+    <div class="section">
+      <div class="sec-hdr">
+        <div>
+          <div class="sec-title">Transactions</div>
+          <div class="sec-count">${items.length} record${items.length!==1?'s':''}</div>
+        </div>
+        <div class="sec-total amt-pos">Total: ${fmt(total)}</div>
+      </div>
+      <table>
+        <thead><tr><th>Date</th><th>Description</th><th>Amount</th><th>Notes</th><th></th></tr></thead>
+        <tbody>${items.length?items.slice().sort((a,z)=>z.date.localeCompare(a.date)).map(x=>`
+          <tr>
+            <td><span class="day-pill ${dayClass(x.date)}">${dayName(x.date)}</span> ${fmtDate(x.date)}</td>
+            <td>${x.desc}</td>
+            <td class="amt-pos">${fmt(x.amount)}</td>
+            <td style="color:var(--muted)">${x.notes||'—'}</td>
+            <td><button class="act-btn" onclick="openBranchModal('${b.key}',${x.id})">✏️</button> <button class="act-btn act-del" onclick="delBranchEntry('${b.key}',${x.id})">🗑️</button></td>
+          </tr>`).join(''):`<tr><td colspan="5" class="empty-row">No entries yet. Click ＋ Add Entry to start.</td></tr>`}
+        </tbody>
+      </table>
+    </div>`;
+}
+let _branchEditKey=null;
+function openBranchModal(key,id){
+  const b=BRANCHES.find(x=>x.key===key);
+  document.getElementById('br-key').value=key;
+  editBranchId=id||null;
+  document.getElementById('branch-modal-title').textContent=id?`Edit Entry — ${b.label}`:`Add Entry — ${b.label}`;
+  if(id){
+    const item=getS(b.kKey).find(x=>x.id===id);
+    if(!item) return;
+    document.getElementById('br-date').value=item.date;
+    document.getElementById('br-desc').value=item.desc;
+    document.getElementById('br-amt').value=item.amount;
+    document.getElementById('br-notes').value=item.notes||'';
+  } else {
+    document.getElementById('br-date').value=new Date().toISOString().split('T')[0];
+    document.getElementById('br-desc').value='';
+    document.getElementById('br-amt').value='';
+    document.getElementById('br-notes').value='';
+  }
+  openModal('branch-modal');
+}
+function saveBranchEntry(){
+  const key=document.getElementById('br-key').value;
+  const b=BRANCHES.find(x=>x.key===key); if(!b) return;
+  const date=document.getElementById('br-date').value;
+  const desc=document.getElementById('br-desc').value.trim();
+  const amount=parseFloat(document.getElementById('br-amt').value);
+  const notes=document.getElementById('br-notes').value.trim();
+  if(!date||!desc||isNaN(amount)){ alert('Date, description and amount are required.'); return; }
+  const data=getS(b.kKey);
+  if(editBranchId!==null){ const i=data.findIndex(x=>x.id===editBranchId); if(i>=0) data[i]={...data[i],date,desc,amount,notes}; }
+  else data.push({id:Date.now(),date,desc,amount,notes});
+  setS(b.kKey,data); closeModal('branch-modal'); renderBranch(b);
+}
+function delBranchEntry(key,id){
+  if(!confirm('Delete this entry?')) return;
+  const b=BRANCHES.find(x=>x.key===key); if(!b) return;
+  setS(b.kKey,getS(b.kKey).filter(x=>x.id!==id));
+  renderBranch(b);
+}
+
 // ── EXPENSES ──
 function renderExpenses(){
   const exps=getS(K_EXP);
@@ -1704,14 +1851,16 @@ function init(){ seed(); migrateExpenses(); migrateSalaryNames(); showTab('dashb
 // Re-render whichever section is currently visible whenever localStorage changes
 // (covers edits made in another tab or browser window)
 window.addEventListener('storage', e=>{
-  if(![K_SALES,K_EXP,K_SAL,K_OTHER].includes(e.key)) return;
+  const branchKeys=BRANCHES.map(b=>b.kKey);
+  if(![K_SALES,K_EXP,K_SAL,K_OTHER,...branchKeys].includes(e.key)) return;
   if(sessionStorage.getItem('ksq_auth')!=='1') return;
-  const active=['dashboard','sales','expenses','salary','others'].find(t=>
-    document.getElementById('tab-'+t)?.style.display!=='none');
+  const active=ALL_TABS.find(t=>document.getElementById('tab-'+t)?.style.display!=='none');
   if(active==='dashboard') renderDashboard();
-  else if(active==='sales'){ renderSales(); }
+  else if(active==='sales') renderSales();
   else if(active==='expenses') renderExpenses();
   else if(active==='salary') renderSalary();
+  else if(active==='others') renderOther();
+  else { const b=BRANCHES.find(x=>x.key===active); if(b) renderBranch(b); }
 });
 
 window.onload=()=>{
