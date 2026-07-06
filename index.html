@@ -95,28 +95,29 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans
 /* back button */
 .back-btn { background: var(--white); border: 1.5px solid var(--border); padding: 8px 16px; border-radius: var(--r-sm); font-size: .82rem; font-weight: 600; cursor: pointer; color: var(--text); font-family: inherit; transition: all .15s; margin-right: 14px; box-shadow: var(--sh-sm); flex-shrink: 0; }
 .back-btn:hover { background: var(--bg); border-color: #aaa; }
-/* year navigation */
-.year-nav-btn { background: var(--white); border: 1.5px solid var(--border); width: 34px; height: 34px; border-radius: var(--r-sm); font-size: 1.1rem; cursor: pointer; color: var(--text); transition: all .15s; box-shadow: var(--sh-sm); line-height: 1; }
-.year-nav-btn:hover { background: var(--bg); }
-.year-label { font-size: 1rem; font-weight: 800; color: var(--text); min-width: 48px; text-align: center; }
-/* 12-month calendar grid */
-.emp-cal-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; padding: 0 28px 32px; }
-.emp-month-card { background: var(--white); border-radius: var(--r); border: 1.5px solid var(--border); padding: 18px 20px; box-shadow: var(--sh-sm); transition: box-shadow .15s; }
-.emp-month-card:hover { box-shadow: var(--sh-md); }
-.emp-month-card.emc-received { border-color: #10b981; background: #f0fdf4; }
-.emc-hdr { font-size: .72rem; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-bottom: 12px; }
-.emc-hdr.received-hdr { color: #10b981; }
-.emc-row { display: flex; justify-content: space-between; align-items: center; font-size: .8rem; margin-bottom: 5px; }
-.emc-lbl { color: var(--muted); }
-.emc-val { font-weight: 600; }
-.emc-divider { border: none; border-top: 1px solid var(--border); margin: 10px 0; }
-.emc-no-rec { color: var(--muted); font-size: .78rem; text-align: center; padding: 20px 0 8px; }
-/* received toggle */
-.rcv-toggle { width: 100%; margin-top: 12px; padding: 8px; border-radius: 8px; border: none; font-size: .78rem; font-weight: 700; cursor: pointer; font-family: inherit; transition: all .15s; letter-spacing: .01em; }
-.rcv-toggle.rcv-yes { background: #dcfce7; color: #15803d; }
-.rcv-toggle.rcv-yes:hover { background: #bbf7d0; }
-.rcv-toggle.rcv-no { background: #f1f5f9; color: #64748b; }
-.rcv-toggle.rcv-no:hover { background: #e2e8f0; }
+/* ── EMPLOYEE CALENDAR ── */
+.emp-cal-wrap { padding: 0 28px 36px; max-width: 880px; }
+.emp-cal-header { display: flex; align-items: center; justify-content: center; gap: 28px; margin-bottom: 24px; }
+.emp-cal-title { font-size: 2rem; font-weight: 900; color: var(--text); letter-spacing: -.03em; min-width: 300px; text-align: center; }
+.emp-cal-nav-btn { background: none; border: 2px solid var(--border); width: 42px; height: 42px; border-radius: 50%; font-size: 1.2rem; cursor: pointer; color: var(--text); font-weight: 700; transition: all .15s; flex-shrink: 0; }
+.emp-cal-nav-btn:hover { background: var(--bg); border-color: #999; }
+.emp-cal-dow { display: grid; grid-template-columns: repeat(7,1fr); border-left: 1px solid #ddd; border-top: 1px solid #ddd; }
+.emp-cal-dow div { text-align: center; font-size: .68rem; font-weight: 800; color: var(--muted); padding: 9px 0; border-right: 1px solid #ddd; border-bottom: 1px solid #ddd; text-transform: uppercase; letter-spacing: .07em; background: #f8f9fa; }
+.emp-cal-days { display: grid; grid-template-columns: repeat(7,1fr); border-left: 1px solid #ddd; }
+.emp-day-cell { min-height: 88px; border-right: 1px solid #ddd; border-bottom: 1px solid #ddd; padding: 7px 9px; background: var(--white); cursor: pointer; transition: background .1s; }
+.emp-day-cell:hover { background: #fff5f5; }
+.emp-day-cell.edc-other { background: #fafafa; cursor: default; pointer-events: none; }
+.emp-day-cell.edc-has-pay { background: #f0fdf4; }
+.emp-day-cell.edc-has-pay:hover { background: #dcfce7; }
+.edc-num { font-size: .78rem; font-weight: 700; color: var(--text); display: block; margin-bottom: 5px; }
+.edc-other .edc-num { color: #ccc; }
+.edc-pay { font-size: .73rem; font-weight: 700; color: #15803d; line-height: 1.3; }
+.edc-note { font-size: .62rem; color: #64748b; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+/* monthly summary bar */
+.emp-cal-summary { margin-top: 18px; background: var(--white); border-radius: var(--r); border: 1.5px solid var(--border); padding: 16px 24px; display: flex; gap: 36px; box-shadow: var(--sh-sm); }
+.ecs-item {}
+.ecs-lbl { font-size: .67rem; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); }
+.ecs-val { font-size: 1.05rem; font-weight: 800; margin-top: 3px; }
 .btn { padding: 9px 18px; border-radius: var(--r-sm); border: none; font-size: .82rem; font-weight: 600; cursor: pointer; font-family: inherit; transition: all .15s; display: inline-flex; align-items: center; gap: 6px; }
 .btn-red { background: var(--red); color: var(--white); box-shadow: 0 1px 3px rgba(192,57,43,.35); }
 .btn-red:hover { background: var(--red-dark); box-shadow: 0 3px 8px rgba(192,57,43,.35); }
@@ -658,17 +659,22 @@ th { background: #F3F5F8; color: #374151; border-bottom-color: #C8D0DB; }
               <button class="back-btn" onclick="closeEmpProfile()">← Back</button>
               <div>
                 <div class="page-title" id="emp-profile-name"></div>
-                <div class="page-sub">Salary history — click a month to toggle received status</div>
+                <div class="page-sub">Daily salary log — click any day to add or edit a payment</div>
               </div>
             </div>
-            <div class="topbar-right" style="align-items:center">
-              <button class="year-nav-btn" onclick="empYearAdj(-1)">‹</button>
-              <span class="year-label" id="emp-profile-year"></span>
-              <button class="year-nav-btn" onclick="empYearAdj(1)">›</button>
-              <button class="btn btn-red" onclick="openSalModalForEmp()">+ Add Month</button>
-            </div>
           </div>
-          <div class="emp-cal-grid" id="emp-cal-grid"></div>
+          <div class="emp-cal-wrap">
+            <div class="emp-cal-header">
+              <button class="emp-cal-nav-btn" onclick="empCalNav(-1)">←</button>
+              <div class="emp-cal-title" id="emp-cal-month-title"></div>
+              <button class="emp-cal-nav-btn" onclick="empCalNav(1)">→</button>
+            </div>
+            <div class="emp-cal-dow">
+              <div>SUN</div><div>MON</div><div>TUES</div><div>WED</div><div>THURS</div><div>FRI</div><div>SAT</div>
+            </div>
+            <div class="emp-cal-days" id="emp-cal-days"></div>
+            <div class="emp-cal-summary" id="emp-cal-summary"></div>
+          </div>
         </div>
 
       </div>
@@ -801,6 +807,33 @@ th { background: #F3F5F8; color: #374151; border-bottom-color: #C8D0DB; }
   </div>
 </div>
 
+<!-- DAY SALARY MODAL -->
+<div class="overlay" id="day-sal-modal">
+  <div class="modal">
+    <h3 id="day-sal-modal-title">Add Payment</h3>
+    <input type="hidden" id="ds-id" />
+    <input type="hidden" id="ds-date" />
+    <div class="modal-field">
+      <label class="f-lbl">Date</label>
+      <div id="ds-date-display" style="font-weight:700;padding:6px 0;font-size:.95rem;color:var(--text)"></div>
+    </div>
+    <div class="modal-field">
+      <label class="f-lbl">Amount Received (₱)</label>
+      <input type="number" id="ds-amount" class="f-inp" placeholder="0" />
+    </div>
+    <div class="modal-field">
+      <label class="f-lbl">Note (optional)</label>
+      <input type="text" id="ds-note" class="f-inp" placeholder="e.g. Regular pay, bonus..." />
+    </div>
+    <div class="login-err" id="ds-err" style="text-align:left;margin-bottom:8px"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="ds-del-btn" onclick="delDaySal()" style="display:none;color:#e74c3c">Delete</button>
+      <button class="btn btn-ghost" onclick="closeModal('day-sal-modal')">Cancel</button>
+      <button class="btn btn-red" onclick="saveDaySal()">Save</button>
+    </div>
+  </div>
+</div>
+
 <!-- SALARY MODAL -->
 <div class="overlay" id="sal-modal">
   <div class="modal">
@@ -861,10 +894,11 @@ const USERS = [
   { role:'antipolo', pin:'0000', label:'Antipolo', emoji:'🏪', access:'branch'   },
   { role:'taytay',   pin:'0000', label:'Taytay',   emoji:'🏪', access:'branch'   },
 ];
-const K_SALES = 'ksq_sales';
-const K_EXP   = 'ksq_expenses';
-const K_SAL   = 'ksq_salary';
-const K_OTHER = 'ksq_other';
+const K_SALES     = 'ksq_sales';
+const K_EXP       = 'ksq_expenses';
+const K_SAL       = 'ksq_salary';
+const K_SAL_DAILY = 'ksq_sal_daily';
+const K_OTHER     = 'ksq_other';
 const BRANCHES = [
   { key:'cainta',   label:'Cainta',   kKey:'ksq_cainta',   sKey:'ksq_cainta_sales'   },
   { key:'marikina', label:'Marikina', kKey:'ksq_marikina', sKey:'ksq_marikina_sales' },
@@ -874,7 +908,9 @@ const BRANCHES = [
 const branchView = {cainta:'expenses',marikina:'expenses',antipolo:'expenses',taytay:'expenses'};
 const ALL_TABS = ['dashboard','sales','expenses','salary','others','cainta','marikina','antipolo','taytay'];
 let editSaleId = null, editExpId = null, editSalId = null, editOtherId = null, editBranchId = null;
-let empProfileName = '', empProfileYear = new Date().getFullYear();
+let empProfileName = '', empCalYear = new Date().getFullYear(), empCalMonth = new Date().getMonth();
+const EMP_CAL_MO = ['JANUARY','FEBRUARY','MARCH','APRIL','MAY','JUNE','JULY','AUGUST','SEPTEMBER','OCTOBER','NOVEMBER','DECEMBER'];
+const EMP_CAL_MO_FULL = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 let salesView = 'monthly';
 
 // ── AUTH ──
@@ -1996,11 +2032,10 @@ function renderSalary(){
   }).join(''):`<tr><td colspan="5" class="empty-row">No salary records for this month.</td></tr>`;
 }
 
-// ── EMPLOYEE PROFILE ──
+// ── EMPLOYEE PROFILE CALENDAR ──
 function openEmpProfile(name){
   empProfileName=name;
   document.getElementById('emp-profile-name').textContent=name;
-  document.getElementById('emp-profile-year').textContent=empProfileYear;
   document.getElementById('sal-list-view').style.display='none';
   document.getElementById('sal-emp-view').style.display='';
   renderEmpCalendar();
@@ -2009,48 +2044,77 @@ function closeEmpProfile(){
   document.getElementById('sal-emp-view').style.display='none';
   document.getElementById('sal-list-view').style.display='';
 }
-function empYearAdj(d){
-  empProfileYear+=d;
-  document.getElementById('emp-profile-year').textContent=empProfileYear;
+function empCalNav(d){
+  empCalMonth+=d;
+  if(empCalMonth>11){empCalMonth=0;empCalYear++;}
+  if(empCalMonth<0){empCalMonth=11;empCalYear--;}
   renderEmpCalendar();
 }
 function renderEmpCalendar(){
-  const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
-  const sals=getS(K_SAL);
-  document.getElementById('emp-cal-grid').innerHTML=MONTHS.map((mName,i)=>{
-    const mStr=`${empProfileYear}-${String(i+1).padStart(2,'0')}`;
-    const rec=sals.find(s=>s.month===mStr&&s.name===empProfileName);
-    if(!rec){
-      return `<div class="emp-month-card">
-        <div class="emc-hdr">${mName} ${empProfileYear}</div>
-        <div class="emc-no-rec">No record</div>
-      </div>`;
-    }
-    const net=rec.earned-(rec.ca||0);
-    const rcv=!!rec.received;
-    return `<div class="emp-month-card${rcv?' emc-received':''}">
-      <div class="emc-hdr${rcv?' received-hdr':''}">${rcv?'✓ ':''} ${mName} ${empProfileYear}</div>
-      <div class="emc-row"><span class="emc-lbl">Earned</span><span class="emc-val amt-blue">${fmt(rec.earned)}</span></div>
-      ${rec.ca?`<div class="emc-row"><span class="emc-lbl">Cash Advance</span><span class="emc-val amt-neg">${fmt(rec.ca)}</span></div>`:''}
-      <hr class="emc-divider">
-      <div class="emc-row"><span class="emc-lbl">Net Pay</span><span class="emc-val ${net>=0?'amt-pos':'amt-neg'}">${fmt(net)}</span></div>
-      <button class="rcv-toggle ${rcv?'rcv-yes':'rcv-no'}" onclick="toggleSalReceived(${rec.id})">
-        ${rcv?'✓ Received — tap to undo':'○ Not Yet Received'}
-      </button>
-    </div>`;
+  document.getElementById('emp-cal-month-title').textContent=`${EMP_CAL_MO[empCalMonth]} ${empCalYear}`;
+  const mPad=String(empCalMonth+1).padStart(2,'0');
+  const mPrefix=`${empCalYear}-${mPad}`;
+  const allDaily=getS(K_SAL_DAILY).filter(r=>r.name===empProfileName);
+  const thisMonth=allDaily.filter(r=>r.date.startsWith(mPrefix));
+  // build cells
+  const firstDow=new Date(empCalYear,empCalMonth,1).getDay();
+  const daysInMonth=new Date(empCalYear,empCalMonth+1,0).getDate();
+  const daysInPrev=new Date(empCalYear,empCalMonth,0).getDate();
+  let cells=[];
+  for(let i=firstDow-1;i>=0;i--) cells.push({day:daysInPrev-i,cur:false});
+  for(let d=1;d<=daysInMonth;d++) cells.push({day:d,cur:true});
+  const rem=(Math.ceil(cells.length/7)*7)-cells.length;
+  for(let d=1;d<=rem;d++) cells.push({day:d,cur:false});
+  document.getElementById('emp-cal-days').innerHTML=cells.map(c=>{
+    if(!c.cur) return `<div class="emp-day-cell edc-other"><span class="edc-num">${c.day}</span></div>`;
+    const ds=`${mPrefix}-${String(c.day).padStart(2,'0')}`;
+    const rec=allDaily.find(r=>r.date===ds);
+    return `<div class="emp-day-cell${rec?' edc-has-pay':''}" onclick="openDaySalModal('${ds}')">
+      <span class="edc-num">${c.day}</span>
+      ${rec?`<div class="edc-pay">₱${fmt(rec.amount)}</div>${rec.note?`<div class="edc-note">${rec.note}</div>`:''}`:''}</div>`;
   }).join('');
+  // summary bar
+  const monthTotal=thisMonth.reduce((a,r)=>a+r.amount,0);
+  const daysWithPay=thisMonth.length;
+  const allTotal=allDaily.reduce((a,r)=>a+r.amount,0);
+  document.getElementById('emp-cal-summary').innerHTML=`
+    <div class="ecs-item"><div class="ecs-lbl">This Month</div><div class="ecs-val amt-pos">${fmt(monthTotal)}</div></div>
+    <div class="ecs-item"><div class="ecs-lbl">Days Paid</div><div class="ecs-val">${daysWithPay} day${daysWithPay!==1?'s':''}</div></div>
+    <div class="ecs-item"><div class="ecs-lbl">All-time Total</div><div class="ecs-val amt-blue">${fmt(allTotal)}</div></div>`;
 }
-function toggleSalReceived(id){
-  const data=getS(K_SAL);
-  const i=data.findIndex(x=>x.id===id); if(i<0) return;
-  data[i].received=!data[i].received;
-  setS(K_SAL,data);
+function openDaySalModal(ds){
+  const [y,m,d]=ds.split('-');
+  const rec=getS(K_SAL_DAILY).find(r=>r.date===ds&&r.name===empProfileName);
+  document.getElementById('ds-date').value=ds;
+  document.getElementById('ds-date-display').textContent=`${EMP_CAL_MO_FULL[parseInt(m)-1]} ${parseInt(d)}, ${y}`;
+  document.getElementById('ds-amount').value=rec?rec.amount:'';
+  document.getElementById('ds-note').value=rec?(rec.note||''):'';
+  document.getElementById('ds-id').value=rec?rec.id:'';
+  document.getElementById('ds-del-btn').style.display=rec?'':'none';
+  document.getElementById('day-sal-modal-title').textContent=rec?'Edit Payment':'Add Payment';
+  document.getElementById('ds-err').textContent='';
+  document.getElementById('day-sal-modal').classList.add('open');
+}
+function saveDaySal(){
+  const ds=document.getElementById('ds-date').value;
+  const amount=parseFloat(document.getElementById('ds-amount').value)||0;
+  const note=document.getElementById('ds-note').value.trim();
+  const existId=document.getElementById('ds-id').value;
+  if(!amount){document.getElementById('ds-err').textContent='Please enter an amount.';return;}
+  document.getElementById('ds-err').textContent='';
+  const data=getS(K_SAL_DAILY);
+  if(existId){const i=data.findIndex(x=>String(x.id)===existId);if(i>=0)data[i]={...data[i],amount,note};}
+  else data.push({id:Date.now(),name:empProfileName,date:ds,amount,note});
+  setS(K_SAL_DAILY,data);
+  closeModal('day-sal-modal');
   renderEmpCalendar();
 }
-function openSalModalForEmp(){
-  // open Add modal pre-filled with employee name
-  openSalModal();
-  document.getElementById('sl-name').value=empProfileName;
+function delDaySal(){
+  const existId=document.getElementById('ds-id').value;
+  if(!existId||!confirm('Delete this payment?')) return;
+  setS(K_SAL_DAILY,getS(K_SAL_DAILY).filter(x=>String(x.id)!==existId));
+  closeModal('day-sal-modal');
+  renderEmpCalendar();
 }
 
 function openSalModal(){
