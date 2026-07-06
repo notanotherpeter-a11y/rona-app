@@ -1197,7 +1197,7 @@ function renderSalesDaily(sales,allM){
       <td><span class="day-pill ${dayClass(s.date)}">${dayName(s.date)}</span></td>
       <td style="color:var(--muted);font-size:.78rem">${fmtDate(s.date)}</td>
       <td class="amt-blue">${fmt(s.amount)}</td>
-      <td style="color:var(--muted)">${s.notes||'—'}</td>
+      <td style="color:var(--muted)">${s.notes||'—'}${s.branch?`<span class="cat-badge" style="background:#e0f2fe;color:#0369a1;margin-left:5px">🏪 ${s.branch.charAt(0).toUpperCase()+s.branch.slice(1)}</span>`:''}</td>
       <td style="white-space:nowrap">
         <button class="act-btn" onclick="editSale(${s.id})">Edit</button>
         <button class="act-btn del-btn" onclick="delSale(${s.id})" style="margin-left:5px">✕</button>
@@ -1251,7 +1251,7 @@ function renderSalesWeekly(sales,allM){
         <td><span class="day-pill ${dayClass(s.date)}">${dayName(s.date)}</span></td>
         <td style="color:var(--muted)">${fmtDate(s.date)}</td>
         <td class="amt-blue">${fmt(s.amount)}</td>
-        <td style="color:var(--muted)">${s.notes||'—'}</td>
+        <td style="color:var(--muted)">${s.notes||'—'}${s.branch?`<span class="cat-badge" style="background:#e0f2fe;color:#0369a1;margin-left:5px">🏪 ${s.branch.charAt(0).toUpperCase()+s.branch.slice(1)}</span>`:''}</td>
         <td style="white-space:nowrap">
           <button class="act-btn" onclick="event.stopPropagation();editSale(${s.id})">Edit</button>
           <button class="act-btn del-btn" onclick="event.stopPropagation();delSale(${s.id})" style="margin-left:4px">✕</button>
@@ -1347,7 +1347,7 @@ function buildWeekRows(weeks, pfx){
         <td><span class="day-pill ${dayClass(s.date)}">${dayName(s.date)}</span></td>
         <td style="color:var(--muted)">${fmtDate(s.date)}</td>
         <td class="amt-blue">${fmt(s.amount)}</td>
-        <td style="color:var(--muted)">${s.notes||'—'}</td>
+        <td style="color:var(--muted)">${s.notes||'—'}${s.branch?`<span class="cat-badge" style="background:#e0f2fe;color:#0369a1;margin-left:5px">🏪 ${s.branch.charAt(0).toUpperCase()+s.branch.slice(1)}</span>`:''}</td>
         <td style="white-space:nowrap">
           <button class="act-btn" onclick="event.stopPropagation();editSale(${s.id})">Edit</button>
           <button class="act-btn del-btn" onclick="event.stopPropagation();delSale(${s.id})" style="margin-left:4px">✕</button>
@@ -1669,7 +1669,7 @@ function renderBranch(b){
       </table>
     </div>`;
   } else {
-    const sales=getS(b.sKey);
+    const sales=getS(K_SALES).filter(s=>s.branch===b.key);
     const total=sales.reduce((a,x)=>a+x.amount,0);
     const avg=sales.length?total/sales.length:0;
     const best=sales.reduce((a,x)=>x.amount>a?x.amount:a,0);
@@ -1752,7 +1752,7 @@ function openBranchSaleModal(key,id){
   editBranchSaleId=id||null;
   document.getElementById('branch-sale-modal-title').textContent=id?`Edit Sale — ${b.label}`:`Add Sale — ${b.label}`;
   if(id){
-    const item=getS(b.sKey).find(x=>x.id===id);
+    const item=getS(K_SALES).find(x=>x.id===id&&x.branch===b.key);
     if(!item) return;
     document.getElementById('brs-date').value=item.date;
     document.getElementById('brs-amt').value=item.amount;
@@ -1771,20 +1771,20 @@ function saveBranchSale(){
   const amount=parseFloat(document.getElementById('brs-amt').value);
   const desc=document.getElementById('brs-desc').value.trim();
   if(!date||isNaN(amount)){ alert('Date and amount are required.'); return; }
-  const data=getS(b.sKey);
+  const data=getS(K_SALES);
   if(editBranchSaleId!==null){
     const i=data.findIndex(x=>x.id===editBranchSaleId);
     if(i>=0) data[i]={...data[i],date,amount,desc};
   } else {
-    data.push({id:Date.now(),date,amount,desc});
+    data.push({id:Date.now(),date,amount,desc,branch:key});
   }
-  setS(b.sKey,data); closeModal('branch-sale-modal'); renderBranch(b);
+  setS(K_SALES,data); closeModal('branch-sale-modal'); renderBranch(b); renderDashboard();
 }
 function delBranchSale(key,id){
   if(!confirm('Delete this sale?')) return;
   const b=BRANCHES.find(x=>x.key===key); if(!b) return;
-  setS(b.sKey,getS(b.sKey).filter(x=>x.id!==id));
-  renderBranch(b);
+  setS(K_SALES,getS(K_SALES).filter(x=>x.id!==id));
+  renderBranch(b); renderDashboard();
 }
 
 // ── EXPENSES ──
@@ -1965,7 +1965,7 @@ function init(){ seed(); migrateExpenses(); migrateSalaryNames(); showTab('dashb
 // Re-render whichever section is currently visible whenever localStorage changes
 // (covers edits made in another tab or browser window)
 window.addEventListener('storage', e=>{
-  const branchKeys=[...BRANCHES.map(b=>b.kKey),...BRANCHES.map(b=>b.sKey)];
+  const branchKeys=BRANCHES.map(b=>b.kKey);
   if(![K_SALES,K_EXP,K_SAL,K_OTHER,...branchKeys].includes(e.key)) return;
   if(sessionStorage.getItem('ksq_auth')!=='1') return;
   const active=ALL_TABS.find(t=>document.getElementById('tab-'+t)?.style.display!=='none');
