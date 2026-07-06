@@ -1619,15 +1619,14 @@ function renderBranch(b){
         <div class="sec-total amt-pos">Total: ${fmt(total)}</div>
       </div>
       <table>
-        <thead><tr><th>Date</th><th>Description</th><th>Amount</th><th>Notes</th><th></th></tr></thead>
+        <thead><tr><th>Date</th><th>Amount</th><th>Description</th><th></th></tr></thead>
         <tbody>${items.length?items.slice().sort((a,z)=>z.date.localeCompare(a.date)).map(x=>`
           <tr>
             <td><span class="day-pill ${dayClass(x.date)}">${dayName(x.date)}</span> ${fmtDate(x.date)}</td>
-            <td>${x.desc}</td>
             <td class="amt-pos">${fmt(x.amount)}</td>
-            <td style="color:var(--muted)">${x.notes||'—'}</td>
+            <td>${x.desc}${x.notes?`<div style="font-size:.75rem;color:var(--muted);margin-top:2px">${x.notes}</div>`:''}</td>
             <td><button class="act-btn" onclick="openBranchModal('${b.key}',${x.id})">✏️</button> <button class="act-btn act-del" onclick="delBranchEntry('${b.key}',${x.id})">🗑️</button></td>
-          </tr>`).join(''):`<tr><td colspan="5" class="empty-row">No entries yet. Click ＋ Add Entry to start.</td></tr>`}
+          </tr>`).join(''):`<tr><td colspan="4" class="empty-row">No entries yet. Click ＋ Add Entry to start.</td></tr>`}
         </tbody>
       </table>
     </div>`;
