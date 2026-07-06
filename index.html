@@ -628,6 +628,30 @@ th { background: #F3F5F8; color: #374151; border-bottom-color: #C8D0DB; }
   </div>
 </div>
 
+<!-- BRANCH SALE MODAL -->
+<div class="overlay" id="branch-sale-modal">
+  <div class="modal">
+    <h3 id="branch-sale-modal-title">Add Sale</h3>
+    <input type="hidden" id="brs-key" />
+    <div class="modal-field">
+      <label class="f-lbl">Date</label>
+      <input type="date" id="brs-date" class="f-inp" />
+    </div>
+    <div class="modal-field">
+      <label class="f-lbl">Amount (₱)</label>
+      <input type="number" id="brs-amt" class="f-inp" placeholder="0" />
+    </div>
+    <div class="modal-field">
+      <label class="f-lbl">Description</label>
+      <input type="text" id="brs-desc" class="f-inp" placeholder="e.g. Daily sales..." />
+    </div>
+    <div class="modal-btns">
+      <button class="btn btn-ghost" onclick="closeModal('branch-sale-modal')">Cancel</button>
+      <button class="btn btn-red" onclick="saveBranchSale()">Save</button>
+    </div>
+  </div>
+</div>
+
 <!-- SALE MODAL -->
 <div class="overlay" id="sale-modal">
   <div class="modal">
@@ -746,11 +770,12 @@ const K_EXP   = 'ksq_expenses';
 const K_SAL   = 'ksq_salary';
 const K_OTHER = 'ksq_other';
 const BRANCHES = [
-  { key:'cainta',   label:'Cainta',   kKey:'ksq_cainta',   initAmount:280760,    initDesc:'Initial Stock Receivable' },
-  { key:'marikina', label:'Marikina', kKey:'ksq_marikina', initAmount:48680,     initDesc:'Initial Stock Receivable' },
-  { key:'antipolo', label:'Antipolo', kKey:'ksq_antipolo', initAmount:756003.67, initDesc:'Initial Stock Receivable' },
-  { key:'taytay',   label:'Taytay',   kKey:'ksq_taytay',   initAmount:366261,    initDesc:'Initial Stock Receivable' },
+  { key:'cainta',   label:'Cainta',   kKey:'ksq_cainta',   sKey:'ksq_cainta_sales'   },
+  { key:'marikina', label:'Marikina', kKey:'ksq_marikina', sKey:'ksq_marikina_sales' },
+  { key:'antipolo', label:'Antipolo', kKey:'ksq_antipolo', sKey:'ksq_antipolo_sales' },
+  { key:'taytay',   label:'Taytay',   kKey:'ksq_taytay',   sKey:'ksq_taytay_sales'   },
 ];
+const branchView = {cainta:'expenses',marikina:'expenses',antipolo:'expenses',taytay:'expenses'};
 const ALL_TABS = ['dashboard','sales','expenses','salary','others','cainta','marikina','antipolo','taytay'];
 let editSaleId = null, editExpId = null, editSalId = null, editOtherId = null, editBranchId = null;
 let salesView = 'monthly';
@@ -1590,25 +1615,36 @@ function delOther(id){
 }
 
 // ── BRANCH PAGES ──
-// Branch entries are saved directly into K_EXP with a `branch` tag so they
-// appear on the main Expenses page automatically.
+function setBranchView(key, view){ branchView[key]=view; renderBranch(BRANCHES.find(x=>x.key===key)); }
+
 function renderBranch(b){
   const el=document.getElementById('tab-'+b.key);
-  const items=getS(K_EXP).filter(e=>e.branch===b.key);
-  const total=items.reduce((a,x)=>a+x.amount,0);
-  const avg=items.length?total/items.length:0;
-  const best=items.reduce((a,x)=>x.amount>a?x.amount:a,0);
-  const latest=items.slice().sort((a,z)=>z.date.localeCompare(a.date))[0];
-  el.innerHTML=`
+  const view=branchView[b.key]||'expenses';
+  const isExp=view==='expenses';
+  // header + tab bar
+  let html=`
     <div class="topbar">
       <div class="topbar-left">
         <div class="page-title">🏪 Kamayan sa ${b.label}</div>
-        <div class="page-sub">${b.label} branch expenses — synced to Expenses page</div>
+        <div class="page-sub">${b.label} branch tracker</div>
       </div>
       <div class="topbar-right">
-        <button class="btn btn-red" onclick="openBranchModal('${b.key}')">＋ Add Entry</button>
+        ${isExp
+          ? `<button class="btn btn-red" onclick="openBranchModal('${b.key}')">＋ Add Expense</button>`
+          : `<button class="btn btn-red" onclick="openBranchSaleModal('${b.key}')">＋ Add Sale</button>`}
       </div>
     </div>
+    <div class="s-nav-tabs" style="margin-bottom:18px">
+      <button class="s-vt${isExp?' active':''}" onclick="setBranchView('${b.key}','expenses')">📋 Expenses</button>
+      <button class="s-vt${!isExp?' active':''}" onclick="setBranchView('${b.key}','sales')">💰 Sales</button>
+    </div>`;
+  if(isExp){
+    const items=getS(K_EXP).filter(e=>e.branch===b.key);
+    const total=items.reduce((a,x)=>a+x.amount,0);
+    const avg=items.length?total/items.length:0;
+    const best=items.reduce((a,x)=>x.amount>a?x.amount:a,0);
+    const latest=items.slice().sort((a,z)=>z.date.localeCompare(a.date))[0];
+    html+=`
     <div class="sales-kpi">
       <div class="s-kpi k-blue"><div class="s-kpi-icon">💰</div><div class="s-kpi-lbl">Total Expenses</div><div class="s-kpi-val blue">${fmt(total)}</div><div class="s-kpi-sub">${items.length} entr${items.length!==1?'ies':'y'}</div></div>
       <div class="s-kpi k-green"><div class="s-kpi-icon">📊</div><div class="s-kpi-lbl">Average</div><div class="s-kpi-val green">${fmt(avg)}</div><div class="s-kpi-sub">per entry</div></div>
@@ -1617,10 +1653,7 @@ function renderBranch(b){
     </div>
     <div class="section">
       <div class="sec-hdr">
-        <div>
-          <div class="sec-title">Branch Expenses</div>
-          <div class="sec-count">${items.length} record${items.length!==1?'s':''}</div>
-        </div>
+        <div><div class="sec-title">Branch Expenses</div><div class="sec-count">${items.length} record${items.length!==1?'s':''}</div></div>
         <div class="sec-total amt-neg">Total: ${fmt(total)}</div>
       </div>
       <table>
@@ -1629,12 +1662,44 @@ function renderBranch(b){
           <tr>
             <td><span class="day-pill ${dayClass(x.date)}">${dayName(x.date)}</span> ${fmtDate(x.date)}</td>
             <td class="amt-neg">${fmt(x.amount)}</td>
-            <td>${x.desc}${x.cat?`<span class="badge ${catClass(x.cat)}" style="margin-left:6px">${x.cat}</span>`:''}</td>
+            <td>${x.desc||'—'}${x.cat?`<span class="cat-badge ${catClass(x.cat)}" style="margin-left:6px">${x.cat}</span>`:''}</td>
             <td><button class="act-btn" onclick="openBranchModal('${b.key}',${x.id})">✏️</button> <button class="act-btn act-del" onclick="delBranchEntry('${b.key}',${x.id})">🗑️</button></td>
-          </tr>`).join(''):`<tr><td colspan="4" class="empty-row">No entries yet — add branch expenses here.</td></tr>`}
+          </tr>`).join(''):`<tr><td colspan="4" class="empty-row">No expenses yet — click ＋ Add Expense to start.</td></tr>`}
         </tbody>
       </table>
     </div>`;
+  } else {
+    const sales=getS(b.sKey);
+    const total=sales.reduce((a,x)=>a+x.amount,0);
+    const avg=sales.length?total/sales.length:0;
+    const best=sales.reduce((a,x)=>x.amount>a?x.amount:a,0);
+    const latest=sales.slice().sort((a,z)=>z.date.localeCompare(a.date))[0];
+    html+=`
+    <div class="sales-kpi">
+      <div class="s-kpi k-blue"><div class="s-kpi-icon">💰</div><div class="s-kpi-lbl">Total Sales</div><div class="s-kpi-val blue">${fmt(total)}</div><div class="s-kpi-sub">${sales.length} entr${sales.length!==1?'ies':'y'}</div></div>
+      <div class="s-kpi k-green"><div class="s-kpi-icon">📊</div><div class="s-kpi-lbl">Average</div><div class="s-kpi-val green">${fmt(avg)}</div><div class="s-kpi-sub">per entry</div></div>
+      <div class="s-kpi k-orange"><div class="s-kpi-icon">⭐</div><div class="s-kpi-lbl">Best</div><div class="s-kpi-val orange">${fmt(best)}</div><div class="s-kpi-sub">single entry</div></div>
+      <div class="s-kpi k-purple"><div class="s-kpi-icon">📅</div><div class="s-kpi-lbl">Latest</div><div class="s-kpi-val purple" style="font-size:.85rem">${latest?fmtDate(latest.date):'—'}</div><div class="s-kpi-sub">last recorded</div></div>
+    </div>
+    <div class="section">
+      <div class="sec-hdr">
+        <div><div class="sec-title">Branch Sales</div><div class="sec-count">${sales.length} record${sales.length!==1?'s':''}</div></div>
+        <div class="sec-total amt-pos">Total: ${fmt(total)}</div>
+      </div>
+      <table>
+        <thead><tr><th>Date</th><th>Amount</th><th>Description</th><th></th></tr></thead>
+        <tbody>${sales.length?sales.slice().sort((a,z)=>z.date.localeCompare(a.date)).map(x=>`
+          <tr>
+            <td><span class="day-pill ${dayClass(x.date)}">${dayName(x.date)}</span> ${fmtDate(x.date)}</td>
+            <td class="amt-pos">${fmt(x.amount)}</td>
+            <td>${x.desc||'—'}</td>
+            <td><button class="act-btn" onclick="openBranchSaleModal('${b.key}',${x.id})">✏️</button> <button class="act-btn act-del" onclick="delBranchSale('${b.key}',${x.id})">🗑️</button></td>
+          </tr>`).join(''):`<tr><td colspan="4" class="empty-row">No sales yet — click ＋ Add Sale to start.</td></tr>`}
+        </tbody>
+      </table>
+    </div>`;
+  }
+  el.innerHTML=html;
 }
 function openBranchModal(key,id){
   const b=BRANCHES.find(x=>x.key===key);
@@ -1678,6 +1743,48 @@ function delBranchEntry(key,id){
   const b=BRANCHES.find(x=>x.key===key); if(!b) return;
   setS(K_EXP,getS(K_EXP).filter(x=>x.id!==id));
   renderBranch(b); renderDashboard();
+}
+// ── BRANCH SALES ──
+let editBranchSaleId=null;
+function openBranchSaleModal(key,id){
+  const b=BRANCHES.find(x=>x.key===key);
+  document.getElementById('brs-key').value=key;
+  editBranchSaleId=id||null;
+  document.getElementById('branch-sale-modal-title').textContent=id?`Edit Sale — ${b.label}`:`Add Sale — ${b.label}`;
+  if(id){
+    const item=getS(b.sKey).find(x=>x.id===id);
+    if(!item) return;
+    document.getElementById('brs-date').value=item.date;
+    document.getElementById('brs-amt').value=item.amount;
+    document.getElementById('brs-desc').value=item.desc||'';
+  } else {
+    document.getElementById('brs-date').value=new Date().toISOString().split('T')[0];
+    document.getElementById('brs-amt').value='';
+    document.getElementById('brs-desc').value='';
+  }
+  openModal('branch-sale-modal');
+}
+function saveBranchSale(){
+  const key=document.getElementById('brs-key').value;
+  const b=BRANCHES.find(x=>x.key===key); if(!b) return;
+  const date=document.getElementById('brs-date').value;
+  const amount=parseFloat(document.getElementById('brs-amt').value);
+  const desc=document.getElementById('brs-desc').value.trim();
+  if(!date||isNaN(amount)){ alert('Date and amount are required.'); return; }
+  const data=getS(b.sKey);
+  if(editBranchSaleId!==null){
+    const i=data.findIndex(x=>x.id===editBranchSaleId);
+    if(i>=0) data[i]={...data[i],date,amount,desc};
+  } else {
+    data.push({id:Date.now(),date,amount,desc});
+  }
+  setS(b.sKey,data); closeModal('branch-sale-modal'); renderBranch(b);
+}
+function delBranchSale(key,id){
+  if(!confirm('Delete this sale?')) return;
+  const b=BRANCHES.find(x=>x.key===key); if(!b) return;
+  setS(b.sKey,getS(b.sKey).filter(x=>x.id!==id));
+  renderBranch(b);
 }
 
 // ── EXPENSES ──
@@ -1858,7 +1965,7 @@ function init(){ seed(); migrateExpenses(); migrateSalaryNames(); showTab('dashb
 // Re-render whichever section is currently visible whenever localStorage changes
 // (covers edits made in another tab or browser window)
 window.addEventListener('storage', e=>{
-  const branchKeys=BRANCHES.map(b=>b.kKey);
+  const branchKeys=[...BRANCHES.map(b=>b.kKey),...BRANCHES.map(b=>b.sKey)];
   if(![K_SALES,K_EXP,K_SAL,K_OTHER,...branchKeys].includes(e.key)) return;
   if(sessionStorage.getItem('ksq_auth')!=='1') return;
   const active=ALL_TABS.find(t=>document.getElementById('tab-'+t)?.style.display!=='none');
