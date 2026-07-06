@@ -359,39 +359,21 @@ th { background: #F3F5F8; color: #374151; border-bottom-color: #C8D0DB; }
 
 <!-- ── LOGIN ── -->
 <div id="login">
-  <div class="login-card" style="max-width:400px">
+  <div class="login-card">
     <div class="login-logo">🍽️</div>
     <div class="login-brand">Kamayan sa Qyusi</div>
     <div class="login-sub">Business Manager</div>
     <div class="login-inp-wrap">
-      <label class="f-lbl">Select Account</label>
-      <div class="user-grid" id="user-grid">
-        <button class="user-btn admin-btn" onclick="selectUser('admin')" id="ubtn-admin">
-          <span class="ub-ic">👑</span><span>Admin</span>
-        </button>
-        <button class="user-btn" onclick="selectUser('cainta')" id="ubtn-cainta">
-          <span class="ub-ic">🏪</span><span>Cainta</span>
-        </button>
-        <button class="user-btn" onclick="selectUser('marikina')" id="ubtn-marikina">
-          <span class="ub-ic">🏪</span><span>Marikina</span>
-        </button>
-        <button class="user-btn" onclick="selectUser('antipolo')" id="ubtn-antipolo">
-          <span class="ub-ic">🏪</span><span>Antipolo</span>
-        </button>
-        <button class="user-btn" onclick="selectUser('taytay')" id="ubtn-taytay">
-          <span class="ub-ic">🏪</span><span>Taytay</span>
-        </button>
-      </div>
+      <label class="f-lbl">Username</label>
+      <input type="text" id="login-username" class="f-inp" placeholder="Enter username"
+        onkeypress="if(event.key==='Enter')document.getElementById('pin').focus()" autocomplete="username" autofocus />
     </div>
-    <input type="hidden" id="selected-role" value="" />
-    <div class="pin-section" id="pin-section" style="display:none">
-      <div class="login-inp-wrap">
-        <label class="f-lbl" id="pin-label">Password</label>
-        <input type="password" id="pin" class="f-inp" placeholder="Enter PIN" maxlength="10"
-          onkeypress="if(event.key==='Enter')login()" />
-      </div>
-      <button class="login-btn" onclick="login()">Sign In →</button>
+    <div class="login-inp-wrap">
+      <label class="f-lbl">Password</label>
+      <input type="password" id="pin" class="f-inp" placeholder="Enter password" maxlength="20"
+        onkeypress="if(event.key==='Enter')login()" autocomplete="current-password" />
     </div>
+    <button class="login-btn" onclick="login()">Sign In</button>
     <div class="login-err" id="login-err"></div>
   </div>
 </div>
@@ -829,36 +811,21 @@ let editSaleId = null, editExpId = null, editSalId = null, editOtherId = null, e
 let salesView = 'monthly';
 
 // ── AUTH ──
-let _selectedRole = '';
-function selectUser(role){
-  _selectedRole = role;
-  document.querySelectorAll('.user-btn').forEach(b=>b.classList.remove('sel'));
-  const btn = document.getElementById('ubtn-'+role);
-  if(btn) btn.classList.add('sel');
-  const u = USERS.find(x=>x.role===role);
-  document.getElementById('pin-label').textContent = (u?u.emoji+' '+u.label:'') + ' — PIN';
-  document.getElementById('pin-section').style.display = '';
-  document.getElementById('login-err').textContent = '';
-  document.getElementById('pin').value = '';
-  setTimeout(()=>document.getElementById('pin').focus(), 50);
-}
 function login() {
-  const role = _selectedRole;
-  const pin  = document.getElementById('pin').value;
-  const user = USERS.find(u=>u.role===role && u.pin===pin);
+  const username = document.getElementById('login-username').value.trim().toLowerCase();
+  const pin      = document.getElementById('pin').value;
+  const user     = USERS.find(u=>u.role===username && u.pin===pin);
   if(user){
     sessionStorage.setItem('ksq_auth','1');
-    sessionStorage.setItem('ksq_role', role);
+    sessionStorage.setItem('ksq_role', user.role);
     document.getElementById('login').style.display = 'none';
     document.getElementById('app').style.display = 'block';
-    // reset login form for next time
-    document.getElementById('pin').value='';
-    document.getElementById('pin-section').style.display='none';
-    document.querySelectorAll('.user-btn').forEach(b=>b.classList.remove('sel'));
-    _selectedRole='';
+    document.getElementById('login-username').value = '';
+    document.getElementById('pin').value = '';
+    document.getElementById('login-err').textContent = '';
     init();
   } else {
-    document.getElementById('login-err').textContent = role ? 'Incorrect PIN.' : 'Select an account first.';
+    document.getElementById('login-err').textContent = 'Incorrect username or password.';
     document.getElementById('pin').value = '';
   }
 }
@@ -867,11 +834,9 @@ function logout() {
   sessionStorage.removeItem('ksq_role');
   document.getElementById('app').style.display = 'none';
   document.getElementById('login').style.display = 'flex';
+  document.getElementById('login-username').value = '';
   document.getElementById('pin').value = '';
-  document.getElementById('pin-section').style.display = 'none';
-  document.querySelectorAll('.user-btn').forEach(b=>b.classList.remove('sel'));
   document.getElementById('login-err').textContent = '';
-  _selectedRole = '';
 }
 function applyRoleUI(role){
   const isAdmin = role==='admin';
@@ -2078,8 +2043,9 @@ window.onload=()=>{
     document.getElementById('login').style.display='none';
     document.getElementById('app').style.display='block';
     init();
+  } else {
+    setTimeout(()=>document.getElementById('login-username').focus(),100);
   }
-  // no autofocus on PIN — user must select account card first
 };
 </script>
 </body>
