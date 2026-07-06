@@ -89,6 +89,34 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans
 .month-sel:focus { border-color: var(--red); }
 .sal-search-inp { padding: 9px 14px; border: 1.5px solid var(--border); border-radius: var(--r-sm); font-size: .82rem; color: var(--text); background: var(--white); outline: none; font-family: inherit; width: 200px; box-shadow: var(--sh-sm); transition: border-color .15s, box-shadow .15s; }
 .sal-search-inp:focus { border-color: var(--red); box-shadow: 0 0 0 3px rgba(192,57,43,.08); }
+/* employee name clickable */
+.emp-name-link { cursor: pointer; font-weight: 600; }
+.emp-name-link:hover { color: var(--red); text-decoration: underline; text-decoration-color: rgba(192,57,43,.5); }
+/* back button */
+.back-btn { background: var(--white); border: 1.5px solid var(--border); padding: 8px 16px; border-radius: var(--r-sm); font-size: .82rem; font-weight: 600; cursor: pointer; color: var(--text); font-family: inherit; transition: all .15s; margin-right: 14px; box-shadow: var(--sh-sm); flex-shrink: 0; }
+.back-btn:hover { background: var(--bg); border-color: #aaa; }
+/* year navigation */
+.year-nav-btn { background: var(--white); border: 1.5px solid var(--border); width: 34px; height: 34px; border-radius: var(--r-sm); font-size: 1.1rem; cursor: pointer; color: var(--text); transition: all .15s; box-shadow: var(--sh-sm); line-height: 1; }
+.year-nav-btn:hover { background: var(--bg); }
+.year-label { font-size: 1rem; font-weight: 800; color: var(--text); min-width: 48px; text-align: center; }
+/* 12-month calendar grid */
+.emp-cal-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; padding: 0 28px 32px; }
+.emp-month-card { background: var(--white); border-radius: var(--r); border: 1.5px solid var(--border); padding: 18px 20px; box-shadow: var(--sh-sm); transition: box-shadow .15s; }
+.emp-month-card:hover { box-shadow: var(--sh-md); }
+.emp-month-card.emc-received { border-color: #10b981; background: #f0fdf4; }
+.emc-hdr { font-size: .72rem; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-bottom: 12px; }
+.emc-hdr.received-hdr { color: #10b981; }
+.emc-row { display: flex; justify-content: space-between; align-items: center; font-size: .8rem; margin-bottom: 5px; }
+.emc-lbl { color: var(--muted); }
+.emc-val { font-weight: 600; }
+.emc-divider { border: none; border-top: 1px solid var(--border); margin: 10px 0; }
+.emc-no-rec { color: var(--muted); font-size: .78rem; text-align: center; padding: 20px 0 8px; }
+/* received toggle */
+.rcv-toggle { width: 100%; margin-top: 12px; padding: 8px; border-radius: 8px; border: none; font-size: .78rem; font-weight: 700; cursor: pointer; font-family: inherit; transition: all .15s; letter-spacing: .01em; }
+.rcv-toggle.rcv-yes { background: #dcfce7; color: #15803d; }
+.rcv-toggle.rcv-yes:hover { background: #bbf7d0; }
+.rcv-toggle.rcv-no { background: #f1f5f9; color: #64748b; }
+.rcv-toggle.rcv-no:hover { background: #e2e8f0; }
 .btn { padding: 9px 18px; border-radius: var(--r-sm); border: none; font-size: .82rem; font-weight: 600; cursor: pointer; font-family: inherit; transition: all .15s; display: inline-flex; align-items: center; gap: 6px; }
 .btn-red { background: var(--red); color: var(--white); box-shadow: 0 1px 3px rgba(192,57,43,.35); }
 .btn-red:hover { background: var(--red-dark); box-shadow: 0 3px 8px rgba(192,57,43,.35); }
@@ -592,32 +620,57 @@ th { background: #F3F5F8; color: #374151; border-bottom-color: #C8D0DB; }
 
       <!-- SALARY -->
       <div id="tab-salary" style="display:none">
-        <div class="topbar">
-          <div class="topbar-left">
-            <div class="page-title">Salary</div>
-            <div class="page-sub">Employee payroll records</div>
-          </div>
-          <div class="topbar-right">
-            <input type="text" id="sal-search" class="sal-search-inp" placeholder="🔍 Search employee..." oninput="renderSalary()" autocomplete="off" />
-            <select class="month-sel" id="sal-month" onchange="renderSalary()"></select>
-            <button class="btn btn-red" onclick="openSalModal()">+ Add Record</button>
-          </div>
-        </div>
-        <div class="section">
-          <div class="sec-hdr">
-            <div>
-              <div class="sec-title">Employee Salary</div>
-              <div class="sec-count" id="sal-count"></div>
+
+        <!-- LIST VIEW -->
+        <div id="sal-list-view">
+          <div class="topbar">
+            <div class="topbar-left">
+              <div class="page-title">Salary</div>
+              <div class="page-sub">Employee payroll records · click a name to view profile</div>
             </div>
-            <div class="sec-total" style="color:var(--orange)" id="sal-total-lbl"></div>
+            <div class="topbar-right">
+              <input type="text" id="sal-search" class="sal-search-inp" placeholder="🔍 Search employee..." oninput="renderSalary()" autocomplete="off" />
+              <select class="month-sel" id="sal-month" onchange="renderSalary()"></select>
+              <button class="btn btn-red" onclick="openSalModal()">+ Add Record</button>
+            </div>
           </div>
-          <table>
-            <thead><tr>
-              <th>Employee</th><th>Salary Earned</th><th>Cash Advance</th><th>Net Pay</th><th></th>
-            </tr></thead>
-            <tbody id="sal-tbody"></tbody>
-          </table>
+          <div class="section">
+            <div class="sec-hdr">
+              <div>
+                <div class="sec-title">Employee Salary</div>
+                <div class="sec-count" id="sal-count"></div>
+              </div>
+              <div class="sec-total" style="color:var(--orange)" id="sal-total-lbl"></div>
+            </div>
+            <table>
+              <thead><tr>
+                <th>Employee</th><th>Salary Earned</th><th>Cash Advance</th><th>Net Pay</th><th></th>
+              </tr></thead>
+              <tbody id="sal-tbody"></tbody>
+            </table>
+          </div>
         </div>
+
+        <!-- EMPLOYEE PROFILE VIEW -->
+        <div id="sal-emp-view" style="display:none">
+          <div class="topbar">
+            <div class="topbar-left" style="align-items:center">
+              <button class="back-btn" onclick="closeEmpProfile()">← Back</button>
+              <div>
+                <div class="page-title" id="emp-profile-name"></div>
+                <div class="page-sub">Salary history — click a month to toggle received status</div>
+              </div>
+            </div>
+            <div class="topbar-right" style="align-items:center">
+              <button class="year-nav-btn" onclick="empYearAdj(-1)">‹</button>
+              <span class="year-label" id="emp-profile-year"></span>
+              <button class="year-nav-btn" onclick="empYearAdj(1)">›</button>
+              <button class="btn btn-red" onclick="openSalModalForEmp()">+ Add Month</button>
+            </div>
+          </div>
+          <div class="emp-cal-grid" id="emp-cal-grid"></div>
+        </div>
+
       </div>
 
       <!-- BRANCH PAGES (cainta / marikina / antipolo / taytay) -->
@@ -821,6 +874,7 @@ const BRANCHES = [
 const branchView = {cainta:'expenses',marikina:'expenses',antipolo:'expenses',taytay:'expenses'};
 const ALL_TABS = ['dashboard','sales','expenses','salary','others','cainta','marikina','antipolo','taytay'];
 let editSaleId = null, editExpId = null, editSalId = null, editOtherId = null, editBranchId = null;
+let empProfileName = '', empProfileYear = new Date().getFullYear();
 let salesView = 'monthly';
 
 // ── AUTH ──
@@ -1928,8 +1982,9 @@ function renderSalary(){
   document.getElementById('sal-tbody').innerHTML=filtered.length?filtered.map(s=>{
     const net=s.earned-(s.ca||0);
     const initials=s.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+    const safeName=s.name.replace(/'/g,"\\'");
     return `<tr>
-      <td style="display:flex;align-items:center"><span class="emp-pill">${initials}</span><span style="font-weight:600">${s.name}</span></td>
+      <td style="display:flex;align-items:center"><span class="emp-pill">${initials}</span><span class="emp-name-link" onclick="openEmpProfile('${safeName}')">${s.name}</span></td>
       <td class="amt-blue">${fmt(s.earned)}</td>
       <td class="amt-neg">${s.ca?fmt(s.ca):'—'}</td>
       <td class="${net>=0?'amt-pos':'amt-neg'}">${fmt(net)}</td>
@@ -1939,6 +1994,63 @@ function renderSalary(){
       </td>
     </tr>`;
   }).join(''):`<tr><td colspan="5" class="empty-row">No salary records for this month.</td></tr>`;
+}
+
+// ── EMPLOYEE PROFILE ──
+function openEmpProfile(name){
+  empProfileName=name;
+  document.getElementById('emp-profile-name').textContent=name;
+  document.getElementById('emp-profile-year').textContent=empProfileYear;
+  document.getElementById('sal-list-view').style.display='none';
+  document.getElementById('sal-emp-view').style.display='';
+  renderEmpCalendar();
+}
+function closeEmpProfile(){
+  document.getElementById('sal-emp-view').style.display='none';
+  document.getElementById('sal-list-view').style.display='';
+}
+function empYearAdj(d){
+  empProfileYear+=d;
+  document.getElementById('emp-profile-year').textContent=empProfileYear;
+  renderEmpCalendar();
+}
+function renderEmpCalendar(){
+  const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const sals=getS(K_SAL);
+  document.getElementById('emp-cal-grid').innerHTML=MONTHS.map((mName,i)=>{
+    const mStr=`${empProfileYear}-${String(i+1).padStart(2,'0')}`;
+    const rec=sals.find(s=>s.month===mStr&&s.name===empProfileName);
+    if(!rec){
+      return `<div class="emp-month-card">
+        <div class="emc-hdr">${mName} ${empProfileYear}</div>
+        <div class="emc-no-rec">No record</div>
+      </div>`;
+    }
+    const net=rec.earned-(rec.ca||0);
+    const rcv=!!rec.received;
+    return `<div class="emp-month-card${rcv?' emc-received':''}">
+      <div class="emc-hdr${rcv?' received-hdr':''}">${rcv?'✓ ':''} ${mName} ${empProfileYear}</div>
+      <div class="emc-row"><span class="emc-lbl">Earned</span><span class="emc-val amt-blue">${fmt(rec.earned)}</span></div>
+      ${rec.ca?`<div class="emc-row"><span class="emc-lbl">Cash Advance</span><span class="emc-val amt-neg">${fmt(rec.ca)}</span></div>`:''}
+      <hr class="emc-divider">
+      <div class="emc-row"><span class="emc-lbl">Net Pay</span><span class="emc-val ${net>=0?'amt-pos':'amt-neg'}">${fmt(net)}</span></div>
+      <button class="rcv-toggle ${rcv?'rcv-yes':'rcv-no'}" onclick="toggleSalReceived(${rec.id})">
+        ${rcv?'✓ Received — tap to undo':'○ Not Yet Received'}
+      </button>
+    </div>`;
+  }).join('');
+}
+function toggleSalReceived(id){
+  const data=getS(K_SAL);
+  const i=data.findIndex(x=>x.id===id); if(i<0) return;
+  data[i].received=!data[i].received;
+  setS(K_SAL,data);
+  renderEmpCalendar();
+}
+function openSalModalForEmp(){
+  // open Add modal pre-filled with employee name
+  openSalModal();
+  document.getElementById('sl-name').value=empProfileName;
 }
 
 function openSalModal(){
