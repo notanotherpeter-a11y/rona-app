@@ -603,16 +603,23 @@ th { background: #F3F5F8; color: #374151; border-bottom-color: #C8D0DB; }
       <input type="date" id="br-date" class="f-inp" />
     </div>
     <div class="modal-field">
-      <label class="f-lbl">Description</label>
-      <input type="text" id="br-desc" class="f-inp" placeholder="e.g. Stock delivery..." />
-    </div>
-    <div class="modal-field">
       <label class="f-lbl">Amount (₱)</label>
       <input type="number" id="br-amt" class="f-inp" placeholder="0" />
     </div>
     <div class="modal-field">
-      <label class="f-lbl">Notes</label>
-      <input type="text" id="br-notes" class="f-inp" placeholder="Optional..." />
+      <label class="f-lbl">Description</label>
+      <input type="text" id="br-desc" class="f-inp" placeholder="e.g. Restock palengke..." />
+    </div>
+    <div class="modal-field">
+      <label class="f-lbl">Category</label>
+      <select id="br-cat" class="f-inp">
+        <option>Restock</option>
+        <option>FB Ads</option>
+        <option>Salary</option>
+        <option>Utilities</option>
+        <option>Transport</option>
+        <option selected>Other</option>
+      </select>
     </div>
     <div class="modal-btns">
       <button class="btn btn-ghost" onclick="closeModal('branch-modal')">Cancel</button>
@@ -890,11 +897,7 @@ function seed(){
       {id:5,desc:'Additional Fund for Back Up',amount:500000,notes:''},
     ]);
   }
-  BRANCHES.forEach(b=>{
-    if(!getS(b.kKey).length){
-      setS(b.kKey,[{id:1,date:'2026-06-01',desc:b.initDesc,amount:b.initAmount,notes:'Opening balance'}]);
-    }
-  });
+  // Branch pages start empty — entries are added by users and stored in K_EXP with branch tag
   if(!getS(K_SAL).length){
     setS(K_SAL,[
       {id:1,month:'2026-06',name:'Chef Yvann',earned:32000,ca:10000},
@@ -1587,9 +1590,11 @@ function delOther(id){
 }
 
 // ── BRANCH PAGES ──
+// Branch entries are saved directly into K_EXP with a `branch` tag so they
+// appear on the main Expenses page automatically.
 function renderBranch(b){
   const el=document.getElementById('tab-'+b.key);
-  const items=getS(b.kKey);
+  const items=getS(K_EXP).filter(e=>e.branch===b.key);
   const total=items.reduce((a,x)=>a+x.amount,0);
   const avg=items.length?total/items.length:0;
   const best=items.reduce((a,x)=>x.amount>a?x.amount:a,0);
@@ -1598,14 +1603,14 @@ function renderBranch(b){
     <div class="topbar">
       <div class="topbar-left">
         <div class="page-title">🏪 Kamayan sa ${b.label}</div>
-        <div class="page-sub">${b.label} branch — stock &amp; receivables</div>
+        <div class="page-sub">${b.label} branch expenses — synced to Expenses page</div>
       </div>
       <div class="topbar-right">
         <button class="btn btn-red" onclick="openBranchModal('${b.key}')">＋ Add Entry</button>
       </div>
     </div>
     <div class="sales-kpi">
-      <div class="s-kpi k-blue"><div class="s-kpi-icon">💰</div><div class="s-kpi-lbl">Total</div><div class="s-kpi-val blue">${fmt(total)}</div><div class="s-kpi-sub">${items.length} entr${items.length!==1?'ies':'y'}</div></div>
+      <div class="s-kpi k-blue"><div class="s-kpi-icon">💰</div><div class="s-kpi-lbl">Total Expenses</div><div class="s-kpi-val blue">${fmt(total)}</div><div class="s-kpi-sub">${items.length} entr${items.length!==1?'ies':'y'}</div></div>
       <div class="s-kpi k-green"><div class="s-kpi-icon">📊</div><div class="s-kpi-lbl">Average</div><div class="s-kpi-val green">${fmt(avg)}</div><div class="s-kpi-sub">per entry</div></div>
       <div class="s-kpi k-orange"><div class="s-kpi-icon">⭐</div><div class="s-kpi-lbl">Highest</div><div class="s-kpi-val orange">${fmt(best)}</div><div class="s-kpi-sub">single entry</div></div>
       <div class="s-kpi k-purple"><div class="s-kpi-icon">📅</div><div class="s-kpi-lbl">Latest</div><div class="s-kpi-val purple" style="font-size:.85rem">${latest?fmtDate(latest.date):'—'}</div><div class="s-kpi-sub">last recorded</div></div>
@@ -1613,42 +1618,41 @@ function renderBranch(b){
     <div class="section">
       <div class="sec-hdr">
         <div>
-          <div class="sec-title">Transactions</div>
+          <div class="sec-title">Branch Expenses</div>
           <div class="sec-count">${items.length} record${items.length!==1?'s':''}</div>
         </div>
-        <div class="sec-total amt-pos">Total: ${fmt(total)}</div>
+        <div class="sec-total amt-neg">Total: ${fmt(total)}</div>
       </div>
       <table>
         <thead><tr><th>Date</th><th>Amount</th><th>Description</th><th></th></tr></thead>
         <tbody>${items.length?items.slice().sort((a,z)=>z.date.localeCompare(a.date)).map(x=>`
           <tr>
             <td><span class="day-pill ${dayClass(x.date)}">${dayName(x.date)}</span> ${fmtDate(x.date)}</td>
-            <td class="amt-pos">${fmt(x.amount)}</td>
-            <td>${x.desc}${x.notes?`<div style="font-size:.75rem;color:var(--muted);margin-top:2px">${x.notes}</div>`:''}</td>
+            <td class="amt-neg">${fmt(x.amount)}</td>
+            <td>${x.desc}${x.cat?`<span class="badge ${catClass(x.cat)}" style="margin-left:6px">${x.cat}</span>`:''}</td>
             <td><button class="act-btn" onclick="openBranchModal('${b.key}',${x.id})">✏️</button> <button class="act-btn act-del" onclick="delBranchEntry('${b.key}',${x.id})">🗑️</button></td>
-          </tr>`).join(''):`<tr><td colspan="4" class="empty-row">No entries yet. Click ＋ Add Entry to start.</td></tr>`}
+          </tr>`).join(''):`<tr><td colspan="4" class="empty-row">No entries yet — add branch expenses here.</td></tr>`}
         </tbody>
       </table>
     </div>`;
 }
-let _branchEditKey=null;
 function openBranchModal(key,id){
   const b=BRANCHES.find(x=>x.key===key);
   document.getElementById('br-key').value=key;
   editBranchId=id||null;
   document.getElementById('branch-modal-title').textContent=id?`Edit Entry — ${b.label}`:`Add Entry — ${b.label}`;
   if(id){
-    const item=getS(b.kKey).find(x=>x.id===id);
+    const item=getS(K_EXP).find(x=>x.id===id&&x.branch===b.key);
     if(!item) return;
     document.getElementById('br-date').value=item.date;
-    document.getElementById('br-desc').value=item.desc;
     document.getElementById('br-amt').value=item.amount;
-    document.getElementById('br-notes').value=item.notes||'';
+    document.getElementById('br-desc').value=item.desc||'';
+    document.getElementById('br-cat').value=item.cat||'Other';
   } else {
     document.getElementById('br-date').value=new Date().toISOString().split('T')[0];
-    document.getElementById('br-desc').value='';
     document.getElementById('br-amt').value='';
-    document.getElementById('br-notes').value='';
+    document.getElementById('br-desc').value='';
+    document.getElementById('br-cat').value='Other';
   }
   openModal('branch-modal');
 }
@@ -1656,20 +1660,24 @@ function saveBranchEntry(){
   const key=document.getElementById('br-key').value;
   const b=BRANCHES.find(x=>x.key===key); if(!b) return;
   const date=document.getElementById('br-date').value;
-  const desc=document.getElementById('br-desc').value.trim();
   const amount=parseFloat(document.getElementById('br-amt').value);
-  const notes=document.getElementById('br-notes').value.trim();
-  if(!date||!desc||isNaN(amount)){ alert('Date, description and amount are required.'); return; }
-  const data=getS(b.kKey);
-  if(editBranchId!==null){ const i=data.findIndex(x=>x.id===editBranchId); if(i>=0) data[i]={...data[i],date,desc,amount,notes}; }
-  else data.push({id:Date.now(),date,desc,amount,notes});
-  setS(b.kKey,data); closeModal('branch-modal'); renderBranch(b);
+  const desc=document.getElementById('br-desc').value.trim();
+  const cat=document.getElementById('br-cat').value;
+  if(!date||isNaN(amount)||!desc){ alert('Date, amount and description are required.'); return; }
+  const data=getS(K_EXP);
+  if(editBranchId!==null){
+    const i=data.findIndex(x=>x.id===editBranchId);
+    if(i>=0) data[i]={...data[i],date,amount,desc,cat};
+  } else {
+    data.push({id:Date.now(),date,amount,desc,cat,branch:key});
+  }
+  setS(K_EXP,data); closeModal('branch-modal'); renderBranch(b); renderDashboard();
 }
 function delBranchEntry(key,id){
   if(!confirm('Delete this entry?')) return;
   const b=BRANCHES.find(x=>x.key===key); if(!b) return;
-  setS(b.kKey,getS(b.kKey).filter(x=>x.id!==id));
-  renderBranch(b);
+  setS(K_EXP,getS(K_EXP).filter(x=>x.id!==id));
+  renderBranch(b); renderDashboard();
 }
 
 // ── EXPENSES ──
@@ -1688,7 +1696,7 @@ function renderExpenses(){
       <td><span class="day-pill ${dayClass(e.date)}">${dayName(e.date)}</span></td>
       <td style="color:var(--muted);font-size:.78rem">${fmtDate(e.date)}</td>
       <td class="amt-neg">${fmt(e.amount)}</td>
-      <td>${e.desc||'—'} ${e.cat?`<span class="cat-badge ${catClass(e.cat)}">${e.cat}</span>`:''}</td>
+      <td>${e.desc||'—'} ${e.cat?`<span class="cat-badge ${catClass(e.cat)}">${e.cat}</span>`:''} ${e.branch?`<span class="cat-badge" style="background:#e0f2fe;color:#0369a1;margin-left:3px">🏪 ${e.branch.charAt(0).toUpperCase()+e.branch.slice(1)}</span>`:''}</td>
       <td style="white-space:nowrap">
         <button class="act-btn" onclick="editExp(${e.id})">Edit</button>
         <button class="act-btn del-btn" onclick="delExp(${e.id})" style="margin-left:5px">✕</button>
@@ -1860,6 +1868,8 @@ window.addEventListener('storage', e=>{
   else if(active==='salary') renderSalary();
   else if(active==='others') renderOther();
   else { const b=BRANCHES.find(x=>x.key===active); if(b) renderBranch(b); }
+  // Always sync dashboard when expenses change (branch entries affect dashboard totals)
+  if(active!=='dashboard' && e.key===K_EXP) renderDashboard();
 });
 
 window.onload=()=>{
