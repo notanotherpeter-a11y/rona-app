@@ -1183,6 +1183,77 @@ function seed(){
     ]);
     localStorage.setItem('ksq_sal_ver',SAL_VER);
   }
+  // ── DAILY SALARY SEED ──
+  const DAL_VER='1';
+  if(!getS(K_SAL_DAILY).length || localStorage.getItem('ksq_dal_ver')!==DAL_VER){
+    const MS=[1,2,3,4,5,6,8,9,10,11,12,13,15,16,17,18,19,20,22,23,24,25,26,27,29,30];
+    const p='2026-06-';
+    let _id=1;
+    const md=(name,amount,days)=>days.map(d=>({id:_id++,name,date:p+String(d).padStart(2,'0'),amount,note:''}));
+    setS(K_SAL_DAILY,[
+      // Chef Yvann: 2000/day × 21 days = ₱42,000
+      ...md('Chef Yvann',2000,MS.slice(0,21)),
+      // RAFF, GAVE, Melvin, Cath: 695/day × 21 days = ₱14,595
+      ...md('RAFF',      695, MS.slice(0,21)),
+      ...md('GAVE',      695, MS.slice(0,21)),
+      ...md('Melvin',    695, MS.slice(0,21)),
+      ...md('Cath',      695, MS.slice(0,21)),
+      // Nicole: 695 × 20 = ₱13,900
+      ...md('Nicole',    695, MS.slice(0,20)),
+      // Nicolei: 695 × 20 = ₱13,900 (₱13,902 total — 2 rounding adj.)
+      ...md('Nicolei',   695, MS.slice(0,20)),
+      // Kate: 695 × 24 = ₱16,680
+      ...md('Kate',      695, MS.slice(0,24)),
+      // Jefferson: 695 × 22 = ₱15,290
+      ...md('Jefferson', 695, MS.slice(0,22)),
+      // Prince: 695 × 17 = ₱11,815
+      ...md('Prince',    695, MS.slice(0,17)),
+      // JV: 695 × 15 = ₱10,425
+      ...md('JV',        695, MS.slice(0,15)),
+      // Kelvin: 695 × 12 = ₱8,340
+      ...md('Kelvin',    695, MS.slice(0,12)),
+      // Elvin: 695 × 23 = ₱15,985
+      ...md('Elvin',     695, MS.slice(0,23)),
+      // J: 695 × 21 + 1130 (Sun Jun 7) = ₱15,725
+      ...md('J',         695, MS.slice(0,21)),
+      {id:_id++,name:'J',       date:'2026-06-07',amount:1130,note:'Sun'},
+      // Dang: 695 × 21 + 1130 (Sun Jun 7) = ₱15,725
+      ...md('Dang',      695, MS.slice(0,21)),
+      {id:_id++,name:'Dang',    date:'2026-06-07',amount:1130,note:'Sun'},
+      // JC: 695 × 21 + 1132 (Sun Jun 7) = ₱15,727
+      ...md('JC',        695, MS.slice(0,21)),
+      {id:_id++,name:'JC',      date:'2026-06-07',amount:1132,note:'Sun'},
+      // Leo: 695 × 19 + 1130 (Sun Jun 7) = ₱14,335
+      ...md('Leo',       695, MS.slice(0,19)),
+      {id:_id++,name:'Leo',     date:'2026-06-07',amount:1130,note:'Sun'},
+      // Lea: 695 × 16 + 1130 (Sun Jun 7) = ₱12,250
+      ...md('Lea',       695, MS.slice(0,16)),
+      {id:_id++,name:'Lea',     date:'2026-06-07',amount:1130,note:'Sun'},
+      // Lorenz: 695 × 17 + 1130 (Sun Jun 7) = ₱12,945
+      ...md('Lorenz',    695, MS.slice(0,17)),
+      {id:_id++,name:'Lorenz',  date:'2026-06-07',amount:1130,note:'Sun'},
+      // Chris: 695 × 20 + 1130 (Sun Jun 7) = ₱15,030
+      ...md('Chris',     695, MS.slice(0,20)),
+      {id:_id++,name:'Chris',   date:'2026-06-07',amount:1130,note:'Sun'},
+      // Joy: 695 × 20 + 1130 (Sun Jun 7) = ₱15,030
+      ...md('Joy',       695, MS.slice(0,20)),
+      {id:_id++,name:'Joy',     date:'2026-06-07',amount:1130,note:'Sun'},
+      // Andrew: 695 × 19 + 1130 (Jun 7) + 1130 (Jun 14) = ₱15,465
+      ...md('Andrew',    695, MS.slice(0,19)),
+      {id:_id++,name:'Andrew',  date:'2026-06-07',amount:1130,note:'Sun'},
+      {id:_id++,name:'Andrew',  date:'2026-06-14',amount:1130,note:'Sun'},
+      // Remrose: 695 × 23 + 345 (Sun Jun 7 partial) = ₱16,330
+      ...md('Remrose',   695, MS.slice(0,23)),
+      {id:_id++,name:'Remrose', date:'2026-06-07',amount:345, note:'Sun (partial)'},
+      // Edelyn: 695 × 20 + 605 (Sun Jun 7 partial) = ₱14,505
+      ...md('Edelyn',    695, MS.slice(0,20)),
+      {id:_id++,name:'Edelyn',  date:'2026-06-07',amount:605, note:'Sun (partial)'},
+      // Joems: 695 × 12 + 262 (Jun 7 partial) = ₱8,602
+      ...md('Joems',     695, MS.slice(0,12)),
+      {id:_id++,name:'Joems',   date:'2026-06-07',amount:262, note:'partial'},
+    ]);
+    localStorage.setItem('ksq_dal_ver',DAL_VER);
+  }
 }
 
 // ── HELPERS ──
