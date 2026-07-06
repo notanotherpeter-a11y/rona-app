@@ -1152,34 +1152,36 @@ function seed(){
     ]);
   }
   // Branch pages start empty — entries are added by users and stored in K_EXP with branch tag
-  if(!getS(K_SAL).length){
+  const SAL_VER='2';
+  if(!getS(K_SAL).length || localStorage.getItem('ksq_sal_ver')!==SAL_VER){
     setS(K_SAL,[
-      {id:1,month:'2026-06',name:'Chef Yvann',earned:32000,ca:10000},
-      {id:2,month:'2026-06',name:'J',earned:14725,ca:1000},
-      {id:3,month:'2026-06',name:'Joems',earned:8602,ca:0},
-      {id:4,month:'2026-06',name:'Dang',earned:10725,ca:5000},
-      {id:5,month:'2026-06',name:'Remrose',earned:15830,ca:500},
-      {id:6,month:'2026-06',name:'Lea',earned:8250,ca:4000},
-      {id:7,month:'2026-06',name:'Leo',earned:10335,ca:4000},
-      {id:8,month:'2026-06',name:'Nicolei',earned:12902,ca:1000},
-      {id:9,month:'2026-06',name:'Lorenz',earned:12945,ca:0},
-      {id:10,month:'2026-06',name:'Nicole',earned:11900,ca:2000},
-      {id:11,month:'2026-06',name:'Andrew',earned:15465,ca:0},
-      {id:12,month:'2026-06',name:'Melvin',earned:13595,ca:1000},
-      {id:13,month:'2026-06',name:'JC',earned:14727,ca:1000},
-      {id:14,month:'2026-06',name:'Chris',earned:12930,ca:2100},
-      {id:15,month:'2026-06',name:'Edelyn',earned:13505,ca:1000},
-      {id:16,month:'2026-06',name:'Kate',earned:15680,ca:1000},
-      {id:17,month:'2026-06',name:'Joy',earned:11030,ca:4000},
-      {id:18,month:'2026-06',name:'Jefferson',earned:12790,ca:2500},
-      {id:19,month:'2026-06',name:'Prince',earned:5645,ca:2000},
-      {id:20,month:'2026-06',name:'Cath',earned:11595,ca:3000},
-      {id:21,month:'2026-06',name:'JV',earned:8925,ca:1500},
-      {id:22,month:'2026-06',name:'Kelvin',earned:6035,ca:3000},
-      {id:23,month:'2026-06',name:'Elvin',earned:14680,ca:2000},
-      {id:24,month:'2026-06',name:'RAFF',earned:14595,ca:0},
-      {id:25,month:'2026-06',name:'GAVE',earned:9730,ca:0},
+      {id:1, month:'2026-06',name:'Chef Yvann',earned:42000,ca:10000},
+      {id:2, month:'2026-06',name:'J',         earned:15725,ca:1000},
+      {id:3, month:'2026-06',name:'Joems',     earned:8602, ca:0},
+      {id:4, month:'2026-06',name:'Dang',      earned:15725,ca:5000},
+      {id:5, month:'2026-06',name:'Remrose',   earned:16330,ca:500},
+      {id:6, month:'2026-06',name:'Lea',       earned:12250,ca:4000},
+      {id:7, month:'2026-06',name:'Leo',       earned:14335,ca:4000},
+      {id:8, month:'2026-06',name:'Nicolei',   earned:13902,ca:1000},
+      {id:9, month:'2026-06',name:'Lorenz',    earned:12945,ca:0},
+      {id:10,month:'2026-06',name:'Nicole',    earned:13900,ca:2000},
+      {id:11,month:'2026-06',name:'Andrew',    earned:15465,ca:0},
+      {id:12,month:'2026-06',name:'Melvin',    earned:14595,ca:1000},
+      {id:13,month:'2026-06',name:'JC',        earned:15727,ca:1000},
+      {id:14,month:'2026-06',name:'Chris',     earned:15030,ca:2100},
+      {id:15,month:'2026-06',name:'Edelyn',    earned:14505,ca:1000},
+      {id:16,month:'2026-06',name:'Kate',      earned:16680,ca:1000},
+      {id:17,month:'2026-06',name:'Joy',       earned:15030,ca:4000},
+      {id:18,month:'2026-06',name:'Jefferson', earned:15290,ca:2500},
+      {id:19,month:'2026-06',name:'Prince',    earned:11815,ca:2000},
+      {id:20,month:'2026-06',name:'Cath',      earned:14595,ca:3000},
+      {id:21,month:'2026-06',name:'JV',        earned:10425,ca:1500},
+      {id:22,month:'2026-06',name:'Kelvin',    earned:8340, ca:3000},
+      {id:23,month:'2026-06',name:'Elvin',     earned:15985,ca:2000},
+      {id:24,month:'2026-06',name:'RAFF',      earned:14595,ca:0},
+      {id:25,month:'2026-06',name:'GAVE',      earned:14595,ca:0},
     ]);
+    localStorage.setItem('ksq_sal_ver',SAL_VER);
   }
 }
 
