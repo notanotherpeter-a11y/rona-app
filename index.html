@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Kamayan sa Qyusi — Business Manager</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <style>
 :root {
   --red:        #c0392b;
@@ -586,6 +588,7 @@ th { background: #F3F5F8; color: #374151; border-bottom-color: #C8D0DB; }
           </div>
           <div class="s-header-right">
             <select class="month-sel" id="sales-year" onchange="renderSales()"></select>
+            <button class="btn" onclick="openPdfModal()" style="background:#1e3a5f;color:#fff;border:none;padding:8px 14px;border-radius:8px;font-size:.82rem;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px">📄 PDF Report</button>
             <button class="btn btn-red" id="btn-add-sale" onclick="openSaleModal()">＋ Add Sale</button>
           </div>
         </div>
@@ -943,6 +946,28 @@ th { background: #F3F5F8; color: #374151; border-bottom-color: #C8D0DB; }
     <div class="modal-btns">
       <button class="btn btn-ghost" onclick="closeModal('other-modal')">Cancel</button>
       <button class="btn btn-red" onclick="saveOther()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- PDF Report Picker Modal -->
+<div class="overlay" id="pdf-modal">
+  <div class="modal" style="max-width:360px">
+    <h3>📄 Export PDF Report</h3>
+    <div class="modal-field">
+      <label class="f-lbl">Report Type</label>
+      <select class="f-inp" id="pdf-type" onchange="updatePdfMonthSel()">
+        <option value="monthly">Monthly — Daily Breakdown</option>
+        <option value="summary">Monthly Summary (all months)</option>
+      </select>
+    </div>
+    <div class="modal-field" id="pdf-month-wrap">
+      <label class="f-lbl">Select Month</label>
+      <select class="f-inp" id="pdf-month"></select>
+    </div>
+    <div class="modal-btns">
+      <button class="btn btn-ghost" onclick="closeModal('pdf-modal')">Cancel</button>
+      <button class="btn btn-red" onclick="generatePDF()">Export PDF</button>
     </div>
   </div>
 </div>
@@ -2302,7 +2327,7 @@ function closeModal(id){
   document.getElementById(id).classList.remove('open');
   editSaleId=editExpId=editSalId=editOtherId=null;
 }
-['sale-modal','exp-modal','sal-modal','other-modal'].forEach(id=>{
+['sale-modal','exp-modal','sal-modal','other-modal','pdf-modal'].forEach(id=>{
   document.getElementById(id).addEventListener('click',e=>{
     if(e.target===document.getElementById(id)) closeModal(id);
   });
@@ -2371,6 +2396,150 @@ window.addEventListener('storage', e=>{
   // Always sync dashboard when expenses change (branch entries affect dashboard totals)
   if(active!=='dashboard' && e.key===K_EXP) renderDashboard();
 });
+
+// ── PDF MODAL ──
+function openPdfModal(){
+  const sales = getS(K_SALES);
+  const months = [...new Set(sales.map(s=>monthKey(s.date)))].sort().reverse();
+  const sel = document.getElementById('pdf-month');
+  sel.innerHTML = months.map(mk=>`<option value="${mk}">${monthLabel(mk)}</option>`).join('');
+  updatePdfMonthSel();
+  document.getElementById('pdf-modal').classList.add('open');
+}
+function updatePdfMonthSel(){
+  const type = document.getElementById('pdf-type').value;
+  document.getElementById('pdf-month-wrap').style.display = type==='monthly' ? '' : 'none';
+}
+function generatePDF(){
+  const type = document.getElementById('pdf-type').value;
+  if(type==='monthly'){
+    const mk = document.getElementById('pdf-month').value;
+    exportMonthlyPDF(mk);
+  } else {
+    exportSummaryPDF();
+  }
+  closeModal('pdf-modal');
+}
+
+// ── PDF HELPERS ──
+function pdfHeader(doc, title, sub){
+  const now = new Date();
+  const genDate = now.toLocaleDateString('en-PH',{year:'numeric',month:'long',day:'numeric'});
+  doc.setFillColor(30,58,95);
+  doc.rect(0,0,210,28,'F');
+  doc.setTextColor(255,255,255);
+  doc.setFontSize(16); doc.setFont('helvetica','bold');
+  doc.text('Kamayan sa Qyusi', 14, 12);
+  doc.setFontSize(9); doc.setFont('helvetica','normal');
+  doc.text(sub, 14, 19);
+  doc.setFontSize(8);
+  doc.text('Generated: '+genDate, 196, 12, {align:'right'});
+  doc.text(title, 196, 19, {align:'right'});
+}
+function pdfKpis(doc, kpis, y){
+  const kpiW=43, kpiH=18, kpiGap=3;
+  kpis.forEach((k,i)=>{
+    const x=14+i*(kpiW+kpiGap);
+    doc.setFillColor(...k.color);
+    doc.roundedRect(x,y,kpiW,kpiH,2,2,'F');
+    doc.setTextColor(255,255,255);
+    doc.setFontSize(7); doc.setFont('helvetica','normal');
+    doc.text(k.label, x+kpiW/2, y+5.5, {align:'center'});
+    doc.setFontSize(11); doc.setFont('helvetica','bold');
+    doc.text(k.val, x+kpiW/2, y+13, {align:'center'});
+  });
+  return y+kpiH;
+}
+function pdfFooters(doc){
+  const n=doc.internal.getNumberOfPages();
+  for(let i=1;i<=n;i++){
+    doc.setPage(i);
+    const h=doc.internal.pageSize.height;
+    doc.setFontSize(7); doc.setTextColor(150); doc.setFont('helvetica','normal');
+    doc.text('Kamayan sa Qyusi Business Manager  •  Confidential', 14, h-6);
+    doc.text('Page '+i+' of '+n, 196, h-6, {align:'right'});
+  }
+}
+
+// ── MONTHLY DETAIL PDF (single month) ──
+function exportMonthlyPDF(mk){
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+  const sales = getS(K_SALES);
+  const days = sales.filter(s=>monthKey(s.date)===mk).sort((a,b)=>a.date.localeCompare(b.date));
+  const total = days.reduce((a,s)=>a+s.amount,0);
+  const best = days.length ? days.reduce((a,s)=>s.amount>a.amount?s:a,days[0]) : null;
+  const label = monthLabel(mk);
+  pdfHeader(doc, label, 'Business Manager — Monthly Sales Report');
+  const kpiBottom = pdfKpis(doc,[
+    {label:'Total Sales',    val:'₱'+total.toLocaleString('en-PH'),                                         color:[30,58,95]},
+    {label:'Days Recorded',  val:days.length.toString(),                                                     color:[5,150,105]},
+    {label:'Best Single Day',val:best?'₱'+best.amount.toLocaleString('en-PH'):'—',                         color:[217,119,6]},
+    {label:'Avg / Day',      val:days.length?'₱'+Math.round(total/days.length).toLocaleString('en-PH'):'—',color:[124,58,237]},
+  ], 34);
+  doc.autoTable({
+    head:[[{content:label+' — Daily Sales  (Total: ₱'+total.toLocaleString('en-PH')+')', colSpan:4,
+            styles:{fillColor:[30,58,95],textColor:255,fontStyle:'bold',fontSize:8,halign:'left'}}],
+          ['Date','Day','Gross Sales','Notes']],
+    body: days.map(s=>[
+      fmtDate(s.date), dayName(s.date),
+      '₱'+s.amount.toLocaleString('en-PH'),
+      s.notes||(s.branch?s.branch.charAt(0).toUpperCase()+s.branch.slice(1):'—'),
+    ]),
+    startY: kpiBottom+8,
+    margin:{left:14,right:14},
+    headStyles:{fillColor:[240,244,255],textColor:[30,58,95],fontStyle:'bold',fontSize:8},
+    bodyStyles:{fontSize:8,textColor:[30,30,30]},
+    alternateRowStyles:{fillColor:[250,252,255]},
+    styles:{cellPadding:3,lineColor:[220,220,220],lineWidth:0.2},
+  });
+  pdfFooters(doc);
+  doc.save('KSQ_Sales_'+mk+'.pdf');
+}
+
+// ── SUMMARY PDF (all months in selected year) ──
+function exportSummaryPDF(){
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+  const sales = getS(K_SALES);
+  const yr = document.getElementById('sales-year').value || (sales[0]?.date.slice(0,4)||'');
+  const filtered = sales.filter(s=>s.date.startsWith(yr)).sort((a,b)=>a.date.localeCompare(b.date));
+  const total = filtered.reduce((a,s)=>a+s.amount,0);
+  const best = filtered.length ? filtered.reduce((a,s)=>s.amount>a.amount?s:a,filtered[0]) : null;
+  const mMap={};
+  filtered.forEach(s=>{
+    const mk=monthKey(s.date);
+    if(!mMap[mk]) mMap[mk]={key:mk,days:[],total:0};
+    mMap[mk].days.push(s); mMap[mk].total+=s.amount;
+  });
+  const months=Object.values(mMap).sort((a,b)=>a.key.localeCompare(b.key));
+  pdfHeader(doc,'Year: '+yr,'Business Manager — Monthly Sales Summary');
+  const kpiBottom = pdfKpis(doc,[
+    {label:'Total Sales',    val:'₱'+total.toLocaleString('en-PH'),                                          color:[30,58,95]},
+    {label:'Days Recorded',  val:filtered.length.toString(),                                                  color:[5,150,105]},
+    {label:'Best Single Day',val:best?'₱'+best.amount.toLocaleString('en-PH'):'—',                          color:[217,119,6]},
+    {label:'Avg / Day',      val:filtered.length?'₱'+Math.round(total/filtered.length).toLocaleString('en-PH'):'—',color:[124,58,237]},
+  ], 34);
+  const body=months.map(m=>[
+    monthLabel(m.key), m.days.length.toString(),
+    '₱'+m.total.toLocaleString('en-PH'),
+    '₱'+Math.round(m.total/m.days.length).toLocaleString('en-PH'),
+  ]);
+  body.push(['TOTAL', filtered.length.toString(), '₱'+total.toLocaleString('en-PH'), '']);
+  doc.autoTable({
+    head:[['Month','Days','Total Sales','Avg / Day']],
+    body,
+    startY: kpiBottom+8,
+    margin:{left:14,right:14},
+    headStyles:{fillColor:[30,58,95],textColor:255,fontStyle:'bold',fontSize:8},
+    bodyStyles:{fontSize:8,textColor:[30,30,30]},
+    alternateRowStyles:{fillColor:[245,248,255]},
+    didParseCell(data){ if(data.row.index===body.length-1){ data.cell.styles.fontStyle='bold'; data.cell.styles.fillColor=[220,230,245]; } },
+    styles:{cellPadding:3,lineColor:[220,220,220],lineWidth:0.2},
+  });
+  pdfFooters(doc);
+  doc.save('KSQ_Sales_Summary_'+yr+'.pdf');
+}
 
 window.onload=()=>{
   if(sessionStorage.getItem('ksq_auth')==='1'){
