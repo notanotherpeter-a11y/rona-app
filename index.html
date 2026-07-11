@@ -549,7 +549,22 @@ th { background: #F3F5F8; color: #374151; border-bottom-color: #C8D0DB; }
             <div class="page-sub" id="dash-period">Loading...</div>
           </div>
           <div class="topbar-right">
-            <select class="month-sel" id="dash-month" onchange="renderDashboard()"></select>
+            <select class="month-sel" id="dash-month-f" onchange="renderDashboard()">
+              <option value="">All Months</option>
+              <option value="01">January</option>
+              <option value="02">February</option>
+              <option value="03">March</option>
+              <option value="04">April</option>
+              <option value="05">May</option>
+              <option value="06">June</option>
+              <option value="07">July</option>
+              <option value="08">August</option>
+              <option value="09">September</option>
+              <option value="10">October</option>
+              <option value="11">November</option>
+              <option value="12">December</option>
+            </select>
+            <select class="month-sel" id="dash-year-f" onchange="renderDashboard()"></select>
           </div>
         </div>
         <div class="cards" id="dash-cards"></div>
@@ -587,6 +602,21 @@ th { background: #F3F5F8; color: #374151; border-bottom-color: #C8D0DB; }
             <div class="page-sub" id="sales-page-sub">Gross sales overview</div>
           </div>
           <div class="s-header-right">
+            <select class="month-sel" id="sales-month-filter" onchange="renderSales()" style="display:none">
+              <option value="">All Months</option>
+              <option value="01">January</option>
+              <option value="02">February</option>
+              <option value="03">March</option>
+              <option value="04">April</option>
+              <option value="05">May</option>
+              <option value="06">June</option>
+              <option value="07">July</option>
+              <option value="08">August</option>
+              <option value="09">September</option>
+              <option value="10">October</option>
+              <option value="11">November</option>
+              <option value="12">December</option>
+            </select>
             <select class="month-sel" id="sales-year" onchange="renderSales()"></select>
             <button class="btn" onclick="openPdfModal()" style="background:#1e3a5f;color:#fff;border:none;padding:8px 14px;border-radius:8px;font-size:.82rem;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px">📄 PDF Report</button>
             <button class="btn btn-red" id="btn-add-sale" onclick="openSaleModal()">＋ Add Sale</button>
@@ -662,7 +692,22 @@ th { background: #F3F5F8; color: #374151; border-bottom-color: #C8D0DB; }
             <div class="page-sub">Daily expense records</div>
           </div>
           <div class="topbar-right">
-            <select class="month-sel" id="exp-month" onchange="renderExpenses()"></select>
+            <select class="month-sel" id="exp-month-f" onchange="renderExpenses()">
+              <option value="">All Months</option>
+              <option value="01">January</option>
+              <option value="02">February</option>
+              <option value="03">March</option>
+              <option value="04">April</option>
+              <option value="05">May</option>
+              <option value="06">June</option>
+              <option value="07">July</option>
+              <option value="08">August</option>
+              <option value="09">September</option>
+              <option value="10">October</option>
+              <option value="11">November</option>
+              <option value="12">December</option>
+            </select>
+            <select class="month-sel" id="exp-year-f" onchange="renderExpenses()"></select>
             <button class="btn btn-red" onclick="openExpModal()">+ Add Expense</button>
           </div>
         </div>
@@ -695,7 +740,22 @@ th { background: #F3F5F8; color: #374151; border-bottom-color: #C8D0DB; }
             </div>
             <div class="topbar-right">
               <input type="text" id="sal-search" class="sal-search-inp" placeholder="🔍 Search employee..." oninput="renderSalary()" autocomplete="off" />
-              <select class="month-sel" id="sal-month" onchange="renderSalary()"></select>
+              <select class="month-sel" id="sal-month-f" onchange="renderSalary()">
+                <option value="">All Months</option>
+                <option value="01">January</option>
+                <option value="02">February</option>
+                <option value="03">March</option>
+                <option value="04">April</option>
+                <option value="05">May</option>
+                <option value="06">June</option>
+                <option value="07">July</option>
+                <option value="08">August</option>
+                <option value="09">September</option>
+                <option value="10">October</option>
+                <option value="11">November</option>
+                <option value="12">December</option>
+              </select>
+              <select class="month-sel" id="sal-year-f" onchange="renderSalary()"></select>
               <button class="btn btn-red" onclick="openSalModal()">+ Add Record</button>
             </div>
           </div>
@@ -1754,22 +1814,39 @@ function drawBarChart(canvasId, labels, values){
 // ── DASHBOARD ──
 function renderDashboard(){
   const sales=getS(K_SALES), exps=getS(K_EXP), sals=getS(K_SAL);
-  const allM=[...new Set([...sales.map(s=>monthKey(s.date)),...exps.map(e=>monthKey(e.date))])].sort().reverse();
-  if(!allM.length) allM.push(monthKey(new Date().toISOString().slice(0,10)));
-  populateMonthSel('dash-month',allM,allM[0]);
-  const m=document.getElementById('dash-month').value;
 
-  const mSales=sales.filter(s=>monthKey(s.date)===m);
-  const mExps =exps.filter(e=>monthKey(e.date)===m);
-  const mSals =sals.filter(s=>s.month===m);
+  // Populate year filter
+  const dataYears=[...sales,...exps].map(x=>x.date.slice(0,4));
+  sals.forEach(s=>{ if(s.month) dataYears.push(s.month.slice(0,4)); });
+  populateYearFilter('dash-year-f', dataYears, true);
 
-  const gross   =mSales.reduce((a,s)=>a+s.amount,0);
+  const {yr, mo, prefix, isAll} = getYearMonthFilter('dash-year-f','dash-month-f');
+  const moSel=document.getElementById('dash-month-f');
+  if(moSel) moSel.style.display=isAll?'none':'';
+
+  let mSales, mExps, mSals, periodLabel;
+  if(isAll){
+    mSales=sales; mExps=exps; mSals=sals; periodLabel='All Time';
+  } else if(mo){
+    const mk=`${yr}-${mo}`;
+    mSales=sales.filter(s=>monthKey(s.date)===mk);
+    mExps=exps.filter(e=>monthKey(e.date)===mk);
+    mSals=sals.filter(s=>s.month===mk);
+    periodLabel=`${MONTH_NAMES[parseInt(mo)-1]} ${yr}`;
+  } else {
+    mSales=sales.filter(s=>s.date.startsWith(yr));
+    mExps=exps.filter(e=>e.date.startsWith(yr));
+    mSals=sals.filter(s=>s.month&&s.month.startsWith(yr));
+    periodLabel=yr;
+  }
+
+  const gross=mSales.reduce((a,s)=>a+s.amount,0);
   const totalExp=mExps.reduce((a,e)=>a+e.amount,0);
   const netSales=gross-totalExp;
   const totalSal=mSals.reduce((a,s)=>a+s.earned,0);
-  const netLess =netSales-totalSal;
+  const netLess=netSales-totalSal;
 
-  document.getElementById('dash-period').textContent=monthLabel(m);
+  document.getElementById('dash-period').textContent=periodLabel;
   document.getElementById('dash-cards').innerHTML=`
     <div class="card"><div class="card-accent ca-blue"></div><div class="card-icon">💰</div><div class="card-lbl">Gross Sales</div><div class="card-val blue">${fmt(gross)}</div><div class="card-sub">${mSales.length} days recorded</div></div>
     <div class="card"><div class="card-accent ca-red"></div><div class="card-icon">📋</div><div class="card-lbl">Total Expenses</div><div class="card-val red">${fmt(totalExp)}</div><div class="card-sub">${mExps.length} entries</div></div>
@@ -1778,11 +1855,16 @@ function renderDashboard(){
     <div class="card"><div class="card-accent ca-purple"></div><div class="card-icon">✅</div><div class="card-lbl">Net less Salary</div><div class="card-val ${netLess>=0?'green':'red'}">${fmt(netLess)}</div><div class="card-sub">Net − Salary</div></div>
   `;
 
-  // Chart data
-  const daySales=mSales.sort((a,b)=>a.date.localeCompare(b.date));
-  const chartLabels=daySales.map(s=>s.date.slice(8)); // day numbers
-  const chartVals=daySales.map(s=>s.amount);
-  setTimeout(()=>drawBarChart('sales-chart',chartLabels,chartVals),0);
+  // Chart — for All Time or full year, show monthly totals; for specific month, show daily
+  if(isAll || !mo){
+    const byMonth={};
+    mSales.forEach(s=>{ const mk=monthKey(s.date); byMonth[mk]=(byMonth[mk]||0)+s.amount; });
+    const sortedM=Object.keys(byMonth).sort();
+    setTimeout(()=>drawBarChart('sales-chart',sortedM.map(k=>monthLabel(k)),sortedM.map(k=>byMonth[k])),0);
+  } else {
+    const daySales=mSales.sort((a,b)=>a.date.localeCompare(b.date));
+    setTimeout(()=>drawBarChart('sales-chart',daySales.map(s=>s.date.slice(8)),daySales.map(s=>s.amount)),0);
+  }
 
   // Table
   const dayMap={};
@@ -1799,7 +1881,7 @@ function renderDashboard(){
       <td class="amt-neg">${r.exp?fmt(r.exp):'—'}</td>
       <td class="${net>=0?'amt-pos':'amt-neg'}">${fmt(net)}</td>
     </tr>`;
-  }).join(''):`<tr><td colspan="5" class="empty-row">No data for this month.</td></tr>`;
+  }).join(''):`<tr><td colspan="5" class="empty-row">No data for this period.</td></tr>`;
 }
 
 // ── SALES KPI CARDS ──
@@ -1837,6 +1919,7 @@ function setSalesView(v){
   });
   const useYear=['monthly','quarterly'].includes(v);
   document.getElementById('sales-year').style.display=useYear?'':'none';
+  document.getElementById('sales-month-filter').style.display=v==='monthly'?'':'none';
   renderSales();
 }
 
@@ -1857,12 +1940,38 @@ function weekLabel(mondayDs){
 
 // ── YEAR SELECTOR ──
 function populateYearSel(sales){
-  const years=[...new Set(sales.map(s=>s.date.slice(0,4)))].sort().reverse();
+  const dataYears=sales.map(s=>s.date.slice(0,4));
+  const curYear=new Date().getFullYear();
+  const allYears=new Set([...dataYears]);
+  for(let y=2026;y<=curYear;y++) allYears.add(String(y));
+  const years=[...allYears].sort().reverse();
   const sel=document.getElementById('sales-year');
   const prev=sel.value;
   sel.innerHTML=years.map(y=>`<option value="${y}">${y}</option>`).join('');
   if(prev&&years.includes(prev)) sel.value=prev;
   return sel.value;
+}
+
+// ── SHARED YEAR/MONTH FILTER ──
+const MONTH_NAMES=['January','February','March','April','May','June','July','August','September','October','November','December'];
+function populateYearFilter(yearSelId, dataYears, hasAllTime=false){
+  const curYear = new Date().getFullYear();
+  const allYears = new Set(dataYears.filter(Boolean));
+  for(let y=2026; y<=curYear; y++) allYears.add(String(y));
+  const years = [...allYears].sort().reverse();
+  const sel = document.getElementById(yearSelId);
+  if(!sel) return '';
+  const prev = sel.value;
+  sel.innerHTML = (hasAllTime ? '<option value="all">All Time</option>' : '') +
+    years.map(y=>`<option value="${y}">${y}</option>`).join('');
+  if(prev && (prev==='all' || years.includes(prev))) sel.value=prev;
+  else if(years.length) sel.value=years[0];
+  return sel.value;
+}
+function getYearMonthFilter(yearSelId, monthSelId){
+  const yr = document.getElementById(yearSelId)?.value || '';
+  const mo = document.getElementById(monthSelId)?.value || '';
+  return { yr, mo, prefix: yr==='all' ? '' : (mo ? `${yr}-${mo}` : yr), isAll: yr==='all' };
 }
 
 // ── SALES ──
@@ -1872,9 +1981,15 @@ function renderSales(){
   // show/hide all tables
   SALE_VIEWS.forEach(v=>{ document.getElementById('sales-table-'+v).style.display=salesView===v?'':'none'; });
 
+  // show month filter only in monthly view
+  const mf=document.getElementById('sales-month-filter');
+  if(mf) mf.style.display=salesView==='monthly'?'':'none';
+
   // KPI cards — filter by year for monthly/quarterly, all for yearly
   const yr=document.getElementById('sales-year').value||sales[0]?.date.slice(0,4)||'';
-  const filtered=salesView==='yearly'?sales:sales.filter(s=>s.date.startsWith(yr));
+  const mo=mf?.value||'';
+  const kpiPrefix=salesView==='monthly'&&mo?`${yr}-${mo}`:yr;
+  const filtered=salesView==='yearly'?sales:sales.filter(s=>s.date.startsWith(kpiPrefix));
   renderSalesKPI(filtered);
 
   if(salesView==='monthly') renderSalesMonthly(sales);
@@ -1986,9 +2101,13 @@ function toggleWeekDetail(detailId,chevId){ toggleDetail(detailId,chevId); }
 function renderSalesMonthly(sales){
   resetSalesTotalColor();
   const yr=populateYearSel(sales);
-  const filtered=sales.filter(s=>s.date.startsWith(yr)).sort((a,b)=>a.date.localeCompare(b.date));
+  const mo=document.getElementById('sales-month-filter')?.value||'';
+  const prefix=mo?`${yr}-${mo}`:yr;
+  const filtered=sales.filter(s=>s.date.startsWith(prefix)).sort((a,b)=>a.date.localeCompare(b.date));
   const total=filtered.reduce((a,s)=>a+s.amount,0);
-  document.getElementById('sales-page-sub').textContent='Gross sales per month — '+yr;
+  const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const subLabel=mo?`${MONTHS[parseInt(mo)-1]} ${yr}`:yr;
+  document.getElementById('sales-page-sub').textContent='Gross sales per month — '+subLabel;
   document.getElementById('sales-sec-title').textContent='Monthly Summary';
   const mMap={};
   filtered.forEach(s=>{
@@ -2606,11 +2725,10 @@ function delBranchSale(key,id){
 // ── EXPENSES ──
 function renderExpenses(){
   const exps=getS(K_EXP);
-  const allM=allMonths(exps,'date');
-  if(!allM.length) allM.push(monthKey(new Date().toISOString().slice(0,10)));
-  populateMonthSel('exp-month',allM,allM[0]);
-  const m=document.getElementById('exp-month').value;
-  const filtered=exps.filter(e=>monthKey(e.date)===m).sort((a,b)=>a.date.localeCompare(b.date)||b.amount-a.amount);
+  const dataYears=exps.map(e=>e.date.slice(0,4));
+  populateYearFilter('exp-year-f', dataYears);
+  const {yr, mo, prefix} = getYearMonthFilter('exp-year-f','exp-month-f');
+  const filtered=exps.filter(e=>e.date.startsWith(prefix)).sort((a,b)=>a.date.localeCompare(b.date)||b.amount-a.amount);
   const total=filtered.reduce((a,e)=>a+e.amount,0);
   document.getElementById('exp-count').textContent=filtered.length+' records';
   document.getElementById('exp-total-lbl').textContent='Total: '+fmt(total);
@@ -2624,7 +2742,7 @@ function renderExpenses(){
         <button class="act-btn" onclick="editExp(${e.id})">Edit</button>
         <button class="act-btn del-btn" onclick="delExp(${e.id})" style="margin-left:5px">✕</button>
       </td>
-    </tr>`).join(''):`<tr><td colspan="5" class="empty-row">No expenses for this month.</td></tr>`;
+    </tr>`).join(''):`<tr><td colspan="5" class="empty-row">No expenses for this period.</td></tr>`;
 }
 
 function openExpModal(){
@@ -2665,12 +2783,13 @@ function delExp(id){
 // ── SALARY ──
 function renderSalary(){
   const sals=getS(K_SAL);
-  const allM=allMonths(sals,'month');
-  if(!allM.length) allM.push(new Date().toISOString().slice(0,7));
-  populateMonthSel('sal-month',allM,allM[0]);
-  const m=document.getElementById('sal-month').value;
+  const dataYears=sals.map(s=>s.month?s.month.slice(0,4):'').filter(Boolean);
+  populateYearFilter('sal-year-f', dataYears);
+  const yr=document.getElementById('sal-year-f')?.value||'';
+  const mo=document.getElementById('sal-month-f')?.value||'';
+  const prefix=mo?`${yr}-${mo}`:yr;
   const q=(document.getElementById('sal-search')?.value||'').trim().toLowerCase();
-  const filtered=sals.filter(s=>s.month===m&&(!q||s.name.toLowerCase().includes(q))).sort((a,b)=>b.earned-a.earned);
+  const filtered=sals.filter(s=>s.month&&s.month.startsWith(prefix)&&(!q||s.name.toLowerCase().includes(q))).sort((a,b)=>b.earned-a.earned);
   const totalEarned=filtered.reduce((a,s)=>a+s.earned,0);
   document.getElementById('sal-count').textContent=filtered.length+' employees';
   document.getElementById('sal-total-lbl').textContent='Total Payroll: '+fmt(totalEarned);
@@ -2684,11 +2803,11 @@ function renderSalary(){
       <td class="amt-neg">${s.ca?fmt(s.ca):'—'}</td>
       <td class="${net>=0?'amt-pos':'amt-neg'}">${fmt(net)}</td>
       <td style="white-space:nowrap">
-        <button class="act-btn" onclick="editSal(${s.id})">Edit</button>
-        <button class="act-btn del-btn" onclick="delSal(${s.id})" style="margin-left:5px">✕</button>
+        <button class="act-btn" onclick="editSal('${safeName}','${s.month}')">Edit</button>
+        <button class="act-btn del-btn" onclick="delSal('${safeName}','${s.month}')" style="margin-left:5px">✕</button>
       </td>
     </tr>`;
-  }).join(''):`<tr><td colspan="5" class="empty-row">No salary records for this month.</td></tr>`;
+  }).join(''):`<tr><td colspan="5" class="empty-row">No salary records for this period.</td></tr>`;
 }
 
 // ── EMPLOYEE PROFILE CALENDAR ──
@@ -2785,9 +2904,15 @@ function openSalModal(){
   document.getElementById('sl-ca').value='';
   document.getElementById('sal-modal').classList.add('open');
 }
-function editSal(id){
-  const s=getS(K_SAL).find(x=>x.id===id); if(!s) return;
-  editSalId=id;
+function editSal(nameOrId, month){
+  let s;
+  if(month !== undefined){
+    s=getS(K_SAL).find(x=>x.name===nameOrId&&x.month===month);
+  } else {
+    s=getS(K_SAL).find(x=>x.id===nameOrId);
+  }
+  if(!s) return;
+  editSalId=s.id;
   document.getElementById('sal-modal-title').textContent='Edit Salary Record';
   document.getElementById('sl-month').value=s.month;
   document.getElementById('sl-name').value=s.name;
@@ -2806,9 +2931,13 @@ function saveSal(){
   else data.push({id:Date.now(),month,name,earned,ca});
   setS(K_SAL,data); closeModal('sal-modal'); renderSalary(); renderDashboard();
 }
-function delSal(id){
+function delSal(nameOrId, month){
   if(!confirm('Delete this salary record?')) return;
-  setS(K_SAL,getS(K_SAL).filter(x=>x.id!==id));
+  if(month !== undefined){
+    setS(K_SAL,getS(K_SAL).filter(x=>!(x.name===nameOrId&&x.month===month)));
+  } else {
+    setS(K_SAL,getS(K_SAL).filter(x=>x.id!==nameOrId));
+  }
   renderSalary(); renderDashboard();
 }
 
