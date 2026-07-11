@@ -507,8 +507,8 @@ th { background: #F3F5F8; color: #374151; border-bottom-color: #C8D0DB; }
         <div class="nav-item" onclick="showTab('salary');closeMobSidebar()" data-access="admin">
           <span class="ni">👥</span><span>Salary</span>
         </div>
-        <div class="nav-item" onclick="showTab('others');closeMobSidebar()" data-access="admin">
-          <span class="ni">📋</span><span>Others</span>
+        <div class="nav-item" onclick="showTab('stock');closeMobSidebar()" data-access="admin">
+          <span class="ni">📦</span><span>Stock</span>
         </div>
         <div class="nav-section" data-access="branches">Branches</div>
         <div class="nav-item" onclick="showTab('cainta');closeMobSidebar()" data-access="branch-cainta">
@@ -744,6 +744,117 @@ th { background: #F3F5F8; color: #374151; border-bottom-color: #C8D0DB; }
       </div>
 
       <!-- BRANCH PAGES (cainta / marikina / antipolo / taytay) -->
+      <!-- ── STOCK TAB ── -->
+      <div id="tab-stock" style="display:none">
+        <div class="topbar">
+          <div class="topbar-left">
+            <div class="page-title">Stock</div>
+            <div class="page-sub">Manage inventory items across all branches</div>
+          </div>
+          <div class="topbar-right">
+            <button class="btn btn-red" onclick="openStockModal()">+ Add Item</button>
+          </div>
+        </div>
+
+        <!-- Summary cards -->
+        <div class="kpi-grid" id="stock-kpi" style="margin-bottom:24px"></div>
+
+        <!-- Categories panel -->
+        <div class="card" style="padding:16px 20px;margin-bottom:16px">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+            <div style="font-weight:700;font-size:.88rem">Categories</div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <input id="new-cat-inp" type="text" placeholder="New category name…" class="f-inp" style="padding:7px 12px;width:180px;font-size:.82rem"
+                onkeydown="if(event.key==='Enter') addStockCat()">
+              <button onclick="addStockCat()" style="padding:7px 16px;background:var(--red);color:#fff;border:none;border-radius:8px;font-size:.82rem;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap">+ Add</button>
+            </div>
+          </div>
+          <div id="stock-cats-list" style="margin-top:12px;min-height:28px"></div>
+        </div>
+
+        <!-- Pending Orders panel (admin) -->
+        <div class="card" style="padding:0;overflow:hidden;margin-bottom:16px">
+          <div style="padding:18px 22px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px">
+            <div>
+              <div style="font-weight:700;font-size:.95rem">Branch Orders</div>
+              <div style="font-size:.75rem;color:var(--muted);margin-top:2px">Confirm to deduct from stock balance</div>
+            </div>
+            <span id="stock-pending-badge" style="display:none;background:var(--red);color:#fff;padding:2px 10px;border-radius:20px;font-size:.72rem;font-weight:700"></span>
+          </div>
+          <div id="stock-pending-orders"></div>
+        </div>
+
+        <!-- Items table -->
+        <div class="card" style="padding:0;overflow:hidden">
+          <div style="padding:18px 22px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px">
+            <div style="font-weight:700;font-size:.95rem">Items</div>
+            <input id="stock-search" type="text" placeholder="Search items…" oninput="renderStock()"
+              style="padding:7px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:.82rem;outline:none;font-family:inherit;width:200px">
+          </div>
+          <table style="width:100%;border-collapse:collapse">
+            <thead>
+              <tr style="background:#f8f9fb">
+                <th style="padding:11px 20px;text-align:left;font-size:.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;border-bottom:1px solid var(--border)">#</th>
+                <th style="padding:11px 20px;text-align:left;font-size:.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;border-bottom:1px solid var(--border)">Item Name</th>
+                <th style="padding:11px 20px;text-align:left;font-size:.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;border-bottom:1px solid var(--border)">Category</th>
+                <th style="padding:11px 20px;text-align:center;font-size:.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;border-bottom:1px solid var(--border)">Qty</th>
+                <th style="padding:11px 20px;text-align:left;font-size:.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;border-bottom:1px solid var(--border)">Unit</th>
+                <th style="padding:11px 20px;text-align:left;font-size:.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;border-bottom:1px solid var(--border)">Status</th>
+                <th style="padding:11px 20px;text-align:center;font-size:.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;border-bottom:1px solid var(--border)">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="stock-tbody"></tbody>
+          </table>
+          <div id="stock-empty" style="display:none;padding:48px;text-align:center;color:var(--muted);font-size:.88rem">No items yet. Click <b>+ Add Item</b> to get started.</div>
+        </div>
+      </div>
+
+      <!-- ── STOCK MODAL ── -->
+      <div id="stock-modal" style="display:none;position:fixed;inset:0;z-index:999;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;padding:16px">
+        <div style="background:#fff;border-radius:16px;padding:28px 28px 24px;width:100%;max-width:420px;box-shadow:0 20px 60px rgba(0,0,0,.25)">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+            <div style="font-weight:800;font-size:1rem" id="stock-modal-title">Add Item</div>
+            <button onclick="closeStockModal()" style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--muted);line-height:1">×</button>
+          </div>
+          <input type="hidden" id="stock-edit-id">
+          <div style="margin-bottom:14px">
+            <label class="f-lbl">Item Name *</label>
+            <input id="stock-name" type="text" class="f-inp" placeholder="e.g. Rice">
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+            <div>
+              <label class="f-lbl">Category</label>
+              <select id="stock-cat-sel" class="f-inp" style="padding:9px 12px">
+                <option value="">No category</option>
+              </select>
+              <datalist id="stock-cat-list"></datalist>
+            </div>
+            <div>
+              <label class="f-lbl">Unit</label>
+              <input id="stock-unit" type="text" class="f-inp" placeholder="e.g. kg, pcs">
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+            <div>
+              <label class="f-lbl">Quantity</label>
+              <input id="stock-qty" type="number" class="f-inp" placeholder="0" min="0">
+            </div>
+            <div>
+              <label class="f-lbl">Low Stock Alert</label>
+              <input id="stock-min" type="number" class="f-inp" placeholder="5" min="0">
+            </div>
+          </div>
+          <div style="margin-bottom:20px">
+            <label class="f-lbl">Notes</label>
+            <input id="stock-notes" type="text" class="f-inp" placeholder="Optional notes">
+          </div>
+          <div style="display:flex;gap:10px">
+            <button onclick="closeStockModal()" style="flex:1;padding:10px;border:1.5px solid var(--border);border-radius:8px;background:#fff;font-size:.85rem;font-weight:600;cursor:pointer;font-family:inherit">Cancel</button>
+            <button onclick="saveStockItem()" style="flex:1;padding:10px;background:var(--red);color:#fff;border:none;border-radius:8px;font-size:.85rem;font-weight:700;cursor:pointer;font-family:inherit">Save Item</button>
+          </div>
+        </div>
+      </div>
+
       <div id="tab-cainta"   style="display:none" data-branch="cainta"></div>
       <div id="tab-marikina" style="display:none" data-branch="marikina"></div>
       <div id="tab-antipolo" style="display:none" data-branch="antipolo"></div>
@@ -754,6 +865,18 @@ th { background: #F3F5F8; color: #374151; border-bottom-color: #C8D0DB; }
 </div>
 
 <!-- BRANCH MODAL -->
+<!-- ── BRANCH ORDER MODAL ── -->
+<div id="branch-order-modal" style="display:none;position:fixed;inset:0;z-index:999;background:rgba(0,0,0,.45);align-items:center;justify-content:center;padding:16px">
+  <div style="background:#fff;border-radius:16px;width:100%;max-width:580px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.25)">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:22px 24px 16px;border-bottom:1px solid var(--border);position:sticky;top:0;background:#fff;z-index:1">
+      <div style="font-weight:800;font-size:1rem" id="branch-order-title">Orders</div>
+      <button onclick="closeBranchOrderModal()" style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--muted);line-height:1">×</button>
+    </div>
+    <div style="padding:20px 24px" id="branch-order-body"></div>
+    <input type="hidden" id="branch-order-key">
+  </div>
+</div>
+
 <div class="overlay" id="branch-modal">
   <div class="modal">
     <h3 id="branch-modal-title">Add Entry</h3>
@@ -992,7 +1115,7 @@ const BRANCHES = [
   { key:'taytay',   label:'Taytay',   kKey:'ksq_taytay',   sKey:'ksq_taytay_sales'   },
 ];
 const branchView = {cainta:'expenses',marikina:'expenses',antipolo:'expenses',taytay:'expenses'};
-const ALL_TABS = ['dashboard','sales','expenses','salary','others','cainta','marikina','antipolo','taytay'];
+const ALL_TABS = ['dashboard','sales','expenses','salary','stock','cainta','marikina','antipolo','taytay'];
 let editSaleId = null, editExpId = null, editSalId = null, editOtherId = null, editBranchId = null;
 let empProfileName = '', empCalYear = new Date().getFullYear(), empCalMonth = new Date().getMonth();
 const EMP_CAL_MO = ['JANUARY','FEBRUARY','MARCH','APRIL','MAY','JUNE','JULY','AUGUST','SEPTEMBER','OCTOBER','NOVEMBER','DECEMBER'];
@@ -1313,9 +1436,261 @@ function showTab(tab){
   else if(tab==='expenses')  renderExpenses();
   else if(tab==='salary')    renderSalary();
   else if(tab==='others')    renderOther();
+  else if(tab==='stock')     renderStock();
   else { const b=BRANCHES.find(x=>x.key===tab); if(b) renderBranch(b); }
 }
 
+// ── STOCK ────────────────────────────────────────────────────
+const STOCK_KEY = 'ksq_stock_v1';
+const STOCK_CATS_KEY = 'ksq_stock_cats_v1';
+const DEFAULT_CATS = ['Food', 'Drinks', 'Packaging', 'Supplies', 'Equipment', 'General'];
+
+function loadStockCats(){
+  const raw = localStorage.getItem(STOCK_CATS_KEY);
+  if(raw) return JSON.parse(raw);
+  // First load — persist defaults so they survive refresh
+  localStorage.setItem(STOCK_CATS_KEY, JSON.stringify(DEFAULT_CATS));
+  return [...DEFAULT_CATS];
+}
+function saveStockCats(cats){ localStorage.setItem(STOCK_CATS_KEY, JSON.stringify(cats)); }
+
+function addStockCat(){
+  const inp = document.getElementById('new-cat-inp');
+  const name = inp.value.trim();
+  if(!name) return;
+  const cats = loadStockCats();
+  if(cats.map(c=>c.toLowerCase()).includes(name.toLowerCase())){ alert('Category already exists.'); return; }
+  cats.push(name);
+  saveStockCats(cats);
+  inp.value = '';
+  renderStockCats();
+  renderStock();
+}
+
+function deleteStockCat(name){
+  if(!confirm(`Delete category "${name}"? Items using it won't be changed.`)) return;
+  saveStockCats(loadStockCats().filter(c=>c!==name));
+  renderStockCats();
+  renderStock();
+}
+
+function renderStockCats(){
+  const cats = loadStockCats();
+  const wrap = document.getElementById('stock-cats-list');
+  if(!wrap) return;
+  wrap.innerHTML = cats.map(c=>`
+    <span style="display:inline-flex;align-items:center;gap:5px;background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;padding:4px 10px;border-radius:20px;font-size:.78rem;font-weight:600;margin:3px">
+      ${c}
+      <button onclick="deleteStockCat('${c.replace(/'/g,"\\'")}') " style="background:none;border:none;cursor:pointer;color:#93c5fd;font-size:.85rem;line-height:1;padding:0 2px" title="Remove">×</button>
+    </span>`).join('');
+  // also update category select in modal
+  const sel = document.getElementById('stock-cat-sel');
+  if(sel){
+    const cur = sel.value;
+    sel.innerHTML = `<option value="">No category</option>` + cats.map(c=>`<option value="${c}" ${c===cur?'selected':''}>${c}</option>`).join('');
+  }
+  // update datalist fallback
+  const dl = document.getElementById('stock-cat-list');
+  if(dl) dl.innerHTML = cats.map(c=>`<option value="${c}">`).join('');
+}
+const DEFAULT_STOCK = [
+  { id:'s1', name:'Item 1', category:'General', unit:'pcs', qty:0, minQty:5, notes:'' },
+  { id:'s2', name:'Item 2', category:'General', unit:'pcs', qty:0, minQty:5, notes:'' },
+  { id:'s3', name:'Item 3', category:'General', unit:'pcs', qty:0, minQty:5, notes:'' },
+  { id:'s4', name:'Item 4', category:'General', unit:'pcs', qty:0, minQty:5, notes:'' },
+];
+
+function loadStock() {
+  const raw = localStorage.getItem(STOCK_KEY);
+  return raw ? JSON.parse(raw) : DEFAULT_STOCK;
+}
+
+function saveStock(items) {
+  localStorage.setItem(STOCK_KEY, JSON.stringify(items));
+}
+
+function renderStockPendingOrders(){
+  const allOrders = JSON.parse(localStorage.getItem(BRANCH_ORDERS_KEY)||'[]');
+  const pending = allOrders.filter(o=>o.status==='Pending');
+  const badge = document.getElementById('stock-pending-badge');
+  const wrap  = document.getElementById('stock-pending-orders');
+  if(!wrap) return;
+
+  if(badge){ if(pending.length){ badge.textContent=`${pending.length} Pending`; badge.style.display=''; } else badge.style.display='none'; }
+
+  if(!pending.length){
+    wrap.innerHTML=`<div style="padding:24px;text-align:center;color:var(--muted);font-size:.85rem">No pending orders from any branch.</div>`;
+    return;
+  }
+
+  const statusColors = { Pending:'background:#fef3c7;color:#d97706', Fulfilled:'background:#d1fae5;color:#059669', Cancelled:'background:#fee2e2;color:#dc2626' };
+  const branchColors = { cainta:'#2563eb', marikina:'#059669', antipolo:'#d97706', taytay:'#7c3aed' };
+
+  wrap.innerHTML = `
+  <table style="width:100%;border-collapse:collapse;font-size:.83rem">
+    <thead><tr style="background:#f8f9fb">
+      <th style="padding:10px 20px;text-align:left;font-size:.7rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;border-bottom:1px solid var(--border)">Branch</th>
+      <th style="padding:10px 20px;text-align:left;font-size:.7rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;border-bottom:1px solid var(--border)">Date</th>
+      <th style="padding:10px 20px;text-align:left;font-size:.7rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;border-bottom:1px solid var(--border)">Category</th>
+      <th style="padding:10px 20px;text-align:left;font-size:.7rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;border-bottom:1px solid var(--border)">Item</th>
+      <th style="padding:10px 20px;text-align:center;font-size:.7rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;border-bottom:1px solid var(--border)">Qty</th>
+      <th style="padding:10px 20px;text-align:center;font-size:.7rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;border-bottom:1px solid var(--border)">Action</th>
+    </tr></thead>
+    <tbody>
+    ${pending.map(o=>{
+      const branchLabel = (BRANCHES.find(b=>b.key===o.branch)||{label:o.branch}).label;
+      const col = branchColors[o.branch]||'#6b7280';
+      return `<tr style="border-bottom:1px solid var(--border)">
+        <td style="padding:10px 20px"><span style="background:${col}22;color:${col};padding:3px 10px;border-radius:20px;font-size:.72rem;font-weight:700">${branchLabel}</span></td>
+        <td style="padding:10px 20px;color:var(--muted)">${o.date}</td>
+        <td style="padding:10px 20px"><span style="background:#eff6ff;color:#2563eb;padding:2px 8px;border-radius:20px;font-size:.72rem;font-weight:600">${o.category||'—'}</span></td>
+        <td style="padding:10px 20px;font-weight:600">${o.itemName}</td>
+        <td style="padding:10px 20px;text-align:center;font-weight:700">${o.qty}</td>
+        <td style="padding:10px 20px;text-align:center;display:flex;gap:6px;justify-content:center">
+          <button onclick="updateBranchOrderStatus('${o.branch}','${o.id}','Fulfilled')" style="padding:5px 14px;background:#059669;color:#fff;border:none;border-radius:6px;font-size:.75rem;font-weight:700;cursor:pointer;font-family:inherit">✓ Confirm</button>
+          <button onclick="updateBranchOrderStatus('${o.branch}','${o.id}','Cancelled')" style="padding:5px 14px;background:#fff;color:#dc2626;border:1.5px solid #dc2626;border-radius:6px;font-size:.75rem;font-weight:700;cursor:pointer;font-family:inherit">✕ Cancel</button>
+        </td>
+      </tr>`;
+    }).join('')}
+    </tbody>
+  </table>`;
+}
+
+function renderStock() {
+  renderStockCats();
+  renderStockPendingOrders();
+  const items = loadStock();
+  const q = (document.getElementById('stock-search')?.value || '').toLowerCase();
+  const filtered = q ? items.filter(i => i.name.toLowerCase().includes(q) || (i.category||'').toLowerCase().includes(q)) : items;
+
+  // KPI cards
+  const total = items.length;
+  const low   = items.filter(i => i.qty <= i.minQty).length;
+  const ok    = items.filter(i => i.qty > i.minQty).length;
+  const cats  = [...new Set(items.map(i => i.category).filter(Boolean))].length;
+  document.getElementById('stock-kpi').innerHTML = `
+    <div class="kpi-card"><div class="kpi-label">Total Items</div><div class="kpi-value">${total}</div></div>
+    <div class="kpi-card"><div class="kpi-label">In Stock</div><div class="kpi-value" style="color:var(--green)">${ok}</div></div>
+    <div class="kpi-card"><div class="kpi-label">Low / Out</div><div class="kpi-value" style="color:var(--red)">${low}</div></div>
+    <div class="kpi-card"><div class="kpi-label">Categories</div><div class="kpi-value">${cats}</div></div>
+  `;
+
+  const tbody = document.getElementById('stock-tbody');
+  const empty = document.getElementById('stock-empty');
+
+  if (!filtered.length) {
+    tbody.innerHTML = '';
+    empty.style.display = '';
+    return;
+  }
+  empty.style.display = 'none';
+
+  tbody.innerHTML = filtered.map((item, idx) => {
+    const isLow = item.qty <= item.minQty;
+    const statusBadge = item.qty === 0
+      ? `<span style="background:#fee2e2;color:#dc2626;padding:3px 10px;border-radius:20px;font-size:.72rem;font-weight:700">Out</span>`
+      : isLow
+      ? `<span style="background:#fef3c7;color:#d97706;padding:3px 10px;border-radius:20px;font-size:.72rem;font-weight:700">Low</span>`
+      : `<span style="background:#d1fae5;color:#059669;padding:3px 10px;border-radius:20px;font-size:.72rem;font-weight:700">OK</span>`;
+    return `
+    <tr style="border-bottom:1px solid var(--border);transition:background .1s" onmouseover="this.style.background='#f8f9fb'" onmouseout="this.style.background=''">
+      <td style="padding:13px 20px;color:var(--muted);font-size:.8rem">${idx+1}</td>
+      <td style="padding:13px 20px;font-weight:600">${item.name}</td>
+      <td style="padding:13px 20px;color:var(--muted)">${item.category||'—'}</td>
+      <td style="padding:13px 20px;text-align:center">
+        <div style="display:flex;align-items:center;justify-content:center;gap:6px">
+          <button onclick="adjustStockQty('${item.id}',-1)" style="width:26px;height:26px;border:1.5px solid var(--border);border-radius:6px;background:#fff;cursor:pointer;font-size:.9rem;font-weight:700;color:var(--muted);font-family:inherit;display:flex;align-items:center;justify-content:center">−</button>
+          <span style="font-weight:700;min-width:28px;text-align:center">${item.qty}</span>
+          <button onclick="adjustStockQty('${item.id}',1)" style="width:26px;height:26px;border:1.5px solid var(--border);border-radius:6px;background:#fff;cursor:pointer;font-size:.9rem;font-weight:700;color:var(--muted);font-family:inherit;display:flex;align-items:center;justify-content:center">+</button>
+        </div>
+      </td>
+      <td style="padding:13px 20px;color:var(--muted)">${item.unit||'—'}</td>
+      <td style="padding:13px 20px">${statusBadge}</td>
+      <td style="padding:13px 20px;text-align:center">
+        <div style="display:flex;gap:6px;justify-content:center">
+          <button onclick="openStockModal('${item.id}')" style="padding:5px 12px;border:1.5px solid var(--border);border-radius:6px;background:#fff;cursor:pointer;font-size:.76rem;font-weight:600;font-family:inherit;color:var(--text)">Edit</button>
+          <button onclick="deleteStockItem('${item.id}')" style="padding:5px 12px;border:1.5px solid #fecaca;border-radius:6px;background:#fff;cursor:pointer;font-size:.76rem;font-weight:600;font-family:inherit;color:var(--red)">Delete</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function adjustStockQty(id, delta) {
+  const items = loadStock();
+  const item = items.find(i => i.id === id);
+  if (!item) return;
+  item.qty = Math.max(0, (item.qty||0) + delta);
+  saveStock(items);
+  renderStock();
+}
+
+function openStockModal(id) {
+  const modal = document.getElementById('stock-modal');
+  document.getElementById('stock-edit-id').value = id || '';
+  document.getElementById('stock-modal-title').textContent = id ? 'Edit Item' : 'Add Item';
+  if (id) {
+    const item = loadStock().find(i => i.id === id);
+    if (item) {
+      document.getElementById('stock-name').value  = item.name || '';
+      document.getElementById('stock-cat-sel').value = item.category || '';
+      document.getElementById('stock-unit').value  = item.unit || '';
+      document.getElementById('stock-qty').value   = item.qty ?? 0;
+      document.getElementById('stock-min').value   = item.minQty ?? 5;
+      document.getElementById('stock-notes').value = item.notes || '';
+    }
+  } else {
+    document.getElementById('stock-name').value  = '';
+    document.getElementById('stock-cat-sel').value = '';
+    document.getElementById('stock-unit').value  = '';
+    document.getElementById('stock-qty').value   = '';
+    document.getElementById('stock-min').value   = '5';
+    document.getElementById('stock-notes').value = '';
+  }
+  modal.style.display = 'flex';
+  setTimeout(() => document.getElementById('stock-name').focus(), 80);
+}
+
+function closeStockModal() {
+  document.getElementById('stock-modal').style.display = 'none';
+}
+
+function saveStockItem() {
+  const name = document.getElementById('stock-name').value.trim();
+  if (!name) { alert('Item name is required.'); return; }
+  const items = loadStock();
+  const editId = document.getElementById('stock-edit-id').value;
+  const payload = {
+    name,
+    category: document.getElementById('stock-cat-sel').value,
+    unit:     document.getElementById('stock-unit').value.trim(),
+    qty:      parseInt(document.getElementById('stock-qty').value) || 0,
+    minQty:   parseInt(document.getElementById('stock-min').value) || 5,
+    notes:    document.getElementById('stock-notes').value.trim(),
+  };
+  if (editId) {
+    const idx = items.findIndex(i => i.id === editId);
+    if (idx !== -1) items[idx] = { ...items[idx], ...payload };
+  } else {
+    items.push({ id: 's' + Date.now(), ...payload });
+  }
+  saveStock(items);
+  closeStockModal();
+  renderStock();
+}
+
+function deleteStockItem(id) {
+  if (!confirm('Delete this item?')) return;
+  const items = loadStock().filter(i => i.id !== id);
+  saveStock(items);
+  renderStock();
+}
+
+// Close stock modal on backdrop click
+document.addEventListener('click', e => {
+  const modal = document.getElementById('stock-modal');
+  if (modal && e.target === modal) closeStockModal();
+});
 // ── CHART ──
 function drawBarChart(canvasId, labels, values){
   const canvas=document.getElementById(canvasId);
@@ -1945,9 +2320,14 @@ function setBranchView(key, view){ branchView[key]=view; renderBranch(BRANCHES.f
 
 function renderBranch(b){
   const el=document.getElementById('tab-'+b.key);
-  const view=branchView[b.key]||'expenses';
-  const isExp=view==='expenses';
-  // header + tab bar
+  const sales=getS(K_SALES).filter(s=>s.branch===b.key);
+  const total=sales.reduce((a,x)=>a+x.amount,0);
+  const avg=sales.length?total/sales.length:0;
+  const best=sales.reduce((a,x)=>x.amount>a?x.amount:a,0);
+  const latest=sales.slice().sort((a,z)=>z.date.localeCompare(a.date))[0];
+  // Count pending orders for this branch
+  const orders=getBranchOrders(b.key);
+  const pendingOrders=orders.filter(o=>o.status==='Pending').length;
   let html=`
     <div class="topbar">
       <div class="topbar-left">
@@ -1955,52 +2335,12 @@ function renderBranch(b){
         <div class="page-sub">${b.label} branch tracker</div>
       </div>
       <div class="topbar-right">
-        ${isExp
-          ? `<button class="btn btn-red" onclick="openBranchModal('${b.key}')">＋ Add Expense</button>`
-          : `<button class="btn btn-red" onclick="openBranchSaleModal('${b.key}')">＋ Add Sale</button>`}
+        <button class="btn" onclick="openBranchOrderModal('${b.key}')" style="background:#fff;border:1.5px solid var(--border);color:var(--text);font-weight:600;padding:9px 16px;border-radius:8px;cursor:pointer;font-family:inherit;font-size:.83rem;display:flex;align-items:center;gap:6px;box-shadow:var(--sh-sm)">
+          🛒 Order${pendingOrders?` <span style="background:var(--red);color:#fff;border-radius:10px;padding:1px 7px;font-size:.7rem;font-weight:700">${pendingOrders}</span>`:''}
+        </button>
+        <button class="btn btn-red" onclick="openBranchSaleModal('${b.key}')">＋ Add Sale</button>
       </div>
     </div>
-    <div class="s-nav-tabs" style="margin-bottom:18px">
-      <button class="s-vt${isExp?' active':''}" onclick="setBranchView('${b.key}','expenses')">📋 Expenses</button>
-      <button class="s-vt${!isExp?' active':''}" onclick="setBranchView('${b.key}','sales')">💰 Sales</button>
-    </div>`;
-  if(isExp){
-    const items=getS(K_EXP).filter(e=>e.branch===b.key);
-    const total=items.reduce((a,x)=>a+x.amount,0);
-    const avg=items.length?total/items.length:0;
-    const best=items.reduce((a,x)=>x.amount>a?x.amount:a,0);
-    const latest=items.slice().sort((a,z)=>z.date.localeCompare(a.date))[0];
-    html+=`
-    <div class="sales-kpi">
-      <div class="s-kpi k-blue"><div class="s-kpi-icon">💰</div><div class="s-kpi-lbl">Total Expenses</div><div class="s-kpi-val blue">${fmt(total)}</div><div class="s-kpi-sub">${items.length} entr${items.length!==1?'ies':'y'}</div></div>
-      <div class="s-kpi k-green"><div class="s-kpi-icon">📊</div><div class="s-kpi-lbl">Average</div><div class="s-kpi-val green">${fmt(avg)}</div><div class="s-kpi-sub">per entry</div></div>
-      <div class="s-kpi k-orange"><div class="s-kpi-icon">⭐</div><div class="s-kpi-lbl">Highest</div><div class="s-kpi-val orange">${fmt(best)}</div><div class="s-kpi-sub">single entry</div></div>
-      <div class="s-kpi k-purple"><div class="s-kpi-icon">📅</div><div class="s-kpi-lbl">Latest</div><div class="s-kpi-val purple" style="font-size:.85rem">${latest?fmtDate(latest.date):'—'}</div><div class="s-kpi-sub">last recorded</div></div>
-    </div>
-    <div class="section">
-      <div class="sec-hdr">
-        <div><div class="sec-title">Branch Expenses</div><div class="sec-count">${items.length} record${items.length!==1?'s':''}</div></div>
-        <div class="sec-total amt-neg">Total: ${fmt(total)}</div>
-      </div>
-      <table>
-        <thead><tr><th>Date</th><th>Amount</th><th>Description</th><th></th></tr></thead>
-        <tbody>${items.length?items.slice().sort((a,z)=>z.date.localeCompare(a.date)).map(x=>`
-          <tr>
-            <td><span class="day-pill ${dayClass(x.date)}">${dayName(x.date)}</span> ${fmtDate(x.date)}</td>
-            <td class="amt-neg">${fmt(x.amount)}</td>
-            <td>${x.desc||'—'}${x.cat?`<span class="cat-badge ${catClass(x.cat)}" style="margin-left:6px">${x.cat}</span>`:''}</td>
-            <td><button class="act-btn" onclick="openBranchModal('${b.key}',${x.id})">✏️</button> <button class="act-btn act-del" onclick="delBranchEntry('${b.key}',${x.id})">🗑️</button></td>
-          </tr>`).join(''):`<tr><td colspan="4" class="empty-row">No expenses yet — click ＋ Add Expense to start.</td></tr>`}
-        </tbody>
-      </table>
-    </div>`;
-  } else {
-    const sales=getS(K_SALES).filter(s=>s.branch===b.key);
-    const total=sales.reduce((a,x)=>a+x.amount,0);
-    const avg=sales.length?total/sales.length:0;
-    const best=sales.reduce((a,x)=>x.amount>a?x.amount:a,0);
-    const latest=sales.slice().sort((a,z)=>z.date.localeCompare(a.date))[0];
-    html+=`
     <div class="sales-kpi">
       <div class="s-kpi k-blue"><div class="s-kpi-icon">💰</div><div class="s-kpi-lbl">Total Sales</div><div class="s-kpi-val blue">${fmt(total)}</div><div class="s-kpi-sub">${sales.length} entr${sales.length!==1?'ies':'y'}</div></div>
       <div class="s-kpi k-green"><div class="s-kpi-icon">📊</div><div class="s-kpi-lbl">Average</div><div class="s-kpi-val green">${fmt(avg)}</div><div class="s-kpi-sub">per entry</div></div>
@@ -2024,9 +2364,159 @@ function renderBranch(b){
         </tbody>
       </table>
     </div>`;
-  }
   el.innerHTML=html;
 }
+
+// ── BRANCH ORDERS ────────────────────────────────────────────
+const BRANCH_ORDERS_KEY = 'ksq_branch_orders_v1';
+function getBranchOrders(branchKey){
+  const all = JSON.parse(localStorage.getItem(BRANCH_ORDERS_KEY)||'[]');
+  return branchKey ? all.filter(o=>o.branch===branchKey) : all;
+}
+function saveBranchOrders(orders){ localStorage.setItem(BRANCH_ORDERS_KEY, JSON.stringify(orders)); }
+
+function openBranchOrderModal(branchKey){
+  const b = BRANCHES.find(x=>x.key===branchKey);
+  const stockItems = loadStock();
+  const orders = getBranchOrders(branchKey);
+  const modal = document.getElementById('branch-order-modal');
+  document.getElementById('branch-order-title').textContent = `🛒 Orders — ${b.label}`;
+  document.getElementById('branch-order-key').value = branchKey;
+  renderBranchOrderModal(branchKey, stockItems, orders);
+  modal.style.display = 'flex';
+}
+
+function filterBranchOrderItems(branchKey){
+  const allItems = loadStock();
+  const cat = document.getElementById('bo-cat')?.value || '';
+  const filtered = cat ? allItems.filter(i=>(i.category||'')===cat) : allItems;
+  const sel = document.getElementById('bo-item');
+  if(!sel) return;
+  sel.innerHTML = `<option value="">Select item…</option>` +
+    filtered.map(i=>`<option value="${i.id}">${i.name} (${i.unit||'pcs'})</option>`).join('');
+}
+
+function renderBranchOrderModal(branchKey, stockItems, orders){
+  const statusColors = { Pending:'#fef3c7;color:#d97706', Fulfilled:'#d1fae5;color:#059669', Cancelled:'#fee2e2;color:#dc2626' };
+  const categories = loadStockCats();
+  document.getElementById('branch-order-body').innerHTML = `
+    <!-- Place new order -->
+    <div style="margin-bottom:20px;background:#f8f9fb;border-radius:10px;padding:16px;border:1px solid var(--border)">
+      <div style="font-weight:700;font-size:.82rem;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:12px">Place New Order</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+        <div>
+          <label class="f-lbl">Category</label>
+          <select id="bo-cat" class="f-inp" style="padding:9px 12px" onchange="filterBranchOrderItems('${branchKey}')">
+            <option value="">All Categories</option>
+            ${categories.map(c=>`<option value="${c}">${c}</option>`).join('')}
+          </select>
+        </div>
+        <div>
+          <label class="f-lbl">Item</label>
+          <select id="bo-item" class="f-inp" style="padding:9px 12px">
+            <option value="">Select item…</option>
+            ${stockItems.map(i=>`<option value="${i.id}">${i.name} (${i.unit||'pcs'})</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end">
+        <div>
+          <label class="f-lbl">Quantity</label>
+          <input id="bo-qty" type="number" class="f-inp" placeholder="1" min="1">
+        </div>
+        <button onclick="submitBranchOrder('${branchKey}')" style="padding:10px 20px;background:var(--red);color:#fff;border:none;border-radius:8px;font-size:.83rem;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;height:42px">Submit Order</button>
+      </div>
+    </div>
+    <!-- Order history -->
+    <div style="font-weight:700;font-size:.82rem;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px">Order History</div>
+    ${orders.length ? `
+    <table style="width:100%;border-collapse:collapse;font-size:.83rem">
+      <thead><tr style="background:#f8f9fb">
+        <th style="padding:8px 12px;text-align:left;border-bottom:1px solid var(--border);font-size:.7rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)">Date</th>
+        <th style="padding:8px 12px;text-align:left;border-bottom:1px solid var(--border);font-size:.7rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)">Category</th>
+        <th style="padding:8px 12px;text-align:left;border-bottom:1px solid var(--border);font-size:.7rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)">Item</th>
+        <th style="padding:8px 12px;text-align:center;border-bottom:1px solid var(--border);font-size:.7rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)">Qty</th>
+        <th style="padding:8px 12px;text-align:left;border-bottom:1px solid var(--border);font-size:.7rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)">Status</th>
+        <th style="padding:8px 12px;text-align:center;border-bottom:1px solid var(--border);font-size:.7rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)"></th>
+      </tr></thead>
+      <tbody>${orders.slice().reverse().map(o=>`
+        <tr style="border-bottom:1px solid var(--border)">
+          <td style="padding:9px 12px;color:var(--muted)">${o.date}</td>
+          <td style="padding:9px 12px"><span style="background:#eff6ff;color:#2563eb;padding:2px 8px;border-radius:20px;font-size:.72rem;font-weight:600">${o.category||'—'}</span></td>
+          <td style="padding:9px 12px;font-weight:600">${o.itemName}</td>
+          <td style="padding:9px 12px;text-align:center">${o.qty}</td>
+          <td style="padding:9px 12px"><span style="background:${statusColors[o.status]||'#f3f4f6;color:#6b7280'};padding:3px 10px;border-radius:20px;font-size:.72rem;font-weight:700">${o.status}</span></td>
+          <td style="padding:9px 12px;text-align:center">
+            <select onchange="updateBranchOrderStatus('${branchKey}','${o.id}',this.value)" style="font-size:.75rem;border:1.5px solid var(--border);border-radius:6px;padding:3px 6px;font-family:inherit;cursor:pointer;outline:none">
+              <option ${o.status==='Pending'?'selected':''}>Pending</option>
+              <option ${o.status==='Fulfilled'?'selected':''}>Fulfilled</option>
+              <option ${o.status==='Cancelled'?'selected':''}>Cancelled</option>
+            </select>
+          </td>
+        </tr>`).join('')}
+      </tbody>
+    </table>` : `<div style="padding:24px;text-align:center;color:var(--muted);font-size:.85rem">No orders yet for this branch.</div>`}
+  `;
+}
+
+function submitBranchOrder(branchKey){
+  const itemId = document.getElementById('bo-item').value;
+  const qty = parseInt(document.getElementById('bo-qty').value)||0;
+  const cat = document.getElementById('bo-cat')?.value || '';
+  if(!itemId){ alert('Please select an item.'); return; }
+  if(qty < 1){ alert('Quantity must be at least 1.'); return; }
+  const stockItems = loadStock();
+  const item = stockItems.find(i=>i.id===itemId);
+  if(!item) return;
+  const all = JSON.parse(localStorage.getItem(BRANCH_ORDERS_KEY)||'[]');
+  all.push({
+    id: 'bo'+Date.now(),
+    branch: branchKey,
+    itemId, itemName: item.name,
+    category: item.category || cat || '—',
+    qty, status: 'Pending',
+    date: new Date().toLocaleDateString('en-PH',{month:'short',day:'numeric',year:'numeric'})
+  });
+  saveBranchOrders(all);
+  document.getElementById('bo-item').value='';
+  document.getElementById('bo-qty').value='';
+  if(document.getElementById('bo-cat')) document.getElementById('bo-cat').value='';
+  renderBranchOrderModal(branchKey, stockItems, getBranchOrders(branchKey));
+  // refresh branch tab to update badge count
+  const b=BRANCHES.find(x=>x.key===branchKey); if(b) renderBranch(b);
+}
+
+function updateBranchOrderStatus(branchKey, orderId, newStatus){
+  const all = JSON.parse(localStorage.getItem(BRANCH_ORDERS_KEY)||'[]');
+  const o = all.find(x=>x.id===orderId);
+  if(!o) return;
+  const prev = o.status;
+  o.status = newStatus;
+
+  // Auto-deduct stock when admin confirms (Fulfilled) — only once
+  if(newStatus === 'Fulfilled' && prev !== 'Fulfilled' && !o.deducted){
+    const stock = loadStock();
+    const si = stock.find(i=>i.id===o.itemId);
+    if(si){ si.qty = Math.max(0, (si.qty||0) - o.qty); saveStock(stock); }
+    o.deducted = true;
+  }
+  // Restore stock if un-confirming a previously fulfilled order
+  if(prev === 'Fulfilled' && newStatus !== 'Fulfilled' && o.deducted){
+    const stock = loadStock();
+    const si = stock.find(i=>i.id===o.itemId);
+    if(si){ si.qty = (si.qty||0) + o.qty; saveStock(stock); }
+    o.deducted = false;
+  }
+
+  saveBranchOrders(all);
+  // Refresh stock page if visible
+  if(document.getElementById('tab-stock')?.style.display !== 'none') renderStock();
+  // Refresh pending orders panel on stock page
+  renderStockPendingOrders();
+  const b=BRANCHES.find(x=>x.key===branchKey); if(b) renderBranch(b);
+}
+
+function closeBranchOrderModal(){ document.getElementById('branch-order-modal').style.display='none'; }
 function openBranchModal(key,id){
   const b=BRANCHES.find(x=>x.key===key);
   document.getElementById('br-key').value=key;
