@@ -178,7 +178,7 @@ tr:hover td { background: #fafbfd; }
 /* CATEGORY BADGE */
 .cat-badge { display: inline-block; padding: 2px 9px; border-radius: 20px; font-size: .65rem; font-weight: 600; }
 .cat-Restock    { background: #eff6ff; color: #1e40af; }
-.cat-FB         { background: #eef2ff; color: #3730a3; }
+.cat-Marketing  { background: #fce7f3; color: #9d174d; }
 .cat-Salary     { background: #fef3c7; color: #92400e; }
 .cat-Utilities  { background: #f0fdf4; color: #166534; }
 .cat-Transport  { background: #fdf4ff; color: #6b21a8; }
@@ -300,9 +300,20 @@ select.f-inp { appearance: none; background-image: url("data:image/svg+xml,%3Csv
 .day-pill { background: #E2E8F0 !important; color: #334155 !important; }
 .pill-mon,.pill-tue,.pill-wed,.pill-thu,.pill-fri,.pill-sat,.pill-sun { background: #E2E8F0 !important; color: #334155 !important; }
 
-/* Category badges — neutral */
-.cat-badge { background: #F1F5F9 !important; color: #475569 !important; border: 1px solid #E2E8F0; }
-.cat-Restock,.cat-FB,.cat-Salary,.cat-Utilities,.cat-Transport,.cat-Other { background: #F1F5F9 !important; color: #475569 !important; }
+/* Category badges — base style only, colors handled by specific classes */
+.cat-badge { border: 1px solid #E2E8F0; }
+
+/* Stock KPI cards */
+.kpi-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; }
+.kpi-card { background: var(--white); border-radius: var(--r); padding: 16px 20px; box-shadow: var(--sh-sm); border: 1px solid var(--border); }
+.kpi-label { font-size: .62rem; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); margin-bottom: 6px; }
+.kpi-value { font-size: 1.25rem; font-weight: 800; color: var(--text); letter-spacing: -.02em; }
+
+/* Day salary modal actions */
+.modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 24px; }
+
+/* Branch sale delete button */
+.act-del:hover { border-color: var(--red) !important; color: var(--red) !important; background: var(--red-light) !important; }
 
 /* Best-day chip — neutral */
 .best-day-chip { background: #F1F5F9; color: #475569; border: 1px solid #DDE3ED; font-weight: 600; }
@@ -510,6 +521,12 @@ th { background: #F3F5F8; color: #374151; border-bottom-color: #C8D0DB; }
         <div class="nav-item" onclick="showTab('stock');closeMobSidebar()" data-access="admin">
           <span class="ni">📦</span><span>Stock</span>
         </div>
+        <div class="nav-item" onclick="showTab('others');closeMobSidebar()" data-access="admin">
+          <span class="ni">🧾</span><span>Receivables</span>
+        </div>
+        <div class="nav-item" onclick="showTab('settings');closeMobSidebar()" data-access="admin">
+          <span class="ni">⚙️</span><span>Settings</span>
+        </div>
         <div class="nav-section" data-access="branches">Branches</div>
         <div class="nav-item" onclick="showTab('cainta');closeMobSidebar()" data-access="branch-cainta">
           <span class="ni">🏪</span><span>Cainta</span>
@@ -586,7 +603,7 @@ th { background: #F3F5F8; color: #374151; border-bottom-color: #C8D0DB; }
           </div>
           <table>
             <thead><tr>
-              <th>Day</th><th>Date</th><th>Gross Sales</th><th>Expenses</th><th>Net</th>
+              <th>Day</th><th>Date</th><th>Gross Sales</th><th>Expenses</th><th>Net</th><th></th>
             </tr></thead>
             <tbody id="dash-tbody"></tbody>
           </table>
@@ -623,11 +640,6 @@ th { background: #F3F5F8; color: #374151; border-bottom-color: #C8D0DB; }
           </div>
         </div>
         <!-- Tab bar -->
-        <div class="s-nav-tabs">
-          <button class="s-vt active" id="vt-monthly"   onclick="setSalesView('monthly')">📆 Monthly</button>
-          <button class="s-vt"        id="vt-quarterly" onclick="setSalesView('quarterly')">📊 Quarterly</button>
-          <button class="s-vt"        id="vt-yearly"    onclick="setSalesView('yearly')">📈 Yearly</button>
-        </div>
         <!-- KPI Cards -->
         <div class="sales-kpi" id="sales-kpi"></div>
         <div class="section">
@@ -640,9 +652,10 @@ th { background: #F3F5F8; color: #374151; border-bottom-color: #C8D0DB; }
           </div>
           <!-- monthly -->
           <table id="sales-table-monthly" style="display:none">
-            <thead><tr><th>Month</th><th>Weeks</th><th>Total Sales</th><th>Avg / Day</th><th>Best Day</th></tr></thead>
+            <thead><tr><th>Day</th><th>Date</th><th>Gross Sales</th><th>Branch</th><th></th></tr></thead>
             <tbody id="sales-tbody-monthly"></tbody>
           </table>
+          <div id="sales-receivables-section" class="section" style="display:none;margin-top:16px"></div>
           <!-- quarterly -->
           <table id="sales-table-quarterly" style="display:none">
             <thead><tr><th>Quarter</th><th>Months</th><th>Days</th><th>Total Sales</th><th>Avg / Month</th><th>Best Month</th></tr></thead>
@@ -692,6 +705,15 @@ th { background: #F3F5F8; color: #374151; border-bottom-color: #C8D0DB; }
             <div class="page-sub">Daily expense records</div>
           </div>
           <div class="topbar-right">
+            <select class="month-sel" id="exp-cat-f" onchange="renderExpenses()">
+              <option value="">All Categories</option>
+              <option value="Restock">Restock</option>
+              <option value="Marketing">Marketing</option>
+              <option value="Salary">Salary</option>
+              <option value="Utilities">Utilities</option>
+              <option value="Transport">Transport</option>
+              <option value="Other">Other</option>
+            </select>
             <select class="month-sel" id="exp-month-f" onchange="renderExpenses()">
               <option value="">All Months</option>
               <option value="01">January</option>
@@ -721,7 +743,7 @@ th { background: #F3F5F8; color: #374151; border-bottom-color: #C8D0DB; }
           </div>
           <table>
             <thead><tr>
-              <th>Day</th><th>Date</th><th>Amount</th><th>Description</th><th></th>
+              <th>Day</th><th>Date</th><th>Amount</th><th>Description</th><th>Category</th><th></th>
             </tr></thead>
             <tbody id="exp-tbody"></tbody>
           </table>
@@ -756,7 +778,7 @@ th { background: #F3F5F8; color: #374151; border-bottom-color: #C8D0DB; }
                 <option value="12">December</option>
               </select>
               <select class="month-sel" id="sal-year-f" onchange="renderSalary()"></select>
-              <button class="btn btn-red" onclick="openSalModal()">+ Add Record</button>
+              <button class="btn btn-red" onclick="openSalModal()">+ Add Employee</button>
             </div>
           </div>
           <div class="section">
@@ -891,7 +913,22 @@ th { background: #F3F5F8; color: #374151; border-bottom-color: #C8D0DB; }
             </div>
             <div>
               <label class="f-lbl">Unit</label>
-              <input id="stock-unit" type="text" class="f-inp" placeholder="e.g. kg, pcs">
+              <select id="stock-unit-sel" class="f-inp" onchange="toggleCustomUnit()">
+                <option value="">— select —</option>
+                <option value="kg">kg</option>
+                <option value="g">g</option>
+                <option value="pcs">pcs</option>
+                <option value="box">box</option>
+                <option value="sack">sack</option>
+                <option value="pack">pack</option>
+                <option value="bottle">bottle</option>
+                <option value="liter">liter</option>
+                <option value="tray">tray</option>
+                <option value="bundle">bundle</option>
+                <option value="__custom__">+ Add custom…</option>
+              </select>
+              <input id="stock-unit-custom" type="text" class="f-inp" placeholder="Type unit name…" style="display:none;margin-top:6px">
+              <input type="hidden" id="stock-unit">
             </div>
           </div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
@@ -912,6 +949,47 @@ th { background: #F3F5F8; color: #374151; border-bottom-color: #C8D0DB; }
             <button onclick="closeStockModal()" style="flex:1;padding:10px;border:1.5px solid var(--border);border-radius:8px;background:#fff;font-size:.85rem;font-weight:600;cursor:pointer;font-family:inherit">Cancel</button>
             <button onclick="saveStockItem()" style="flex:1;padding:10px;background:var(--red);color:#fff;border:none;border-radius:8px;font-size:.85rem;font-weight:700;cursor:pointer;font-family:inherit">Save Item</button>
           </div>
+        </div>
+      </div>
+
+      <!-- SETTINGS TAB -->
+      <div id="tab-settings" style="display:none">
+        <div class="topbar">
+          <div class="topbar-left">
+            <div class="page-title">Settings</div>
+            <div class="page-sub">Manage app preferences &amp; data</div>
+          </div>
+        </div>
+
+        <div style="padding:24px;display:flex;flex-direction:column;gap:20px;max-width:680px">
+
+          <!-- PIN MANAGEMENT -->
+          <div class="section" style="padding:24px">
+            <div class="sec-title" style="margin-bottom:16px">🔐 Change PINs</div>
+            <div style="display:flex;flex-direction:column;gap:12px" id="settings-pin-list"></div>
+          </div>
+
+          <!-- EXPENSE CATEGORIES -->
+          <div class="section" style="padding:24px">
+            <div class="sec-hdr" style="margin-bottom:16px">
+              <div class="sec-title">🏷️ Expense Categories</div>
+              <button class="btn btn-red" style="font-size:.75rem;padding:6px 14px" onclick="openSettingsCatModal()">+ Add Category</button>
+            </div>
+            <div id="settings-exp-cats" style="display:flex;flex-wrap:wrap;gap:8px"></div>
+          </div>
+
+          <!-- DATA MANAGEMENT -->
+          <div class="section" style="padding:24px">
+            <div class="sec-title" style="margin-bottom:16px">💾 Data Management</div>
+            <div style="display:flex;gap:12px;flex-wrap:wrap">
+              <button class="btn" style="background:#1A6B3C;color:#fff;border:none" onclick="exportAllData()">⬇️ Export Backup</button>
+              <button class="btn" style="background:#1E5CA8;color:#fff;border:none" onclick="document.getElementById('import-file').click()">⬆️ Import Backup</button>
+              <input type="file" id="import-file" accept=".json" style="display:none" onchange="importAllData(event)">
+              <button class="btn" style="background:#A52B23;color:#fff;border:none" onclick="clearAllData()">🗑️ Clear All Data</button>
+            </div>
+            <div style="margin-top:12px;font-size:.75rem;color:var(--muted)">Export saves all records to a JSON file. Import restores from a previous backup. Clear removes all records permanently.</div>
+          </div>
+
         </div>
       </div>
 
@@ -957,7 +1035,7 @@ th { background: #F3F5F8; color: #374151; border-bottom-color: #C8D0DB; }
       <label class="f-lbl">Category</label>
       <select id="br-cat" class="f-inp">
         <option>Restock</option>
-        <option>FB Ads</option>
+        <option>Marketing</option>
         <option>Salary</option>
         <option>Utilities</option>
         <option>Transport</option>
@@ -995,6 +1073,41 @@ th { background: #F3F5F8; color: #374151; border-bottom-color: #C8D0DB; }
   </div>
 </div>
 
+<!-- SETTINGS PIN MODAL -->
+<div class="overlay" id="settings-pin-modal">
+  <div class="modal">
+    <h3 id="settings-pin-modal-title">Change PIN</h3>
+    <input type="hidden" id="spm-role">
+    <div class="modal-field">
+      <label class="f-lbl">New PIN (4 digits)</label>
+      <input type="password" id="spm-pin" class="f-inp" maxlength="4" placeholder="••••" inputmode="numeric">
+    </div>
+    <div class="modal-field">
+      <label class="f-lbl">Confirm PIN</label>
+      <input type="password" id="spm-pin2" class="f-inp" maxlength="4" placeholder="••••" inputmode="numeric">
+    </div>
+    <div class="modal-btns">
+      <button class="btn btn-ghost" onclick="closeModal('settings-pin-modal')">Cancel</button>
+      <button class="btn btn-red" onclick="savePinChange()">Save PIN</button>
+    </div>
+  </div>
+</div>
+
+<!-- SETTINGS CATEGORY MODAL -->
+<div class="overlay" id="settings-cat-modal">
+  <div class="modal">
+    <h3>Add Expense Category</h3>
+    <div class="modal-field">
+      <label class="f-lbl">Category Name</label>
+      <input type="text" id="scat-name" class="f-inp" placeholder="e.g. Maintenance">
+    </div>
+    <div class="modal-btns">
+      <button class="btn btn-ghost" onclick="closeModal('settings-cat-modal')">Cancel</button>
+      <button class="btn btn-red" onclick="saveSettingsCat()">Add</button>
+    </div>
+  </div>
+</div>
+
 <!-- SALE MODAL -->
 <div class="overlay" id="sale-modal">
   <div class="modal">
@@ -1008,8 +1121,14 @@ th { background: #F3F5F8; color: #374151; border-bottom-color: #C8D0DB; }
       <input type="number" id="s-amt" class="f-inp" placeholder="0" />
     </div>
     <div class="modal-field">
-      <label class="f-lbl">Notes</label>
-      <input type="text" id="s-notes" class="f-inp" placeholder="Optional..." />
+      <label class="f-lbl">Branch</label>
+      <select id="s-branch" class="f-inp">
+        <option value="">Main</option>
+        <option value="cainta">Cainta</option>
+        <option value="marikina">Marikina</option>
+        <option value="antipolo">Antipolo</option>
+        <option value="taytay">Taytay</option>
+      </select>
     </div>
     <div class="modal-btns">
       <button class="btn btn-ghost" onclick="closeModal('sale-modal')">Cancel</button>
@@ -1035,7 +1154,7 @@ th { background: #F3F5F8; color: #374151; border-bottom-color: #C8D0DB; }
         <label class="f-lbl">Category</label>
         <select id="e-cat" class="f-inp">
           <option>Restock</option>
-          <option>FB Ads</option>
+          <option>Marketing</option>
           <option>Salary</option>
           <option>Utilities</option>
           <option>Transport</option>
@@ -1084,28 +1203,14 @@ th { background: #F3F5F8; color: #374151; border-bottom-color: #C8D0DB; }
 <!-- SALARY MODAL -->
 <div class="overlay" id="sal-modal">
   <div class="modal">
-    <h3 id="sal-modal-title">Add Salary Record</h3>
-    <div class="modal-field">
-      <label class="f-lbl">Month</label>
-      <input type="month" id="sl-month" class="f-inp" />
-    </div>
+    <h3>Add Employee</h3>
     <div class="modal-field">
       <label class="f-lbl">Employee Name</label>
-      <input type="text" id="sl-name" class="f-inp" placeholder="e.g. Chef Yvann" />
-    </div>
-    <div class="f-row2">
-      <div>
-        <label class="f-lbl">Salary Earned (₱)</label>
-        <input type="number" id="sl-earned" class="f-inp" placeholder="0" />
-      </div>
-      <div>
-        <label class="f-lbl">Cash Advance (₱)</label>
-        <input type="number" id="sl-ca" class="f-inp" placeholder="0" />
-      </div>
+      <input type="text" id="sl-name" class="f-inp" placeholder="e.g. Chef Yvann" onkeydown="if(event.key==='Enter') saveSal()" />
     </div>
     <div class="modal-btns">
       <button class="btn btn-ghost" onclick="closeModal('sal-modal')">Cancel</button>
-      <button class="btn btn-red" onclick="saveSal()">Save</button>
+      <button class="btn btn-red" onclick="saveSal()">Add Employee</button>
     </div>
   </div>
 </div>
@@ -1114,6 +1219,10 @@ th { background: #F3F5F8; color: #374151; border-bottom-color: #C8D0DB; }
 <div class="overlay" id="other-modal">
   <div class="modal">
     <h3 id="other-modal-title">Add Other / Receivable</h3>
+    <div class="modal-field">
+      <label class="f-lbl">Date</label>
+      <input type="date" id="ot-date" class="f-inp" />
+    </div>
     <div class="modal-field">
       <label class="f-lbl">Description</label>
       <input type="text" id="ot-desc" class="f-inp" placeholder="e.g. Receivable from Kamayan sa Cainta" />
@@ -1163,10 +1272,27 @@ const USERS = [
   { role:'antipolo', pin:'0000', label:'Antipolo', emoji:'🏪', access:'branch'   },
   { role:'taytay',   pin:'0000', label:'Taytay',   emoji:'🏪', access:'branch'   },
 ];
+const K_PINS = 'ksq_pins';
+function getPins(){
+  const saved=localStorage.getItem(K_PINS);
+  if(saved) return JSON.parse(saved);
+  const pins={}; USERS.forEach(u=>{ pins[u.role]=u.pin; }); return pins;
+}
+function savePins(pins){ localStorage.setItem(K_PINS,JSON.stringify(pins)); }
 const K_SALES     = 'ksq_sales';
 const K_EXP       = 'ksq_expenses';
 const K_SAL       = 'ksq_salary';
 const K_SAL_DAILY = 'ksq_sal_daily';
+const K_EMPLOYEES = 'ksq_employees_v1';
+function loadEmployees(){
+  const raw=localStorage.getItem(K_EMPLOYEES);
+  if(raw) return JSON.parse(raw);
+  // Seed from existing K_SAL names on first load
+  const names=[...new Set(getS(K_SAL).map(s=>s.name).filter(Boolean))].sort();
+  localStorage.setItem(K_EMPLOYEES, JSON.stringify(names));
+  return names;
+}
+function saveEmployees(names){ localStorage.setItem(K_EMPLOYEES, JSON.stringify(names)); }
 const K_OTHER     = 'ksq_other';
 const BRANCHES = [
   { key:'cainta',   label:'Cainta',   kKey:'ksq_cainta',   sKey:'ksq_cainta_sales'   },
@@ -1175,7 +1301,7 @@ const BRANCHES = [
   { key:'taytay',   label:'Taytay',   kKey:'ksq_taytay',   sKey:'ksq_taytay_sales'   },
 ];
 const branchView = {cainta:'expenses',marikina:'expenses',antipolo:'expenses',taytay:'expenses'};
-const ALL_TABS = ['dashboard','sales','expenses','salary','stock','cainta','marikina','antipolo','taytay'];
+const ALL_TABS = ['dashboard','sales','expenses','salary','stock','others','settings','cainta','marikina','antipolo','taytay'];
 let editSaleId = null, editExpId = null, editSalId = null, editOtherId = null, editBranchId = null;
 let empProfileName = '', empCalYear = new Date().getFullYear(), empCalMonth = new Date().getMonth();
 const EMP_CAL_MO = ['JANUARY','FEBRUARY','MARCH','APRIL','MAY','JUNE','JULY','AUGUST','SEPTEMBER','OCTOBER','NOVEMBER','DECEMBER'];
@@ -1186,7 +1312,8 @@ let salesView = 'monthly';
 function login() {
   const username = document.getElementById('login-username').value.trim().toLowerCase();
   const pin      = document.getElementById('pin').value;
-  const user     = USERS.find(u=>u.role===username && u.pin===pin);
+  const savedPins=getPins();
+  const user     = USERS.find(u=>u.role===username && (savedPins[u.role]||u.pin)===pin);
   if(user){
     sessionStorage.setItem('ksq_auth','1');
     sessionStorage.setItem('ksq_role', user.role);
@@ -1271,83 +1398,83 @@ function seed(){
   }
   if(!getS(K_EXP).length){
     setS(K_EXP,[
-      {id:1,date:'2026-06-01',amount:500,desc:'FB Ads',cat:'FB Ads'},
+      {id:1,date:'2026-06-01',amount:500,desc:'Marketing',cat:'Marketing'},
       {id:101,date:'2026-06-01',amount:5026,desc:'Expenses from Kamayan Sales',cat:'Other'},
-      {id:2,date:'2026-06-02',amount:500,desc:'FB Ads',cat:'FB Ads'},
+      {id:2,date:'2026-06-02',amount:500,desc:'Marketing',cat:'Marketing'},
       {id:3,date:'2026-06-02',amount:2265,desc:'Restock palengke',cat:'Restock'},
       {id:4,date:'2026-06-02',amount:3800,desc:'10 sacks uling',cat:'Restock'},
       {id:102,date:'2026-06-02',amount:7994,desc:'Expenses from Kamayan Sales',cat:'Other'},
       {id:5,date:'2026-06-03',amount:1800,desc:'WIFI',cat:'Utilities'},
-      {id:6,date:'2026-06-03',amount:500,desc:'FB Ads',cat:'FB Ads'},
+      {id:6,date:'2026-06-03',amount:500,desc:'Marketing',cat:'Marketing'},
       {id:7,date:'2026-06-03',amount:3050,desc:'Restock palengke',cat:'Restock'},
       {id:103,date:'2026-06-03',amount:11533,desc:'Expenses from Kamayan Sales',cat:'Other'},
-      {id:8,date:'2026-06-04',amount:500,desc:'FB Ads',cat:'FB Ads'},
+      {id:8,date:'2026-06-04',amount:500,desc:'Marketing',cat:'Marketing'},
       {id:9,date:'2026-06-04',amount:3000,desc:'Gas for H100',cat:'Transport'},
       {id:10,date:'2026-06-04',amount:790,desc:'Restock palengke',cat:'Restock'},
       {id:104,date:'2026-06-04',amount:8206,desc:'Expenses from Kamayan Sales',cat:'Other'},
-      {id:11,date:'2026-06-05',amount:500,desc:'FB Ads',cat:'FB Ads'},
+      {id:11,date:'2026-06-05',amount:500,desc:'Marketing',cat:'Marketing'},
       {id:12,date:'2026-06-05',amount:38500,desc:'Puregold Restock',cat:'Restock'},
       {id:13,date:'2026-06-05',amount:5200,desc:'Restock palengke',cat:'Restock'},
       {id:105,date:'2026-06-05',amount:6210,desc:'Expenses from Kamayan Sales',cat:'Other'},
-      {id:14,date:'2026-06-06',amount:500,desc:'FB Ads',cat:'FB Ads'},
+      {id:14,date:'2026-06-06',amount:500,desc:'Marketing',cat:'Marketing'},
       {id:15,date:'2026-06-06',amount:3800,desc:'10 sacks uling',cat:'Restock'},
       {id:16,date:'2026-06-06',amount:7010,desc:'Restock palengke',cat:'Restock'},
       {id:106,date:'2026-06-06',amount:8130,desc:'Expenses from Kamayan Sales',cat:'Other'},
-      {id:17,date:'2026-06-07',amount:500,desc:'FB Ads',cat:'FB Ads'},
+      {id:17,date:'2026-06-07',amount:500,desc:'Marketing',cat:'Marketing'},
       {id:18,date:'2026-06-07',amount:4300,desc:'1000 pcs plastic for restocking',cat:'Restock'},
       {id:19,date:'2026-06-07',amount:18780,desc:'Restock palengke',cat:'Restock'},
       {id:20,date:'2026-06-07',amount:3080,desc:'Leche Flan',cat:'Restock'},
       {id:107,date:'2026-06-07',amount:11321,desc:'Expenses from Kamayan Sales',cat:'Other'},
-      {id:21,date:'2026-06-08',amount:500,desc:'FB Ads',cat:'FB Ads'},
+      {id:21,date:'2026-06-08',amount:500,desc:'Marketing',cat:'Marketing'},
       {id:22,date:'2026-06-08',amount:3460,desc:'Restock palengke',cat:'Restock'},
       {id:108,date:'2026-06-08',amount:6530,desc:'Expenses from Kamayan Sales',cat:'Other'},
-      {id:23,date:'2026-06-09',amount:500,desc:'FB Ads',cat:'FB Ads'},
+      {id:23,date:'2026-06-09',amount:500,desc:'Marketing',cat:'Marketing'},
       {id:24,date:'2026-06-09',amount:3800,desc:'10 sacks uling',cat:'Restock'},
       {id:25,date:'2026-06-09',amount:6010,desc:'Restock palengke',cat:'Restock'},
       {id:109,date:'2026-06-09',amount:8601,desc:'Expenses from Kamayan Sales',cat:'Other'},
-      {id:26,date:'2026-06-10',amount:500,desc:'FB Ads',cat:'FB Ads'},
+      {id:26,date:'2026-06-10',amount:500,desc:'Marketing',cat:'Marketing'},
       {id:27,date:'2026-06-10',amount:28158,desc:'Puregold restock',cat:'Restock'},
       {id:28,date:'2026-06-10',amount:122000,desc:'Pera kay Gave for Balintawak',cat:'Other'},
       {id:110,date:'2026-06-10',amount:9392,desc:'Expenses from Kamayan Sales',cat:'Other'},
-      {id:29,date:'2026-06-11',amount:500,desc:'FB Ads',cat:'FB Ads'},
+      {id:29,date:'2026-06-11',amount:500,desc:'Marketing',cat:'Marketing'},
       {id:30,date:'2026-06-11',amount:8760,desc:'Restock palengke',cat:'Restock'},
       {id:111,date:'2026-06-11',amount:17682,desc:'Expenses from Kamayan Sales',cat:'Other'},
-      {id:31,date:'2026-06-12',amount:500,desc:'FB Ads',cat:'FB Ads'},
+      {id:31,date:'2026-06-12',amount:500,desc:'Marketing',cat:'Marketing'},
       {id:32,date:'2026-06-12',amount:5575,desc:'Restock palengke',cat:'Restock'},
       {id:112,date:'2026-06-12',amount:2853,desc:'Expenses from Kamayan Sales',cat:'Other'},
-      {id:33,date:'2026-06-13',amount:500,desc:'FB Ads',cat:'FB Ads'},
+      {id:33,date:'2026-06-13',amount:500,desc:'Marketing',cat:'Marketing'},
       {id:34,date:'2026-06-13',amount:47270,desc:'Restock puregold',cat:'Restock'},
       {id:35,date:'2026-06-13',amount:6810,desc:'Restock palengke',cat:'Restock'},
       {id:113,date:'2026-06-13',amount:10444,desc:'Expenses from Kamayan Sales',cat:'Other'},
-      {id:36,date:'2026-06-14',amount:500,desc:'FB Ads',cat:'FB Ads'},
+      {id:36,date:'2026-06-14',amount:500,desc:'Marketing',cat:'Marketing'},
       {id:37,date:'2026-06-14',amount:3620,desc:'Restocking palengke',cat:'Restock'},
       {id:114,date:'2026-06-14',amount:7601,desc:'Expenses from Kamayan Sales',cat:'Other'},
-      {id:38,date:'2026-06-15',amount:500,desc:'FB Ads',cat:'FB Ads'},
+      {id:38,date:'2026-06-15',amount:500,desc:'Marketing',cat:'Marketing'},
       {id:39,date:'2026-06-15',amount:16000,desc:'Cash Advance',cat:'Other'},
       {id:115,date:'2026-06-15',amount:11131,desc:'Expenses from Kamayan Sales',cat:'Other'},
-      {id:40,date:'2026-06-16',amount:500,desc:'FB Ads',cat:'FB Ads'},
+      {id:40,date:'2026-06-16',amount:500,desc:'Marketing',cat:'Marketing'},
       {id:41,date:'2026-06-16',amount:4500,desc:'Cash Advance',cat:'Other'},
       {id:42,date:'2026-06-16',amount:5265,desc:'Restock palengke',cat:'Restock'},
       {id:116,date:'2026-06-16',amount:2803,desc:'Expenses from Kamayan Sales',cat:'Other'},
       {id:43,date:'2026-06-16',amount:500000,desc:'Payment for Meat Jun 1-15',cat:'Restock'},
-      {id:44,date:'2026-06-17',amount:500,desc:'FB Ads',cat:'FB Ads'},
+      {id:44,date:'2026-06-17',amount:500,desc:'Marketing',cat:'Marketing'},
       {id:45,date:'2026-06-17',amount:38000,desc:'Restock puregold',cat:'Restock'},
       {id:117,date:'2026-06-17',amount:8858,desc:'Expenses from Kamayan Sales',cat:'Other'},
-      {id:46,date:'2026-06-18',amount:500,desc:'FB Ads',cat:'FB Ads'},
+      {id:46,date:'2026-06-18',amount:500,desc:'Marketing',cat:'Marketing'},
       {id:47,date:'2026-06-18',amount:12345,desc:'Restock palengke',cat:'Restock'},
       {id:118,date:'2026-06-18',amount:8573,desc:'Expenses from Kamayan Sales',cat:'Other'},
-      {id:48,date:'2026-06-19',amount:500,desc:'FB Ads',cat:'FB Ads'},
+      {id:48,date:'2026-06-19',amount:500,desc:'Marketing',cat:'Marketing'},
       {id:49,date:'2026-06-19',amount:13500,desc:'Cash Advance',cat:'Other'},
       {id:119,date:'2026-06-19',amount:12203,desc:'Expenses from Kamayan Sales',cat:'Other'},
-      {id:50,date:'2026-06-20',amount:500,desc:'FB Ads',cat:'FB Ads'},
+      {id:50,date:'2026-06-20',amount:500,desc:'Marketing',cat:'Marketing'},
       {id:51,date:'2026-06-20',amount:7500,desc:'Cash Advance',cat:'Other'},
       {id:52,date:'2026-06-20',amount:4930,desc:'Restock palengke',cat:'Restock'},
-      {id:53,date:'2026-06-21',amount:500,desc:'FB Ads',cat:'FB Ads'},
+      {id:53,date:'2026-06-21',amount:500,desc:'Marketing',cat:'Marketing'},
       {id:120,date:'2026-06-21',amount:18612,desc:'Expenses from Kamayan Sales',cat:'Other'},
-      {id:54,date:'2026-06-22',amount:500,desc:'FB Ads',cat:'FB Ads'},
+      {id:54,date:'2026-06-22',amount:500,desc:'Marketing',cat:'Marketing'},
       {id:55,date:'2026-06-22',amount:5965,desc:'Restock palengke',cat:'Restock'},
       {id:56,date:'2026-06-22',amount:53355,desc:'Restock puregold',cat:'Restock'},
-      {id:57,date:'2026-06-23',amount:500,desc:'FB Ads',cat:'FB Ads'},
+      {id:57,date:'2026-06-23',amount:500,desc:'Marketing',cat:'Marketing'},
     ]);
   }
   if(!getS(K_OTHER).length){
@@ -1473,7 +1600,11 @@ function fmtDate(ds){ return new Date(ds+'T00:00:00').toLocaleDateString('en-PH'
 function monthKey(ds){ return ds.substring(0,7); }
 function monthLabel(ym){ const [y,m]=ym.split('-'); return new Date(y,m-1,1).toLocaleDateString('en-PH',{month:'long',year:'numeric'}); }
 function allMonths(data,field){ const s=new Set(); data.forEach(d=>s.add(field==='month'?d.month:monthKey(d[field]))); return [...s].sort().reverse(); }
-function catClass(cat){ if(!cat) return 'cat-Other'; if(cat.startsWith('FB')) return 'cat-FB'; return 'cat-'+cat.split(' ')[0]; }
+function catClass(cat){
+  if(!cat) return 'cat-Other';
+  const map={'Restock':'cat-Restock','Marketing':'cat-Marketing','Salary':'cat-Salary','Utilities':'cat-Utilities','Transport':'cat-Transport'};
+  return map[cat]||'cat-Other';
+}
 
 function populateMonthSel(selId, months, curr){
   const sel=document.getElementById(selId);
@@ -1497,6 +1628,7 @@ function showTab(tab){
   else if(tab==='salary')    renderSalary();
   else if(tab==='others')    renderOther();
   else if(tab==='stock')     renderStock();
+  else if(tab==='settings')  renderSettings();
   else { const b=BRANCHES.find(x=>x.key===tab); if(b) renderBranch(b); }
 }
 
@@ -1685,6 +1817,28 @@ function adjustStockQty(id, delta) {
   renderStock();
 }
 
+function setUnitField(val){
+  const knownUnits=['kg','g','pcs','box','sack','pack','bottle','liter','tray','bundle'];
+  const sel=document.getElementById('stock-unit-sel');
+  const custom=document.getElementById('stock-unit-custom');
+  if(!val){ sel.value=''; custom.style.display='none'; custom.value=''; }
+  else if(knownUnits.includes(val)){ sel.value=val; custom.style.display='none'; custom.value=''; }
+  else { sel.value='__custom__'; custom.style.display='block'; custom.value=val; }
+  document.getElementById('stock-unit').value=val||'';
+}
+function toggleCustomUnit(){
+  const sel=document.getElementById('stock-unit-sel');
+  const custom=document.getElementById('stock-unit-custom');
+  if(sel.value==='__custom__'){
+    custom.style.display='block'; custom.value=''; custom.focus();
+    document.getElementById('stock-unit').value='';
+    custom.oninput=()=>{ document.getElementById('stock-unit').value=custom.value.trim(); };
+  } else {
+    custom.style.display='none'; custom.value='';
+    document.getElementById('stock-unit').value=sel.value;
+  }
+}
+
 function openStockModal(id) {
   const modal = document.getElementById('stock-modal');
   document.getElementById('stock-edit-id').value = id || '';
@@ -1694,7 +1848,7 @@ function openStockModal(id) {
     if (item) {
       document.getElementById('stock-name').value  = item.name || '';
       document.getElementById('stock-cat-sel').value = item.category || '';
-      document.getElementById('stock-unit').value  = item.unit || '';
+      setUnitField(item.unit||'');
       document.getElementById('stock-qty').value   = item.qty ?? 0;
       document.getElementById('stock-min').value   = item.minQty ?? 5;
       document.getElementById('stock-notes').value = item.notes || '';
@@ -1702,7 +1856,7 @@ function openStockModal(id) {
   } else {
     document.getElementById('stock-name').value  = '';
     document.getElementById('stock-cat-sel').value = '';
-    document.getElementById('stock-unit').value  = '';
+    setUnitField('');
     document.getElementById('stock-qty').value   = '';
     document.getElementById('stock-min').value   = '5';
     document.getElementById('stock-notes').value = '';
@@ -1813,44 +1967,56 @@ function drawBarChart(canvasId, labels, values){
 
 // ── DASHBOARD ──
 function renderDashboard(){
-  const sales=getS(K_SALES), exps=getS(K_EXP), sals=getS(K_SAL);
+  const sales=getS(K_SALES), exps=getS(K_EXP), sals=getS(K_SAL), others=getS(K_OTHER);
 
   // Populate year filter
   const dataYears=[...sales,...exps].map(x=>x.date.slice(0,4));
   sals.forEach(s=>{ if(s.month) dataYears.push(s.month.slice(0,4)); });
   populateYearFilter('dash-year-f', dataYears, true);
+  initCurrentMonth('dash-month-f');
 
   const {yr, mo, prefix, isAll} = getYearMonthFilter('dash-year-f','dash-month-f');
   const moSel=document.getElementById('dash-month-f');
   if(moSel) moSel.style.display=isAll?'none':'';
 
-  let mSales, mExps, mSals, periodLabel;
+  let mSales, mExps, mSals, mOthers, periodLabel;
   if(isAll){
-    mSales=sales; mExps=exps; mSals=sals; periodLabel='All Time';
+    mSales=sales; mExps=exps; mSals=sals; mOthers=others; periodLabel='All Time';
   } else if(mo){
     const mk=`${yr}-${mo}`;
     mSales=sales.filter(s=>monthKey(s.date)===mk);
     mExps=exps.filter(e=>monthKey(e.date)===mk);
     mSals=sals.filter(s=>s.month===mk);
+    mOthers=others.filter(o=>{
+      if(o.dateISO) return o.dateISO.startsWith(mk);
+      return new Date(o.id).toISOString().slice(0,7)===mk;
+    });
     periodLabel=`${MONTH_NAMES[parseInt(mo)-1]} ${yr}`;
   } else {
     mSales=sales.filter(s=>s.date.startsWith(yr));
     mExps=exps.filter(e=>e.date.startsWith(yr));
     mSals=sals.filter(s=>s.month&&s.month.startsWith(yr));
+    mOthers=others.filter(o=>{
+      if(o.dateISO) return o.dateISO.startsWith(yr);
+      return new Date(o.id).toISOString().startsWith(yr);
+    });
     periodLabel=yr;
   }
 
   const gross=mSales.reduce((a,s)=>a+s.amount,0);
+  const totalRec=mOthers.reduce((a,o)=>a+o.amount,0);
+  const totalIncome=gross+totalRec;
   const totalExp=mExps.reduce((a,e)=>a+e.amount,0);
-  const netSales=gross-totalExp;
+  const netSales=totalIncome-totalExp;
   const totalSal=mSals.reduce((a,s)=>a+s.earned,0);
   const netLess=netSales-totalSal;
 
   document.getElementById('dash-period').textContent=periodLabel;
   document.getElementById('dash-cards').innerHTML=`
     <div class="card"><div class="card-accent ca-blue"></div><div class="card-icon">💰</div><div class="card-lbl">Gross Sales</div><div class="card-val blue">${fmt(gross)}</div><div class="card-sub">${mSales.length} days recorded</div></div>
+    <div class="card"><div class="card-accent ca-blue"></div><div class="card-icon">🧾</div><div class="card-lbl">Receivables</div><div class="card-val blue">${fmt(totalRec)}</div><div class="card-sub">${mOthers.length} entries</div></div>
     <div class="card"><div class="card-accent ca-red"></div><div class="card-icon">📋</div><div class="card-lbl">Total Expenses</div><div class="card-val red">${fmt(totalExp)}</div><div class="card-sub">${mExps.length} entries</div></div>
-    <div class="card"><div class="card-accent ca-green"></div><div class="card-icon">📈</div><div class="card-lbl">Net Sales</div><div class="card-val ${netSales>=0?'green':'red'}">${fmt(netSales)}</div><div class="card-sub">Sales − Expenses</div></div>
+    <div class="card"><div class="card-accent ca-green"></div><div class="card-icon">📈</div><div class="card-lbl">Net Income</div><div class="card-val ${netSales>=0?'green':'red'}">${fmt(netSales)}</div><div class="card-sub">Sales + Receivables − Expenses</div></div>
     <div class="card"><div class="card-accent ca-orange"></div><div class="card-icon">👥</div><div class="card-lbl">Running Salary</div><div class="card-val orange">${fmt(totalSal)}</div><div class="card-sub">${mSals.length} employees</div></div>
     <div class="card"><div class="card-accent ca-purple"></div><div class="card-icon">✅</div><div class="card-lbl">Net less Salary</div><div class="card-val ${netLess>=0?'green':'red'}">${fmt(netLess)}</div><div class="card-sub">Net − Salary</div></div>
   `;
@@ -1868,20 +2034,27 @@ function renderDashboard(){
 
   // Table
   const dayMap={};
-  mSales.forEach(s=>{ dayMap[s.date]=dayMap[s.date]||{sales:0,exp:0}; dayMap[s.date].sales+=s.amount; });
-  mExps.forEach(e=>{ dayMap[e.date]=dayMap[e.date]||{sales:0,exp:0}; dayMap[e.date].exp+=e.amount; });
+  mSales.forEach(s=>{ dayMap[s.date]=dayMap[s.date]||{sales:0,exp:0,saleIds:[],expIds:[]}; dayMap[s.date].sales+=s.amount; dayMap[s.date].saleIds.push(s.id); });
+  mExps.forEach(e=>{ dayMap[e.date]=dayMap[e.date]||{sales:0,exp:0,saleIds:[],expIds:[]}; dayMap[e.date].exp+=e.amount; dayMap[e.date].expIds.push(e.id); });
   const days=Object.keys(dayMap).sort();
   document.getElementById('dash-tbl-count').textContent=days.length+' days';
   document.getElementById('dash-tbody').innerHTML=days.length?days.map(d=>{
     const r=dayMap[d], net=r.sales-r.exp;
+    const saleBtn=r.saleIds.length===1
+      ? `<button class="act-btn" onclick="editSale(${r.saleIds[0]})">✏ Sale</button><button class="act-btn del-btn" onclick="delSale(${r.saleIds[0]})" style="margin-left:4px">✕</button>`
+      : r.saleIds.length>1 ? `<button class="act-btn" onclick="showTab('sales')" title="${r.saleIds.length} entries">Sales ↗</button>` : '';
+    const expBtn=r.expIds.length===1
+      ? `<button class="act-btn" onclick="editExp(${r.expIds[0]})" style="margin-left:4px">✏ Exp</button><button class="act-btn del-btn" onclick="delExp(${r.expIds[0]})" style="margin-left:4px">✕</button>`
+      : r.expIds.length>1 ? `<button class="act-btn" onclick="showTab('expenses')" style="margin-left:4px" title="${r.expIds.length} entries">Exp ↗</button>` : '';
     return `<tr>
       <td><span class="day-pill ${dayClass(d)}">${dayName(d)}</span></td>
       <td style="color:var(--muted);font-size:.78rem">${fmtDate(d)}</td>
       <td class="amt-blue">${r.sales?fmt(r.sales):'—'}</td>
       <td class="amt-neg">${r.exp?fmt(r.exp):'—'}</td>
       <td class="${net>=0?'amt-pos':'amt-neg'}">${fmt(net)}</td>
+      <td style="white-space:nowrap">${saleBtn}${expBtn}</td>
     </tr>`;
-  }).join(''):`<tr><td colspan="5" class="empty-row">No data for this period.</td></tr>`;
+  }).join(''):`<tr><td colspan="6" class="empty-row">No data for this period.</td></tr>`;
 }
 
 // ── SALES KPI CARDS ──
@@ -1943,12 +2116,15 @@ function populateYearSel(sales){
   const dataYears=sales.map(s=>s.date.slice(0,4));
   const curYear=new Date().getFullYear();
   const allYears=new Set([...dataYears]);
-  for(let y=2026;y<=curYear;y++) allYears.add(String(y));
+  for(let y=2026;y<=curYear+5;y++) allYears.add(String(y));
   const years=[...allYears].sort().reverse();
   const sel=document.getElementById('sales-year');
   const prev=sel.value;
+  const curYrStr=String(new Date().getFullYear());
   sel.innerHTML=years.map(y=>`<option value="${y}">${y}</option>`).join('');
   if(prev&&years.includes(prev)) sel.value=prev;
+  else if(years.includes(curYrStr)) sel.value=curYrStr;
+  else if(years.length) sel.value=years[0];
   return sel.value;
 }
 
@@ -1957,16 +2133,25 @@ const MONTH_NAMES=['January','February','March','April','May','June','July','Aug
 function populateYearFilter(yearSelId, dataYears, hasAllTime=false){
   const curYear = new Date().getFullYear();
   const allYears = new Set(dataYears.filter(Boolean));
-  for(let y=2026; y<=curYear; y++) allYears.add(String(y));
+  for(let y=2026; y<=curYear+5; y++) allYears.add(String(y));
   const years = [...allYears].sort().reverse();
   const sel = document.getElementById(yearSelId);
   if(!sel) return '';
   const prev = sel.value;
   sel.innerHTML = (hasAllTime ? '<option value="all">All Time</option>' : '') +
     years.map(y=>`<option value="${y}">${y}</option>`).join('');
+  const curYrStr2=String(new Date().getFullYear());
   if(prev && (prev==='all' || years.includes(prev))) sel.value=prev;
+  else if(years.includes(curYrStr2)) sel.value=curYrStr2;
   else if(years.length) sel.value=years[0];
   return sel.value;
+}
+function initCurrentMonth(selId){
+  const sel=document.getElementById(selId);
+  if(sel && !sel.dataset.inited){
+    sel.value=String(new Date().getMonth()+1).padStart(2,'0');
+    sel.dataset.inited='1';
+  }
 }
 function getYearMonthFilter(yearSelId, monthSelId){
   const yr = document.getElementById(yearSelId)?.value || '';
@@ -2101,51 +2286,84 @@ function toggleWeekDetail(detailId,chevId){ toggleDetail(detailId,chevId); }
 function renderSalesMonthly(sales){
   resetSalesTotalColor();
   const yr=populateYearSel(sales);
+  initCurrentMonth('sales-month-filter');
   const mo=document.getElementById('sales-month-filter')?.value||'';
   const prefix=mo?`${yr}-${mo}`:yr;
   const filtered=sales.filter(s=>s.date.startsWith(prefix)).sort((a,b)=>a.date.localeCompare(b.date));
   const total=filtered.reduce((a,s)=>a+s.amount,0);
   const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
   const subLabel=mo?`${MONTHS[parseInt(mo)-1]} ${yr}`:yr;
-  document.getElementById('sales-page-sub').textContent='Gross sales per month — '+subLabel;
-  document.getElementById('sales-sec-title').textContent='Monthly Summary';
-  const mMap={};
-  filtered.forEach(s=>{
-    const mk=monthKey(s.date);
-    if(!mMap[mk]) mMap[mk]={key:mk,days:[],total:0,best:null,weekData:{}};
-    mMap[mk].days.push(s);
-    mMap[mk].total+=s.amount;
-    if(!mMap[mk].best||s.amount>mMap[mk].best.amount) mMap[mk].best=s;
-    const wk=weekMonday(s.date);
-    if(!mMap[mk].weekData[wk]) mMap[mk].weekData[wk]={monday:wk,days:[],total:0,best:null};
-    mMap[mk].weekData[wk].days.push(s);
-    mMap[mk].weekData[wk].total+=s.amount;
-    if(!mMap[mk].weekData[wk].best||s.amount>mMap[mk].weekData[wk].best.amount) mMap[mk].weekData[wk].best=s;
-  });
-  const months=Object.values(mMap).sort((a,b)=>a.key.localeCompare(b.key));
-  document.getElementById('sales-count').textContent=months.length+' month'+(months.length!==1?'s':'');
+  document.getElementById('sales-page-sub').textContent='Gross sales — '+subLabel;
+  document.getElementById('sales-sec-title').textContent='Sales Records';
+  document.getElementById('sales-count').textContent=filtered.length+' record'+(filtered.length!==1?'s':'');
   document.getElementById('sales-total-lbl').textContent='Total: '+fmt(total);
-  if(!months.length){ document.getElementById('sales-tbody-monthly').innerHTML=`<tr><td colspan="5" class="empty-row">No sales for ${yr}.</td></tr>`; return; }
-  let rows='';
-  months.forEach((m,i)=>{
-    const avg=m.total/m.days.length;
-    const weeks=Object.values(m.weekData).sort((a,b)=>a.monday.localeCompare(b.monday));
-    const detailId='mo-detail-'+i, chevId='mo-chev-'+i;
-    rows+=`<tr class="week-row" onclick="toggleDetail('${detailId}','${chevId}')">
-      <td><span class="week-chevron" id="${chevId}">▶</span><strong>${monthLabel(m.key)}</strong></td>
-      <td style="color:var(--muted)">${weeks.length} week${weeks.length!==1?'s':''}</td>
-      <td class="amt-blue">${fmt(m.total)}</td>
-      <td style="color:var(--muted);font-weight:600">${fmt(avg)}/day avg</td>
-      <td>${m.best?`<span class="best-day-chip">${dayName(m.best.date)} ${m.best.date.slice(8)} — ${fmt(m.best.amount)}</span>`:'—'}</td>
-    </tr>`;
-    rows+=`<tr class="week-detail-row" id="${detailId}" style="display:none">
-      <td colspan="5"><div class="week-detail-inner"><table>
-        <thead><tr><th>Week</th><th>Date Range</th><th>Days</th><th>Total Sales</th><th>Avg / Day</th><th>Best Day</th></tr></thead>
-        <tbody>${buildWeekRows(weeks,'mo'+i)}</tbody>
-      </table></div></td>
-    </tr>`;
-  });
-  document.getElementById('sales-tbody-monthly').innerHTML=rows;
+
+  // ── Merge sales + dated receivables into one list ──
+  // Undated receivables fall under the month they were created (derived from id timestamp)
+  const allOthers = getS(K_OTHER);
+  const datedOthers = allOthers.filter(o=>o.dateISO && o.dateISO.startsWith(prefix));
+  const undatedOthers = allOthers.filter(o=>!o.dateISO && new Date(o.id).toISOString().slice(0,prefix.length)===prefix);
+
+  const salesRows = filtered.map(s=>({...s, _type:'sale'}));
+  const recRows   = datedOthers.map(o=>({...o, _type:'rec', date: o.dateISO}));
+  const merged    = [...salesRows, ...recRows].sort((a,b)=>a.date.localeCompare(b.date));
+
+  const tbody = document.getElementById('sales-tbody-monthly');
+  if(!merged.length){
+    tbody.innerHTML=`<tr><td colspan="5" class="empty-row">No sales for ${subLabel}.</td></tr>`;
+  } else {
+    tbody.innerHTML=merged.map(r=>{
+      if(r._type==='sale') return `
+        <tr>
+          <td><span class="day-pill ${dayClass(r.date)}">${dayName(r.date)}</span></td>
+          <td style="color:var(--muted);font-size:.78rem">${fmtDate(r.date)}</td>
+          <td class="amt-blue">${fmt(r.amount)}</td>
+          <td><span class="cat-badge" style="background:#e0f2fe;color:#0369a1">🏪 ${r.branch?r.branch.charAt(0).toUpperCase()+r.branch.slice(1):'Main'}</span></td>
+          <td style="white-space:nowrap">
+            <button class="act-btn" onclick="editSale(${r.id})">Edit</button>
+            <button class="act-btn del-btn" onclick="delSale(${r.id})" style="margin-left:4px">✕</button>
+          </td>
+        </tr>`;
+      else return `
+        <tr style="background:#f0fdf4">
+          <td><span class="day-pill ${dayClass(r.date)}">${dayName(r.date)}</span></td>
+          <td style="color:var(--muted);font-size:.78rem">${fmtDate(r.date)}</td>
+          <td class="amt-blue">${fmt(r.amount)}</td>
+          <td style="color:var(--muted)">${r.desc||'—'} <span class="cat-badge" style="background:#dcfce7;color:#166534">🧾 Receivable</span>${r.notes?` — ${r.notes}`:''}</td>
+          <td style="white-space:nowrap">
+            <button class="act-btn" onclick="editOther(${r.id})">Edit</button>
+            <button class="act-btn del-btn" onclick="delOther(${r.id})" style="margin-left:4px">✕</button>
+          </td>
+        </tr>`;
+    }).join('');
+  }
+
+  // ── Undated receivables → "Other" section ──
+  const recSection=document.getElementById('sales-receivables-section');
+  if(recSection){
+    if(undatedOthers.length){
+      recSection.style.display='';
+      recSection.innerHTML=`
+        <div class="sec-hdr"><div><div class="sec-title">🧾 Receivables (no date)</div></div>
+          <div class="sec-total amt-blue">Total: ${fmt(undatedOthers.reduce((a,o)=>a+o.amount,0))}</div>
+        </div>
+        <table><thead><tr><th>Description</th><th>Amount</th><th>Notes</th><th></th></tr></thead>
+        <tbody>${undatedOthers.map(o=>`
+          <tr>
+            <td>${o.desc||'—'}</td>
+            <td class="amt-blue">${fmt(o.amount)}</td>
+            <td style="color:var(--muted)">${o.notes||'—'}</td>
+            <td style="white-space:nowrap">
+              <button class="act-btn" onclick="editOther(${o.id})">Edit</button>
+              <button class="act-btn del-btn" onclick="delOther(${o.id})" style="margin-left:4px">✕</button>
+            </td>
+          </tr>`).join('')}
+        </tbody></table>`;
+    } else {
+      recSection.style.display='none';
+      recSection.innerHTML='';
+    }
+  }
 }
 
 // ── HELPERS: build nested month→week→day HTML ──
@@ -2342,7 +2560,7 @@ function openSaleModal(prefill){
   document.getElementById('sale-modal-title').textContent='Add Sale';
   document.getElementById('s-date').value=prefill||new Date().toISOString().slice(0,10);
   document.getElementById('s-amt').value='';
-  document.getElementById('s-notes').value='';
+  document.getElementById('s-branch').value='';
   document.getElementById('sale-modal').classList.add('open');
 }
 function editSale(id){
@@ -2351,23 +2569,125 @@ function editSale(id){
   document.getElementById('sale-modal-title').textContent='Edit Sale';
   document.getElementById('s-date').value=s.date;
   document.getElementById('s-amt').value=s.amount;
-  document.getElementById('s-notes').value=s.notes||'';
+  document.getElementById('s-branch').value=s.branch||'';
   document.getElementById('sale-modal').classList.add('open');
 }
 function saveSale(){
   const date=document.getElementById('s-date').value;
   const amount=parseFloat(document.getElementById('s-amt').value);
-  const notes=document.getElementById('s-notes').value.trim();
+  const branch=document.getElementById('s-branch').value;
   if(!date||isNaN(amount)){ alert('Date and amount required.'); return; }
   const data=getS(K_SALES);
-  if(editSaleId!==null){ const i=data.findIndex(x=>x.id===editSaleId); if(i>=0) data[i]={...data[i],date,amount,notes}; }
-  else data.push({id:Date.now(),date,amount,notes});
+  if(editSaleId!==null){ const i=data.findIndex(x=>x.id===editSaleId); if(i>=0) data[i]={...data[i],date,amount,branch}; }
+  else data.push({id:Date.now(),date,amount,branch});
   setS(K_SALES,data); closeModal('sale-modal'); renderSales(); renderDashboard();
 }
 function delSale(id){
   if(!confirm('Delete this sale?')) return;
   setS(K_SALES,getS(K_SALES).filter(x=>x.id!==id));
   renderSales(); renderDashboard();
+}
+
+// ── SETTINGS ──
+function renderSettings(){
+  const pins=getPins();
+  // PIN list
+  document.getElementById('settings-pin-list').innerHTML=USERS.map(u=>`
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border:1px solid var(--border);border-radius:10px;background:#fafbfc">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font-size:1.2rem">${u.emoji}</span>
+        <div>
+          <div style="font-weight:700;font-size:.85rem">${u.label}</div>
+          <div style="font-size:.72rem;color:var(--muted)">${u.role==='admin'?'Administrator':'Branch Account'}</div>
+        </div>
+      </div>
+      <button class="act-btn" onclick="openPinModal('${u.role}','${u.label}')">Change PIN</button>
+    </div>`).join('');
+  // Expense categories
+  const cats=loadStockCats();
+  const EXP_CATS=['Restock','Marketing','Salary','Utilities','Transport','Other'];
+  const allCats=[...new Set([...EXP_CATS,...cats])];
+  document.getElementById('settings-exp-cats').innerHTML=allCats.map(c=>`
+    <span class="cat-badge ${catClass(c)}" style="font-size:.78rem;padding:5px 12px;display:inline-flex;align-items:center;gap:6px">
+      ${c}
+    </span>`).join('');
+}
+
+function openPinModal(role,label){
+  document.getElementById('settings-pin-modal-title').textContent=`Change PIN — ${label}`;
+  document.getElementById('spm-role').value=role;
+  document.getElementById('spm-pin').value='';
+  document.getElementById('spm-pin2').value='';
+  openModal('settings-pin-modal');
+}
+
+function savePinChange(){
+  const role=document.getElementById('spm-role').value;
+  const p1=document.getElementById('spm-pin').value.trim();
+  const p2=document.getElementById('spm-pin2').value.trim();
+  if(!/^\d{4}$/.test(p1)){ alert('PIN must be exactly 4 digits.'); return; }
+  if(p1!==p2){ alert('PINs do not match.'); return; }
+  const pins=getPins(); pins[role]=p1; savePins(pins);
+  closeModal('settings-pin-modal');
+  alert(`PIN for ${USERS.find(u=>u.role===role)?.label} updated successfully.`);
+}
+
+function openSettingsCatModal(){
+  document.getElementById('scat-name').value='';
+  openModal('settings-cat-modal');
+}
+
+function saveSettingsCat(){
+  const name=document.getElementById('scat-name').value.trim();
+  if(!name){ alert('Please enter a category name.'); return; }
+  const cats=loadStockCats();
+  if(cats.includes(name)){ alert('Category already exists.'); return; }
+  cats.push(name);
+  localStorage.setItem(STOCK_CATS_KEY, JSON.stringify(cats));
+  closeModal('settings-cat-modal');
+  renderSettings();
+}
+
+function exportAllData(){
+  const keys=['ksq_sales','ksq_expenses','ksq_salary','ksq_sal_daily','ksq_employees_v1','ksq_other',
+    'ksq_stock_v1','ksq_stock_cats_v1','ksq_branch_orders_v1','ksq_pins',
+    'ksq_cainta','ksq_marikina','ksq_antipolo','ksq_taytay',
+    'ksq_cainta_sales','ksq_marikina_sales','ksq_antipolo_sales','ksq_taytay_sales'];
+  const data={};
+  keys.forEach(k=>{ const v=localStorage.getItem(k); if(v) data[k]=JSON.parse(v); });
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`KSQ_Backup_${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+}
+
+function importAllData(e){
+  const file=e.target.files[0]; if(!file) return;
+  if(!confirm('This will overwrite all current data. Continue?')){ e.target.value=''; return; }
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    try{
+      const data=JSON.parse(ev.target.result);
+      Object.entries(data).forEach(([k,v])=>localStorage.setItem(k,JSON.stringify(v)));
+      alert('Backup restored successfully. The page will reload.');
+      location.reload();
+    } catch{ alert('Invalid backup file.'); }
+  };
+  reader.readAsText(file);
+  e.target.value='';
+}
+
+function clearAllData(){
+  if(!confirm('This will permanently delete ALL records. This cannot be undone. Continue?')) return;
+  if(!confirm('Are you sure? All sales, expenses, salary, stock, and branch data will be erased.')) return;
+  ['ksq_sales','ksq_expenses','ksq_salary','ksq_sal_daily','ksq_employees_v1','ksq_other',
+   'ksq_stock_v1','ksq_stock_cats_v1','ksq_branch_orders_v1',
+   'ksq_cainta','ksq_marikina','ksq_antipolo','ksq_taytay',
+   'ksq_cainta_sales','ksq_marikina_sales','ksq_antipolo_sales','ksq_taytay_sales']
+  .forEach(k=>localStorage.removeItem(k));
+  alert('All data cleared. The page will reload.');
+  location.reload();
 }
 
 // ── OTHER / RECEIVABLES PAGE ──
@@ -2404,6 +2724,7 @@ function renderOther(){
 function openOtherModal(){
   editOtherId=null;
   document.getElementById('other-modal-title').textContent='Add Other / Receivable';
+  document.getElementById('ot-date').value=new Date().toISOString().slice(0,10);
   document.getElementById('ot-desc').value='';
   document.getElementById('ot-amt').value='';
   document.getElementById('ot-notes').value='';
@@ -2413,20 +2734,28 @@ function editOther(id){
   const o=getS(K_OTHER).find(x=>x.id===id); if(!o) return;
   editOtherId=id;
   document.getElementById('other-modal-title').textContent='Edit Item';
+  document.getElementById('ot-date').value=o.dateISO||o.date||new Date().toISOString().slice(0,10);
   document.getElementById('ot-desc').value=o.desc;
   document.getElementById('ot-amt').value=o.amount;
   document.getElementById('ot-notes').value=o.notes||'';
   document.getElementById('other-modal').classList.add('open');
 }
 function saveOther(){
+  const dateVal=document.getElementById('ot-date').value||new Date().toISOString().slice(0,10);
   const desc=document.getElementById('ot-desc').value.trim();
   const amount=parseFloat(document.getElementById('ot-amt').value);
   const notes=document.getElementById('ot-notes').value.trim();
   if(!desc||isNaN(amount)){ alert('Description and amount required.'); return; }
+  const d=new Date(dateVal+'T00:00:00');
+  const dateFormatted=d.toLocaleDateString('en-PH',{month:'short',day:'numeric',year:'numeric'});
   const data=getS(K_OTHER);
-  if(editOtherId!==null){ const i=data.findIndex(x=>x.id===editOtherId); if(i>=0) data[i]={...data[i],desc,amount,notes}; }
-  else data.push({id:Date.now(),desc,amount,notes});
-  setS(K_OTHER,data); closeModal('other-modal'); renderOther(); renderDashboard();
+  if(editOtherId!==null){
+    const i=data.findIndex(x=>x.id===editOtherId);
+    if(i>=0) data[i]={...data[i],dateISO:dateVal,date:dateFormatted,desc,amount,notes};
+  } else {
+    data.push({id:Date.now(),dateISO:dateVal,date:dateFormatted,desc,amount,notes});
+  }
+  setS(K_OTHER,data); closeModal('other-modal'); renderOther(); renderDashboard(); renderSales();
 }
 function delOther(id){
   if(!confirm('Delete this item?')) return;
@@ -2538,13 +2867,17 @@ function renderBranchOrderModal(branchKey, stockItems, orders){
           </select>
         </div>
       </div>
-      <div style="display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+        <div>
+          <label class="f-lbl">Date</label>
+          <input id="bo-date" type="date" class="f-inp" style="padding:9px 12px" value="${new Date().toISOString().slice(0,10)}">
+        </div>
         <div>
           <label class="f-lbl">Quantity</label>
-          <input id="bo-qty" type="number" class="f-inp" placeholder="1" min="1">
+          <input id="bo-qty" type="number" class="f-inp" placeholder="1" min="1" style="padding:9px 12px">
         </div>
-        <button onclick="submitBranchOrder('${branchKey}')" style="padding:10px 20px;background:var(--red);color:#fff;border:none;border-radius:8px;font-size:.83rem;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;height:42px">Submit Order</button>
       </div>
+      <button onclick="submitBranchOrder('${branchKey}')" style="width:100%;padding:11px;background:var(--red);color:#fff;border:none;border-radius:8px;font-size:.85rem;font-weight:700;cursor:pointer;font-family:inherit">Submit Order</button>
     </div>
     <!-- Order history -->
     <div style="font-weight:700;font-size:.82rem;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px">Order History</div>
@@ -2582,23 +2915,27 @@ function submitBranchOrder(branchKey){
   const itemId = document.getElementById('bo-item').value;
   const qty = parseInt(document.getElementById('bo-qty').value)||0;
   const cat = document.getElementById('bo-cat')?.value || '';
+  const dateVal = document.getElementById('bo-date')?.value || new Date().toISOString().slice(0,10);
   if(!itemId){ alert('Please select an item.'); return; }
   if(qty < 1){ alert('Quantity must be at least 1.'); return; }
   const stockItems = loadStock();
   const item = stockItems.find(i=>i.id===itemId);
   if(!item) return;
   const all = JSON.parse(localStorage.getItem(BRANCH_ORDERS_KEY)||'[]');
+  const d = new Date(dateVal+'T00:00:00');
   all.push({
     id: 'bo'+Date.now(),
     branch: branchKey,
     itemId, itemName: item.name,
     category: item.category || cat || '—',
     qty, status: 'Pending',
-    date: new Date().toLocaleDateString('en-PH',{month:'short',day:'numeric',year:'numeric'})
+    date: d.toLocaleDateString('en-PH',{month:'short',day:'numeric',year:'numeric'}),
+    dateISO: dateVal
   });
   saveBranchOrders(all);
   document.getElementById('bo-item').value='';
   document.getElementById('bo-qty').value='';
+  document.getElementById('bo-date').value=new Date().toISOString().slice(0,10);
   if(document.getElementById('bo-cat')) document.getElementById('bo-cat').value='';
   renderBranchOrderModal(branchKey, stockItems, getBranchOrders(branchKey));
   // refresh branch tab to update badge count
@@ -2727,22 +3064,29 @@ function renderExpenses(){
   const exps=getS(K_EXP);
   const dataYears=exps.map(e=>e.date.slice(0,4));
   populateYearFilter('exp-year-f', dataYears);
+  initCurrentMonth('exp-month-f');
   const {yr, mo, prefix} = getYearMonthFilter('exp-year-f','exp-month-f');
-  const filtered=exps.filter(e=>e.date.startsWith(prefix)).sort((a,b)=>a.date.localeCompare(b.date)||b.amount-a.amount);
+  const catF=document.getElementById('exp-cat-f').value;
+  const filtered=exps.filter(e=>e.date.startsWith(prefix)&&(!catF||(e.cat||'Other')===catF)).sort((a,b)=>a.date.localeCompare(b.date)||b.amount-a.amount);
   const total=filtered.reduce((a,e)=>a+e.amount,0);
   document.getElementById('exp-count').textContent=filtered.length+' records';
   document.getElementById('exp-total-lbl').textContent='Total: '+fmt(total);
-  document.getElementById('exp-tbody').innerHTML=filtered.length?filtered.map(e=>`
-    <tr>
+  let lastDate='', dateToggle=0;
+  document.getElementById('exp-tbody').innerHTML=filtered.length?filtered.map(e=>{
+    if(e.date!==lastDate){ lastDate=e.date; dateToggle^=1; }
+    const rowBg=dateToggle?'background:#e8f0fe':'background:#ffffff';
+    return `
+    <tr style="${rowBg}">
       <td><span class="day-pill ${dayClass(e.date)}">${dayName(e.date)}</span></td>
       <td style="color:var(--muted);font-size:.78rem">${fmtDate(e.date)}</td>
       <td class="amt-neg">${fmt(e.amount)}</td>
-      <td>${e.desc||'—'} ${e.cat?`<span class="cat-badge ${catClass(e.cat)}">${e.cat}</span>`:''} ${e.branch?`<span class="cat-badge" style="background:#e0f2fe;color:#0369a1;margin-left:3px">🏪 ${e.branch.charAt(0).toUpperCase()+e.branch.slice(1)}</span>`:''}</td>
+      <td>${e.desc||'—'}${e.branch?` <span class="cat-badge" style="background:#e0f2fe;color:#0369a1">🏪 ${e.branch.charAt(0).toUpperCase()+e.branch.slice(1)}</span>`:''}</td>
+      <td>${e.cat?`<span class="cat-badge ${catClass(e.cat)}">${e.cat}</span>`:'—'}</td>
       <td style="white-space:nowrap">
         <button class="act-btn" onclick="editExp(${e.id})">Edit</button>
         <button class="act-btn del-btn" onclick="delExp(${e.id})" style="margin-left:5px">✕</button>
       </td>
-    </tr>`).join(''):`<tr><td colspan="5" class="empty-row">No expenses for this period.</td></tr>`;
+    </tr>`;}).join(''):`<tr><td colspan="5" class="empty-row">No expenses for this period.</td></tr>`;
 }
 
 function openExpModal(){
@@ -2782,32 +3126,46 @@ function delExp(id){
 
 // ── SALARY ──
 function renderSalary(){
+  const employees=loadEmployees();
   const sals=getS(K_SAL);
-  const dataYears=sals.map(s=>s.month?s.month.slice(0,4):'').filter(Boolean);
+  const daily=getS(K_SAL_DAILY);
+  const curYear=new Date().getFullYear();
+  const dataYears=employees.length?[String(curYear)]:sals.map(s=>s.month?s.month.slice(0,4):'').filter(Boolean);
   populateYearFilter('sal-year-f', dataYears);
-  const yr=document.getElementById('sal-year-f')?.value||'';
+  initCurrentMonth('sal-month-f');
+  const yr=document.getElementById('sal-year-f')?.value||String(curYear);
   const mo=document.getElementById('sal-month-f')?.value||'';
   const prefix=mo?`${yr}-${mo}`:yr;
   const q=(document.getElementById('sal-search')?.value||'').trim().toLowerCase();
-  const filtered=sals.filter(s=>s.month&&s.month.startsWith(prefix)&&(!q||s.name.toLowerCase().includes(q))).sort((a,b)=>b.earned-a.earned);
-  const totalEarned=filtered.reduce((a,s)=>a+s.earned,0);
-  document.getElementById('sal-count').textContent=filtered.length+' employees';
+
+  // Build rows from employee registry — show all employees for this period
+  const rows=employees.filter(name=>!q||name.toLowerCase().includes(q)).map(name=>{
+    // Sum daily entries for this period
+    const empDaily=daily.filter(r=>r.name===name&&r.date.startsWith(prefix));
+    const earned=empDaily.reduce((a,r)=>a+r.amount,0);
+    // Cash advance from K_SAL records for this period (if any)
+    const salRecs=sals.filter(s=>s.name===name&&s.month&&s.month.startsWith(prefix));
+    const ca=salRecs.reduce((a,s)=>a+(s.ca||0),0);
+    const net=earned-ca;
+    const initials=name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+    const safeName=name.replace(/'/g,"\\'");
+    return {name,earned,ca,net,initials,safeName};
+  });
+
+  const totalEarned=rows.reduce((a,r)=>a+r.earned,0);
+  document.getElementById('sal-count').textContent=rows.length+' employees';
   document.getElementById('sal-total-lbl').textContent='Total Payroll: '+fmt(totalEarned);
-  document.getElementById('sal-tbody').innerHTML=filtered.length?filtered.map(s=>{
-    const net=s.earned-(s.ca||0);
-    const initials=s.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
-    const safeName=s.name.replace(/'/g,"\\'");
-    return `<tr>
-      <td style="display:flex;align-items:center"><span class="emp-pill">${initials}</span><span class="emp-name-link" onclick="openEmpProfile('${safeName}')">${s.name}</span></td>
-      <td class="amt-blue">${fmt(s.earned)}</td>
-      <td class="amt-neg">${s.ca?fmt(s.ca):'—'}</td>
-      <td class="${net>=0?'amt-pos':'amt-neg'}">${fmt(net)}</td>
+  document.getElementById('sal-tbody').innerHTML=rows.length?rows.map(r=>`
+    <tr>
+      <td style="display:flex;align-items:center"><span class="emp-pill">${r.initials}</span><span class="emp-name-link" onclick="openEmpProfile('${r.safeName}')">${r.name}</span></td>
+      <td class="amt-blue">${r.earned?fmt(r.earned):'—'}</td>
+      <td class="amt-neg">${r.ca?fmt(r.ca):'—'}</td>
+      <td class="${r.net>=0?'amt-pos':'amt-neg'}">${r.earned||r.ca?fmt(r.net):'—'}</td>
       <td style="white-space:nowrap">
-        <button class="act-btn" onclick="editSal('${safeName}','${s.month}')">Edit</button>
-        <button class="act-btn del-btn" onclick="delSal('${safeName}','${s.month}')" style="margin-left:5px">✕</button>
+        <button class="act-btn" onclick="openEmpProfile('${r.safeName}')">📅 Calendar</button>
+        <button class="act-btn del-btn" onclick="delEmployee('${r.safeName}')" style="margin-left:5px">✕</button>
       </td>
-    </tr>`;
-  }).join(''):`<tr><td colspan="5" class="empty-row">No salary records for this period.</td></tr>`;
+    </tr>`).join(''):`<tr><td colspan="5" class="empty-row">No employees registered yet.</td></tr>`;
 }
 
 // ── EMPLOYEE PROFILE CALENDAR ──
@@ -2849,7 +3207,7 @@ function renderEmpCalendar(){
     const rec=allDaily.find(r=>r.date===ds);
     return `<div class="emp-day-cell${rec?' edc-has-pay':''}" onclick="openDaySalModal('${ds}')">
       <span class="edc-num">${c.day}</span>
-      ${rec?`<div class="edc-pay">₱${fmt(rec.amount)}</div>${rec.note?`<div class="edc-note">${rec.note}</div>`:''}`:''}</div>`;
+      ${rec?`<div class="edc-pay">${fmt(rec.amount)}</div>${rec.note?`<div class="edc-note">${rec.note}</div>`:''}`:''}</div>`;
   }).join('');
   // summary bar
   const monthTotal=thisMonth.reduce((a,r)=>a+r.amount,0);
@@ -2896,52 +3254,27 @@ function delDaySal(){
 }
 
 function openSalModal(){
-  editSalId=null;
-  document.getElementById('sal-modal-title').textContent='Add Salary Record';
-  document.getElementById('sl-month').value=new Date().toISOString().slice(0,7);
   document.getElementById('sl-name').value='';
-  document.getElementById('sl-earned').value='';
-  document.getElementById('sl-ca').value='';
   document.getElementById('sal-modal').classList.add('open');
-}
-function editSal(nameOrId, month){
-  let s;
-  if(month !== undefined){
-    s=getS(K_SAL).find(x=>x.name===nameOrId&&x.month===month);
-  } else {
-    s=getS(K_SAL).find(x=>x.id===nameOrId);
-  }
-  if(!s) return;
-  editSalId=s.id;
-  document.getElementById('sal-modal-title').textContent='Edit Salary Record';
-  document.getElementById('sl-month').value=s.month;
-  document.getElementById('sl-name').value=s.name;
-  document.getElementById('sl-earned').value=s.earned;
-  document.getElementById('sl-ca').value=s.ca||0;
-  document.getElementById('sal-modal').classList.add('open');
+  setTimeout(()=>document.getElementById('sl-name').focus(),80);
 }
 function saveSal(){
-  const month=document.getElementById('sl-month').value;
   const name=document.getElementById('sl-name').value.trim();
-  const earned=parseFloat(document.getElementById('sl-earned').value)||0;
-  const ca=parseFloat(document.getElementById('sl-ca').value)||0;
-  if(!month||!name){ alert('Month and name required.'); return; }
-  const data=getS(K_SAL);
-  if(editSalId!==null){ const i=data.findIndex(x=>x.id===editSalId); if(i>=0) data[i]={...data[i],month,name,earned,ca}; }
-  else data.push({id:Date.now(),month,name,earned,ca});
-  setS(K_SAL,data); closeModal('sal-modal'); renderSalary(); renderDashboard();
+  if(!name){ alert('Employee name is required.'); return; }
+  const employees=loadEmployees();
+  if(employees.map(n=>n.toLowerCase()).includes(name.toLowerCase())){ alert('Employee already registered.'); return; }
+  employees.push(name);
+  saveEmployees(employees);
+  closeModal('sal-modal'); renderSalary(); renderDashboard();
 }
-function delSal(nameOrId, month){
-  if(!confirm('Delete this salary record?')) return;
-  if(month !== undefined){
-    setS(K_SAL,getS(K_SAL).filter(x=>!(x.name===nameOrId&&x.month===month)));
-  } else {
-    setS(K_SAL,getS(K_SAL).filter(x=>x.id!==nameOrId));
-  }
+function delEmployee(name){
+  if(!confirm(`Remove "${name}" from the employee list? Their salary history will be kept.`)) return;
+  saveEmployees(loadEmployees().filter(n=>n!==name));
   renderSalary(); renderDashboard();
 }
 
 // ── MODAL ──
+function openModal(id){ document.getElementById(id).classList.add('open'); }
 function closeModal(id){
   document.getElementById(id).classList.remove('open');
   editSaleId=editExpId=editSalId=editOtherId=null;
@@ -2990,9 +3323,20 @@ function migrateSalaryNames(){
   if(changed) setS(K_SAL,data);
 }
 
+// ── MIGRATE: rename FB Ads → Marketing ──
+function migrateFbAds(){
+  const data=getS(K_EXP);
+  let changed=false;
+  data.forEach(e=>{
+    if(e.cat==='FB Ads'){ e.cat='Marketing'; changed=true; }
+    if(e.desc==='FB Ads'){ e.desc='Marketing'; changed=true; }
+  });
+  if(changed) setS(K_EXP,data);
+}
+
 // ── INIT ──
 function init(){
-  seed(); migrateExpenses(); migrateSalaryNames();
+  seed(); migrateExpenses(); migrateSalaryNames(); migrateFbAds();
   const role=sessionStorage.getItem('ksq_role')||'admin';
   applyRoleUI(role);
   showTab(role==='admin'?'dashboard':role);
