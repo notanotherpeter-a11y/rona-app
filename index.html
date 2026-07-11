@@ -7,6 +7,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 :root {
   --red:        #c0392b;
@@ -459,6 +460,13 @@ th { background: #F3F5F8; color: #374151; border-bottom-color: #C8D0DB; }
 </head>
 <body>
 
+<!-- ── CLOUD SYNC OVERLAY ── -->
+<div id="ksq-sync-overlay" style="display:none;position:fixed;inset:0;z-index:9999;background:linear-gradient(135deg,#0F1C2E 0%,#1A2F4E 60%,#0E2040 100%);align-items:center;justify-content:center;flex-direction:column;gap:16px;">
+  <div style="width:44px;height:44px;border:3px solid rgba(255,255,255,0.15);border-top-color:#e74c3c;border-radius:50%;animation:ksq-spin 0.75s linear infinite;"></div>
+  <p style="color:rgba(255,255,255,0.7);font-family:Inter,sans-serif;font-size:0.85rem;font-weight:500;letter-spacing:0.04em;">Syncing latest data…</p>
+</div>
+<style>@keyframes ksq-spin{to{transform:rotate(360deg)}}</style>
+
 <!-- ── LOGIN ── -->
 <div id="login">
   <div class="login-card">
@@ -552,6 +560,7 @@ th { background: #F3F5F8; color: #374151; border-bottom-color: #C8D0DB; }
         <div class="sb-logout" onclick="logout()">
           <span>🔒</span><span>Lock</span>
         </div>
+        <div id="sb-status" style="font-size:.65rem;color:rgba(255,255,255,.3);text-align:center;padding:4px 0 2px;letter-spacing:.03em;">⬤ connecting…</div>
       </div>
     </div>
 
@@ -1278,7 +1287,10 @@ function getPins(){
   if(saved) return JSON.parse(saved);
   const pins={}; USERS.forEach(u=>{ pins[u.role]=u.pin; }); return pins;
 }
-function savePins(pins){ localStorage.setItem(K_PINS,JSON.stringify(pins)); }
+function savePins(pins){
+  localStorage.setItem(K_PINS,JSON.stringify(pins));
+  if(fbDb && fbReady) fbDb.ref('data/'+K_PINS).set(pins).catch(console.error);
+}
 const K_SALES     = 'ksq_sales';
 const K_EXP       = 'ksq_expenses';
 const K_SAL       = 'ksq_salary';
@@ -1292,7 +1304,10 @@ function loadEmployees(){
   localStorage.setItem(K_EMPLOYEES, JSON.stringify(names));
   return names;
 }
-function saveEmployees(names){ localStorage.setItem(K_EMPLOYEES, JSON.stringify(names)); }
+function saveEmployees(names){
+  localStorage.setItem(K_EMPLOYEES,JSON.stringify(names));
+  if(fbDb && fbReady) fbDb.ref('data/'+K_EMPLOYEES).set(names).catch(console.error);
+}
 const K_OTHER     = 'ksq_other';
 const BRANCHES = [
   { key:'cainta',   label:'Cainta',   kKey:'ksq_cainta',   sKey:'ksq_cainta_sales'   },
@@ -1367,6 +1382,89 @@ function closeMobSidebar(){
 // ── STORAGE ──
 function getS(k){ try{ return JSON.parse(localStorage.getItem(k))||[]; }catch{ return []; } }
 function setS(k,v){ localStorage.setItem(k,JSON.stringify(v)); }
+
+function renderCurrentTab(){
+  const active = ALL_TABS.find(t => document.getElementById('tab-'+t)?.style.display !== 'none');
+  if(!active) return;
+  if(active==='dashboard') renderDashboard();
+  else if(active==='sales') renderSales();
+  else if(active==='expenses') renderExpenses();
+  else if(active==='salary') renderSalary();
+  else if(active==='stock') renderStock();
+  else if(active==='others') renderOther();
+  else{ const b=BRANCHES.find(x=>x.key===active); if(b) renderBranch(b); }
+}
+
+// ── SUPABASE CLOUD SYNC ──
+const SB_URL = 'https://aswhwsekxqivbkuivvqp.supabase.co';
+const SB_KEY = 'sb_publishable_AnhZhNqXNPYwznpR2zZzxQ_ordj3CKi';
+const SB_SYNC_KEYS = [
+  'ksq_sales','ksq_expenses','ksq_salary','ksq_sal_daily','ksq_employees_v1','ksq_other',
+  'ksq_stock_v1','ksq_stock_cats_v1','ksq_branch_orders_v1','ksq_pins',
+  'ksq_cainta','ksq_marikina','ksq_antipolo','ksq_taytay',
+  'ksq_cainta_sales','ksq_marikina_sales','ksq_antipolo_sales','ksq_taytay_sales'
+];
+let _sb = null;
+let _sbReady = false;
+
+// Intercept ALL localStorage.setItem calls — if it's a sync key, push to Supabase
+const _origSetItem = localStorage.setItem.bind(localStorage);
+localStorage.setItem = function(k, v){
+  _origSetItem(k, v);
+  if(_sbReady && SB_SYNC_KEYS.includes(k)){
+    try{
+      const parsed = JSON.parse(v);
+      _sb.from('kv_store').upsert({key:k, value:parsed, updated_at: new Date().toISOString()}, {onConflict:'key'}).then(()=>{});
+    }catch(e){}
+  }
+};
+
+async function initSupabase(){
+  try{
+    _sb = supabase.createClient(SB_URL, SB_KEY);
+
+    // Pull all cloud data into localStorage FIRST (so seed() sees it)
+    const { data } = await _sb.from('kv_store').select('key,value');
+    const sbKeys = new Set((data||[]).map(r=>r.key));
+    if(data && data.length){
+      data.forEach(row => {
+        if(SB_SYNC_KEYS.includes(row.key)){
+          _origSetItem(row.key, JSON.stringify(row.value));
+        }
+      });
+    }
+
+    // Push any local keys missing from Supabase (one-time migration from localStorage)
+    const localOnly = SB_SYNC_KEYS.filter(k => !sbKeys.has(k) && localStorage.getItem(k));
+    if(localOnly.length > 0){
+      const batch = localOnly.map(k => ({key:k, value:JSON.parse(localStorage.getItem(k)), updated_at:new Date().toISOString()}));
+      await _sb.from('kv_store').upsert(batch, {onConflict:'key'});
+    }
+
+    _sbReady = true; // Start intercepting writes AFTER initial pull
+
+    // Update status indicator
+    const st = document.getElementById('sb-status');
+    if(st){ st.textContent='⬤ cloud synced'; st.style.color='rgba(52,211,153,.6)'; }
+
+    // Subscribe to Realtime — push from another device triggers re-render here
+    _sb.channel('ksq_sync')
+      .on('postgres_changes', {event:'*', schema:'public', table:'kv_store'}, payload => {
+        if(sessionStorage.getItem('ksq_auth')!=='1') return;
+        const row = payload.new;
+        if(!row || !SB_SYNC_KEYS.includes(row.key)) return;
+        _origSetItem(row.key, JSON.stringify(row.value));
+        // Fire a storage event so the existing cross-tab listener re-renders the active page
+        window.dispatchEvent(new StorageEvent('storage',{key:row.key}));
+      })
+      .subscribe();
+  }catch(e){
+    console.warn('[KSQ] Supabase init failed, running offline:', e);
+    _sbReady = false;
+    const st = document.getElementById('sb-status');
+    if(st){ st.textContent='⬤ offline'; st.style.color='rgba(239,68,68,.6)'; }
+  }
+}
 
 // ── SEED ──
 function seed(){
@@ -3504,7 +3602,13 @@ function exportSummaryPDF(){
   doc.save('KSQ_Sales_Summary_'+yr+'.pdf');
 }
 
-window.onload=()=>{
+window.onload=async()=>{
+  // Pull cloud data before anything renders
+  const syncOverlay = document.getElementById('ksq-sync-overlay');
+  if(syncOverlay) syncOverlay.style.display='flex';
+  await initSupabase();
+  if(syncOverlay) syncOverlay.style.display='none';
+
   if(sessionStorage.getItem('ksq_auth')==='1'){
     document.getElementById('login').style.display='none';
     document.getElementById('app').style.display='block';
