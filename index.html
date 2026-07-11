@@ -1289,7 +1289,6 @@ function getPins(){
 }
 function savePins(pins){
   localStorage.setItem(K_PINS,JSON.stringify(pins));
-  if(fbDb && fbReady) fbDb.ref('data/'+K_PINS).set(pins).catch(console.error);
 }
 const K_SALES     = 'ksq_sales';
 const K_EXP       = 'ksq_expenses';
@@ -1306,7 +1305,6 @@ function loadEmployees(){
 }
 function saveEmployees(names){
   localStorage.setItem(K_EMPLOYEES,JSON.stringify(names));
-  if(fbDb && fbReady) fbDb.ref('data/'+K_EMPLOYEES).set(names).catch(console.error);
 }
 const K_OTHER     = 'ksq_other';
 const BRANCHES = [
@@ -1454,8 +1452,8 @@ async function initSupabase(){
         const row = payload.new;
         if(!row || !SB_SYNC_KEYS.includes(row.key)) return;
         _origSetItem(row.key, JSON.stringify(row.value));
-        // Fire a storage event so the existing cross-tab listener re-renders the active page
-        window.dispatchEvent(new StorageEvent('storage',{key:row.key}));
+        // Re-render the active tab so remote changes appear instantly
+        renderCurrentTab();
       })
       .subscribe();
   }catch(e){
