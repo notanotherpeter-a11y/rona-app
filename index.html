@@ -8,6 +8,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <style>
 :root {
   --red:        #c0392b;
@@ -55,32 +56,36 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans
 .layout { display: flex; min-height: 100vh; }
 
 /* ── SIDEBAR ── */
-.sidebar { color-scheme: dark; width: 252px; background: #1a2235 !important; flex-shrink: 0; display: flex; flex-direction: column; position: fixed; top: 0; left: 0; height: 100vh; z-index: 100; color: #fff !important; -webkit-text-fill-color: #fff; }
-.sb-brand { padding: 20px 18px 16px; border-bottom: 1px solid rgba(255,255,255,.07); display: flex; align-items: center; gap: 12px; }
-.sb-brand-icon { width: 36px; height: 36px; background: linear-gradient(135deg,#c0392b,#e74c3c); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; flex-shrink: 0; box-shadow: 0 2px 8px rgba(192,57,43,.4); }
+.sidebar { color-scheme: dark; width: 256px; background: #0f172a !important; flex-shrink: 0; display: flex; flex-direction: column; position: fixed; top: 0; left: 0; height: 100vh; z-index: 100; color: #fff !important; -webkit-text-fill-color: #fff; border-right: 1px solid rgba(255,255,255,.06); }
+.sb-brand { padding: 18px 16px 15px; border-bottom: 1px solid rgba(255,255,255,.06); display: flex; align-items: center; gap: 11px; }
+.sb-brand-icon { width: 34px; height: 34px; background: none; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .sb-brand-text {}
-.sb-name { font-size: .88rem; font-weight: 700; color: #f9fafb; line-height: 1.25; letter-spacing: -.01em; }
-.sb-tagline { font-size: .64rem; color: rgba(255,255,255,.35); margin-top: 2px; font-weight: 500; letter-spacing: .04em; text-transform: uppercase; }
-.sb-nav { flex: 1; padding: 12px 10px; overflow-y: auto; }
-.sb-nav::-webkit-scrollbar { width: 3px; }
-.sb-nav::-webkit-scrollbar-thumb { background: rgba(255,255,255,.1); border-radius: 4px; }
-.nav-section { font-size: .59rem; font-weight: 700; color: rgba(255,255,255,.4) !important; -webkit-text-fill-color: rgba(255,255,255,.4); text-transform: uppercase; letter-spacing: .12em; padding: 14px 10px 5px; }
-.nav-item { display: flex; align-items: center; gap: 10px; padding: 9px 10px; cursor: pointer; color: rgba(255,255,255,.75) !important; -webkit-text-fill-color: rgba(255,255,255,.75); font-size: .83rem; font-weight: 500; border-radius: 8px; margin-bottom: 1px; transition: all .12s; position: relative; }
-.nav-item:hover { color: #ffffff !important; -webkit-text-fill-color: #fff; background: rgba(255,255,255,.07); }
-.nav-item.active { color: #ffffff !important; -webkit-text-fill-color: #fff; background: rgba(192,57,43,.25); font-weight: 600; }
-.nav-item.active::before { content:''; position:absolute; left:0; top:18%; bottom:18%; width:3px; background:#e74c3c; border-radius:0 3px 3px 0; }
-.nav-item.active .ni { color: #f87171; }
-.ni { font-size: .92rem; width: 18px; text-align: center; flex-shrink: 0; }
-.sb-footer { padding: 12px 10px; border-top: 1px solid rgba(255,255,255,.07); }
-.sb-user { display: flex; align-items: center; gap: 10px; padding: 10px 10px; margin-bottom: 6px; border-radius: 8px; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.08); }
-.sb-user-avatar { width: 30px; height: 30px; border-radius: 8px; background: linear-gradient(135deg,#c0392b,#e74c3c); display: flex; align-items: center; justify-content: center; font-size: .85rem; flex-shrink: 0; }
-.sb-user-name { font-size: .78rem; color: #f9fafb; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.sb-user-role { font-size: .63rem; color: rgba(255,255,255,.38); margin-top: 1px; }
-.sb-logout { display: flex; align-items: center; gap: 10px; color: rgba(255,255,255,.4); font-size: .8rem; cursor: pointer; font-weight: 500; padding: 8px 10px; border-radius: 7px; transition: all .12s; }
-.sb-logout:hover { color: #f87171; background: rgba(239,68,68,.1); }
+.sb-name { font-size: .84rem; font-weight: 700; color: #f1f5f9; line-height: 1.25; letter-spacing: -.01em; }
+.sb-tagline { font-size: .6rem; color: rgba(255,255,255,.3); margin-top: 2px; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; }
+.sb-nav { flex: 1; padding: 10px 10px; overflow-y: auto; }
+.sb-nav::-webkit-scrollbar { width: 2px; }
+.sb-nav::-webkit-scrollbar-thumb { background: rgba(255,255,255,.08); border-radius: 4px; }
+.nav-section { font-size: .57rem; font-weight: 700; color: rgba(255,255,255,.28) !important; -webkit-text-fill-color: rgba(255,255,255,.28); text-transform: uppercase; letter-spacing: .14em; padding: 16px 8px 4px; }
+.nav-item { display: flex; align-items: center; gap: 10px; padding: 8px 10px; cursor: pointer; color: rgba(255,255,255,.55) !important; -webkit-text-fill-color: rgba(255,255,255,.55); font-size: .82rem; font-weight: 500; border-radius: 7px; margin-bottom: 1px; transition: all .15s; position: relative; letter-spacing: -.01em; }
+.nav-item:hover { color: rgba(255,255,255,.9) !important; -webkit-text-fill-color: rgba(255,255,255,.9); background: rgba(255,255,255,.06); }
+.nav-item.active { color: #ffffff !important; -webkit-text-fill-color: #fff; background: rgba(59,130,246,.18); font-weight: 600; }
+.nav-item.active::before { content:''; position:absolute; left:0; top:20%; bottom:20%; width:2.5px; background:#3b82f6; border-radius:0 2px 2px 0; }
+.nav-item.active .ni svg { stroke: #93c5fd; }
+.nav-item:hover .ni svg { stroke: rgba(255,255,255,.9); }
+.ni { width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.ni svg { width: 15px; height: 15px; stroke: rgba(255,255,255,.4); transition: stroke .15s; }
+.sb-footer { padding: 10px 10px 12px; border-top: 1px solid rgba(255,255,255,.06); }
+.sb-user { display: flex; align-items: center; gap: 10px; padding: 9px 10px; margin-bottom: 4px; border-radius: 7px; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.07); }
+.sb-user-avatar { width: 28px; height: 28px; border-radius: 6px; background: linear-gradient(135deg,#1d4ed8,#3b82f6); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.sb-user-name { font-size: .76rem; color: #f1f5f9; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sb-user-role { font-size: .61rem; color: rgba(255,255,255,.3); margin-top: 1px; text-transform: uppercase; letter-spacing: .05em; }
+.sb-logout { display: flex; align-items: center; gap: 9px; color: rgba(255,255,255,.35); font-size: .79rem; cursor: pointer; font-weight: 500; padding: 8px 10px; border-radius: 7px; transition: all .15s; letter-spacing: -.01em; }
+.sb-logout:hover { color: #f87171; background: rgba(239,68,68,.08); }
+.sb-logout svg { width: 14px; height: 14px; stroke: rgba(255,255,255,.35); transition: stroke .15s; flex-shrink: 0; }
+.sb-logout:hover svg { stroke: #f87171; }
 
 /* ── MAIN ── */
-.main { margin-left: 252px; flex: 1; padding: 32px 36px; }
+.main { margin-left: 256px; flex: 1; padding: 32px 36px; }
 
 /* TOPBAR */
 .topbar { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 28px; gap: 16px; }
@@ -372,9 +377,9 @@ th { background: #F3F5F8; color: #374151; border-bottom-color: #C8D0DB; }
 .week-row:hover td { background: #F0F4FA !important; }
 
 /* Sidebar — dark professional navy */
-.sidebar { background: #1a2235 !important; }
-.nav-item.active { background: rgba(30,92,168,.18) !important; border-color: rgba(30,92,168,.3) !important; }
-.nav-item.active .ni { color: #93BBEE !important; }
+.sidebar { background: #0f172a !important; }
+.nav-item.active { background: rgba(59,130,246,.18) !important; }
+.nav-item.active .ni svg { stroke: #93c5fd !important; }
 
 /* Buttons */
 .btn-red { background: #1E5CA8; box-shadow: 0 1px 3px rgba(30,92,168,.3); }
@@ -514,51 +519,57 @@ th { background: #F3F5F8; color: #374151; border-bottom-color: #C8D0DB; }
       <nav class="sb-nav">
         <div class="nav-section" data-access="admin">Overview</div>
         <div class="nav-item active" onclick="showTab('dashboard');closeMobSidebar()" data-access="admin">
-          <span class="ni">📊</span><span>Dashboard</span>
+          <span class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></span><span>Dashboard</span>
         </div>
         <div class="nav-section" data-access="admin">Records</div>
         <div class="nav-item" onclick="showTab('sales');closeMobSidebar()" data-access="admin">
-          <span class="ni">💰</span><span>Sales</span>
+          <span class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span><span>Sales</span>
+        </div>
+        <div class="nav-item" onclick="showTab('branches-sale');closeMobSidebar()" data-access="admin">
+          <span class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg></span><span>Branches Sale</span>
         </div>
         <div class="nav-item" onclick="showTab('expenses');closeMobSidebar()" data-access="admin">
-          <span class="ni">📋</span><span>Expenses</span>
+          <span class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></span><span>Expenses</span>
         </div>
         <div class="nav-item" onclick="showTab('salary');closeMobSidebar()" data-access="admin">
-          <span class="ni">👥</span><span>Salary</span>
+          <span class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span><span>Salary</span>
         </div>
         <div class="nav-item" onclick="showTab('stock');closeMobSidebar()" data-access="admin">
-          <span class="ni">📦</span><span>Stock</span>
+          <span class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></span><span>Stock</span>
         </div>
         <div class="nav-item" onclick="showTab('others');closeMobSidebar()" data-access="admin">
-          <span class="ni">🧾</span><span>Receivables</span>
+          <span class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></span><span>Receivables</span>
         </div>
         <div class="nav-item" onclick="showTab('settings');closeMobSidebar()" data-access="admin">
-          <span class="ni">⚙️</span><span>Settings</span>
+          <span class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span><span>Settings</span>
         </div>
         <div class="nav-section" data-access="branches">Branches</div>
         <div class="nav-item" onclick="showTab('cainta');closeMobSidebar()" data-access="branch-cainta">
-          <span class="ni">🏪</span><span>Cainta</span>
+          <span class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></span><span>Cainta</span>
         </div>
         <div class="nav-item" onclick="showTab('marikina');closeMobSidebar()" data-access="branch-marikina">
-          <span class="ni">🏪</span><span>Marikina</span>
+          <span class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></span><span>Marikina</span>
         </div>
         <div class="nav-item" onclick="showTab('antipolo');closeMobSidebar()" data-access="branch-antipolo">
-          <span class="ni">🏪</span><span>Antipolo</span>
+          <span class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></span><span>Antipolo</span>
         </div>
         <div class="nav-item" onclick="showTab('taytay');closeMobSidebar()" data-access="branch-taytay">
-          <span class="ni">🏪</span><span>Taytay</span>
+          <span class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></span><span>Taytay</span>
         </div>
       </nav>
       <div class="sb-footer">
         <div class="sb-user">
-          <div class="sb-user-avatar" id="sb-user-ic">👤</div>
+          <div class="sb-user-avatar" id="sb-user-ic">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.9)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          </div>
           <div style="min-width:0">
             <div class="sb-user-name" id="sb-user-name">—</div>
             <div class="sb-user-role" id="sb-user-role">Not signed in</div>
           </div>
         </div>
         <div class="sb-logout" onclick="logout()">
-          <span>🔒</span><span>Lock</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          <span>Log Out</span>
         </div>
         <div id="sb-status" style="font-size:.65rem;color:rgba(255,255,255,.3);text-align:center;padding:4px 0 2px;letter-spacing:.03em;">⬤ connecting…</div>
       </div>
@@ -915,10 +926,11 @@ th { background: #F3F5F8; color: #374151; border-bottom-color: #C8D0DB; }
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
             <div>
               <label class="f-lbl">Category</label>
-              <select id="stock-cat-sel" class="f-inp" style="padding:9px 12px">
+              <select id="stock-cat-sel" class="f-inp" style="padding:9px 12px" onchange="toggleCustomCat()">
                 <option value="">No category</option>
               </select>
-              <datalist id="stock-cat-list"></datalist>
+              <input id="stock-cat-custom" type="text" class="f-inp" placeholder="Type category name…" style="display:none;margin-top:6px">
+              <input type="hidden" id="stock-cat">
             </div>
             <div>
               <label class="f-lbl">Unit</label>
@@ -966,39 +978,206 @@ th { background: #F3F5F8; color: #374151; border-bottom-color: #C8D0DB; }
         <div class="topbar">
           <div class="topbar-left">
             <div class="page-title">Settings</div>
-            <div class="page-sub">Manage app preferences &amp; data</div>
+            <div class="page-sub">Manage access, categories &amp; data</div>
           </div>
         </div>
 
-        <div style="padding:24px;display:flex;flex-direction:column;gap:20px;max-width:680px">
+        <div style="display:flex;flex-direction:column;gap:28px;max-width:980px">
 
-          <!-- PIN MANAGEMENT -->
-          <div class="section" style="padding:24px">
-            <div class="sec-title" style="margin-bottom:16px">🔐 Change PINs</div>
-            <div style="display:flex;flex-direction:column;gap:12px" id="settings-pin-list"></div>
-          </div>
-
-          <!-- EXPENSE CATEGORIES -->
-          <div class="section" style="padding:24px">
-            <div class="sec-hdr" style="margin-bottom:16px">
-              <div class="sec-title">🏷️ Expense Categories</div>
-              <button class="btn btn-red" style="font-size:.75rem;padding:6px 14px" onclick="openSettingsCatModal()">+ Add Category</button>
+          <!-- SECTION: USER ACCESS -->
+          <div>
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+              <div style="width:3px;height:18px;background:#1E5CA8;border-radius:2px"></div>
+              <div style="font-size:.7rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#1E5CA8">User Access</div>
             </div>
-            <div id="settings-exp-cats" style="display:flex;flex-wrap:wrap;gap:8px"></div>
-          </div>
-
-          <!-- DATA MANAGEMENT -->
-          <div class="section" style="padding:24px">
-            <div class="sec-title" style="margin-bottom:16px">💾 Data Management</div>
-            <div style="display:flex;gap:12px;flex-wrap:wrap">
-              <button class="btn" style="background:#1A6B3C;color:#fff;border:none" onclick="exportAllData()">⬇️ Export Backup</button>
-              <button class="btn" style="background:#1E5CA8;color:#fff;border:none" onclick="document.getElementById('import-file').click()">⬆️ Import Backup</button>
-              <input type="file" id="import-file" accept=".json" style="display:none" onchange="importAllData(event)">
-              <button class="btn" style="background:#A52B23;color:#fff;border:none" onclick="clearAllData()">🗑️ Clear All Data</button>
+            <div style="background:#fff;border-radius:16px;border:1px solid var(--border);box-shadow:0 1px 4px rgba(0,0,0,.06);overflow:hidden">
+              <div style="padding:18px 24px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:14px">
+                <div style="width:38px;height:38px;background:#eff6ff;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#1E5CA8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                </div>
+                <div>
+                  <div style="font-weight:700;font-size:.93rem;color:var(--text)">Account PINs</div>
+                  <div style="font-size:.73rem;color:var(--muted);margin-top:2px">Each account uses a 4-digit PIN to log in</div>
+                </div>
+              </div>
+              <div style="padding:6px 16px 16px" id="settings-pin-list"></div>
             </div>
-            <div style="margin-top:12px;font-size:.75rem;color:var(--muted)">Export saves all records to a JSON file. Import restores from a previous backup. Clear removes all records permanently.</div>
           </div>
 
+          <!-- SECTION: CONFIGURATION -->
+          <div>
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+              <div style="width:3px;height:18px;background:#92400e;border-radius:2px"></div>
+              <div style="font-size:.7rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#92400e">Configuration</div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start">
+
+              <!-- Expense Categories -->
+              <div style="background:#fff;border-radius:16px;border:1px solid var(--border);box-shadow:0 1px 4px rgba(0,0,0,.06);overflow:hidden">
+                <div style="padding:18px 24px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px">
+                  <div style="display:flex;align-items:center;gap:12px">
+                    <div style="width:38px;height:38px;background:#fffbeb;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#92400e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+                    </div>
+                    <div>
+                      <div style="font-weight:700;font-size:.93rem;color:var(--text)">Expense Categories</div>
+                      <div style="font-size:.73rem;color:var(--muted);margin-top:2px">Classification tags for expenses</div>
+                    </div>
+                  </div>
+                  <button onclick="openSettingsCatModal()" style="display:flex;align-items:center;gap:5px;padding:6px 13px;background:#1E5CA8;color:#fff;border:none;border-radius:8px;font-size:.75rem;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;transition:background .15s" onmouseover="this.style.background='#1648a0'" onmouseout="this.style.background='#1E5CA8'">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    Add
+                  </button>
+                </div>
+                <div style="padding:16px 24px">
+                  <div id="settings-exp-cats" style="display:flex;flex-wrap:wrap;gap:8px;min-height:32px"></div>
+                </div>
+              </div>
+
+              <!-- Email Reports -->
+              <div style="background:#fff;border-radius:16px;border:1px solid var(--border);box-shadow:0 1px 4px rgba(0,0,0,.06);overflow:hidden">
+                <div style="padding:18px 24px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px">
+                  <div style="display:flex;align-items:center;gap:12px">
+                    <div style="width:38px;height:38px;background:#f0f9ff;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#0369a1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                    </div>
+                    <div>
+                      <div style="font-weight:700;font-size:.93rem;color:var(--text)">Email Reports</div>
+                      <div style="font-size:.73rem;color:var(--muted);margin-top:2px">EmailJS config for PDF delivery</div>
+                    </div>
+                  </div>
+                  <button onclick="saveEmailConfig()" style="padding:6px 13px;background:#0369a1;color:#fff;border:none;border-radius:8px;font-size:.75rem;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;transition:background .15s" onmouseover="this.style.background='#025987'" onmouseout="this.style.background='#0369a1'">Save</button>
+                </div>
+                <div style="padding:16px 24px;display:flex;flex-direction:column;gap:10px">
+                  <div style="display:flex;gap:8px;align-items:flex-start;padding:10px 12px;background:#f8fafc;border:1px solid var(--border);border-radius:9px">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" style="flex-shrink:0;margin-top:1px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                    <span style="font-size:.72rem;color:#64748b;line-height:1.6">Get free credentials at <strong style="color:#334155">emailjs.com</strong> → Create account → Add Email Service → Create Template → Copy IDs below.</span>
+                  </div>
+                  <div>
+                    <label class="f-lbl">Public Key</label>
+                    <input type="text" id="ejs-pubkey" class="f-inp" placeholder="user_xxxxxxxxxxxxxxx">
+                  </div>
+                  <div>
+                    <label class="f-lbl">Service ID</label>
+                    <input type="text" id="ejs-service" class="f-inp" placeholder="service_xxxxxxx">
+                  </div>
+                  <div>
+                    <label class="f-lbl">Template ID</label>
+                    <input type="text" id="ejs-template" class="f-inp" placeholder="template_xxxxxxx">
+                  </div>
+                  <div id="ejs-status" style="font-size:.72rem;font-weight:600;margin-top:2px"></div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- SECTION: DATA MANAGEMENT -->
+          <div>
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+              <div style="width:3px;height:18px;background:#1A6B3C;border-radius:2px"></div>
+              <div style="font-size:.7rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#1A6B3C">Data Management</div>
+            </div>
+            <div style="background:#fff;border-radius:16px;border:1px solid var(--border);box-shadow:0 1px 4px rgba(0,0,0,.06);overflow:hidden">
+              <div style="padding:18px 24px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:14px">
+                <div style="width:38px;height:38px;background:#ecfdf5;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#1A6B3C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+                </div>
+                <div>
+                  <div style="font-weight:700;font-size:.93rem;color:var(--text)">Backup &amp; Restore</div>
+                  <div style="font-size:.73rem;color:var(--muted);margin-top:2px">Export, import or permanently clear all records</div>
+                </div>
+              </div>
+              <div style="padding:16px 24px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+                <!-- Export -->
+                <div style="border:1px solid #d1fae5;border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:10px;background:linear-gradient(135deg,#f0fdf4,#fff)">
+                  <div style="width:36px;height:36px;background:#d1fae5;border-radius:9px;display:flex;align-items:center;justify-content:center">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1A6B3C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                  </div>
+                  <div>
+                    <div style="font-size:.85rem;font-weight:700;color:#1A6B3C">Export Backup</div>
+                    <div style="font-size:.72rem;color:#6b7280;margin-top:3px;line-height:1.5">Download all records as a JSON file</div>
+                  </div>
+                  <button onclick="exportAllData()" style="width:100%;padding:8px;background:#1A6B3C;color:#fff;border:none;border-radius:8px;font-size:.78rem;font-weight:600;cursor:pointer;font-family:inherit;transition:background .15s" onmouseover="this.style.background='#145a31'" onmouseout="this.style.background='#1A6B3C'">Export</button>
+                </div>
+                <!-- Import -->
+                <div style="border:1px solid #bfdbfe;border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:10px;background:linear-gradient(135deg,#eff6ff,#fff)">
+                  <div style="width:36px;height:36px;background:#dbeafe;border-radius:9px;display:flex;align-items:center;justify-content:center">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1E5CA8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 5 17 10"/><line x1="12" y1="5" x2="12" y2="15"/></svg>
+                  </div>
+                  <div>
+                    <div style="font-size:.85rem;font-weight:700;color:#1E5CA8">Import Backup</div>
+                    <div style="font-size:.72rem;color:#6b7280;margin-top:3px;line-height:1.5">Restore records from a backup file</div>
+                  </div>
+                  <button onclick="document.getElementById('import-file').click()" style="width:100%;padding:8px;background:#1E5CA8;color:#fff;border:none;border-radius:8px;font-size:.78rem;font-weight:600;cursor:pointer;font-family:inherit;transition:background .15s" onmouseover="this.style.background='#1648a0'" onmouseout="this.style.background='#1E5CA8'">Import</button>
+                </div>
+                <input type="file" id="import-file" accept=".json" style="display:none" onchange="importAllData(event)">
+                <!-- Clear -->
+                <div style="border:1px solid #fecaca;border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:10px;background:linear-gradient(135deg,#fff5f5,#fff)">
+                  <div style="width:36px;height:36px;background:#fee2e2;border-radius:9px;display:flex;align-items:center;justify-content:center">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#A52B23" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                  </div>
+                  <div>
+                    <div style="font-size:.85rem;font-weight:700;color:#A52B23">Clear All Data</div>
+                    <div style="font-size:.72rem;color:#6b7280;margin-top:3px;line-height:1.5">Permanently remove all records</div>
+                  </div>
+                  <button onclick="clearAllData()" style="width:100%;padding:8px;background:#A52B23;color:#fff;border:none;border-radius:8px;font-size:.78rem;font-weight:600;cursor:pointer;font-family:inherit;transition:background .15s" onmouseover="this.style.background='#8b221b'" onmouseout="this.style.background='#A52B23'">Clear</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- BRANCHES SALE -->
+      <div id="tab-branches-sale" style="display:none">
+        <div class="topbar">
+          <div class="topbar-left">
+            <div class="page-title">Branches Sale</div>
+            <div class="page-sub" id="brsale-sub">Sales reported by all branches</div>
+          </div>
+          <div class="topbar-right">
+            <select class="month-sel" id="brsale-branch-f" onchange="renderBranchSales()">
+              <option value="">All Branches</option>
+              <option value="cainta">Cainta</option>
+              <option value="marikina">Marikina</option>
+              <option value="antipolo">Antipolo</option>
+              <option value="taytay">Taytay</option>
+            </select>
+            <select class="month-sel" id="brsale-month-f" onchange="renderBranchSales()">
+              <option value="">All Months</option>
+              <option value="01">January</option>
+              <option value="02">February</option>
+              <option value="03">March</option>
+              <option value="04">April</option>
+              <option value="05">May</option>
+              <option value="06">June</option>
+              <option value="07">July</option>
+              <option value="08">August</option>
+              <option value="09">September</option>
+              <option value="10">October</option>
+              <option value="11">November</option>
+              <option value="12">December</option>
+            </select>
+            <select class="month-sel" id="brsale-year-f" onchange="renderBranchSales()"></select>
+          </div>
+        </div>
+        <div class="sales-kpi" id="brsale-kpi"></div>
+        <div class="section">
+          <div class="sec-hdr">
+            <div>
+              <div class="sec-title">Branch Sales Records</div>
+              <div class="sec-count" id="brsale-count"></div>
+            </div>
+            <div class="sec-total amt-pos" id="brsale-total-lbl"></div>
+          </div>
+          <table>
+            <thead><tr>
+              <th>Branch</th><th>Day</th><th>Date</th><th>Amount</th><th>Description</th><th></th>
+            </tr></thead>
+            <tbody id="brsale-tbody"></tbody>
+          </table>
         </div>
       </div>
 
@@ -1253,8 +1432,29 @@ th { background: #F3F5F8; color: #374151; border-bottom-color: #C8D0DB; }
 
 <!-- PDF Report Picker Modal -->
 <div class="overlay" id="pdf-modal">
-  <div class="modal" style="max-width:360px">
-    <h3>📄 Export PDF Report</h3>
+  <div class="modal" style="max-width:420px">
+    <!-- Header -->
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
+      <div style="width:38px;height:38px;background:#eff6ff;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1E5CA8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      </div>
+      <div>
+        <div style="font-weight:800;font-size:.95rem;color:var(--text)">Sales Report</div>
+        <div style="font-size:.72rem;color:var(--muted);margin-top:1px">Export or send via email</div>
+      </div>
+    </div>
+    <!-- Action tabs -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:18px">
+      <button id="pdf-tab-dl" onclick="setPdfTab('download')" style="padding:10px;border-radius:8px;border:2px solid #1E5CA8;background:#1E5CA8;color:#fff;font-size:.82rem;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Download PDF
+      </button>
+      <button id="pdf-tab-em" onclick="setPdfTab('email')" style="padding:10px;border-radius:8px;border:2px solid var(--border);background:#fff;color:var(--muted);font-size:.82rem;font-weight:600;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+        Send via Email
+      </button>
+    </div>
+    <!-- Report config (shared) -->
     <div class="modal-field">
       <label class="f-lbl">Report Type</label>
       <select class="f-inp" id="pdf-type" onchange="updatePdfMonthSel()">
@@ -1266,10 +1466,30 @@ th { background: #F3F5F8; color: #374151; border-bottom-color: #C8D0DB; }
       <label class="f-lbl">Select Month</label>
       <select class="f-inp" id="pdf-month"></select>
     </div>
+    <!-- Email fields (shown in email mode) -->
+    <div id="pdf-email-fields" style="display:none">
+      <div class="modal-field">
+        <label class="f-lbl">Recipient Email</label>
+        <input type="email" id="pdf-to-email" class="f-inp" placeholder="e.g. owner@example.com" />
+      </div>
+      <div class="modal-field">
+        <label class="f-lbl">Message (optional)</label>
+        <textarea id="pdf-email-msg" class="f-inp" rows="2" placeholder="Add a short note…" style="resize:vertical;font-family:inherit;font-size:.85rem"></textarea>
+      </div>
+    </div>
     <div class="modal-btns">
       <button class="btn btn-ghost" onclick="closeModal('pdf-modal')">Cancel</button>
-      <button class="btn btn-red" onclick="generatePDF()">Export PDF</button>
+      <button class="btn btn-red" id="pdf-action-btn" onclick="generatePDF()">Download PDF</button>
     </div>
+  </div>
+</div>
+
+<!-- Email Sending Progress Overlay -->
+<div class="overlay" id="email-sending-overlay" style="z-index:500">
+  <div class="modal" style="max-width:320px;text-align:center;padding:36px 28px">
+    <div id="email-send-spinner" style="width:40px;height:40px;border:3px solid #e5e7eb;border-top-color:#1E5CA8;border-radius:50%;animation:ksq-spin .75s linear infinite;margin:0 auto 16px"></div>
+    <div id="email-send-msg" style="font-weight:700;font-size:.92rem;color:var(--text)">Sending report…</div>
+    <div id="email-send-sub" style="font-size:.75rem;color:var(--muted);margin-top:6px">Please wait</div>
   </div>
 </div>
 
@@ -1314,7 +1534,7 @@ const BRANCHES = [
   { key:'taytay',   label:'Taytay',   kKey:'ksq_taytay',   sKey:'ksq_taytay_sales'   },
 ];
 const branchView = {cainta:'expenses',marikina:'expenses',antipolo:'expenses',taytay:'expenses'};
-const ALL_TABS = ['dashboard','sales','expenses','salary','stock','others','settings','cainta','marikina','antipolo','taytay'];
+const ALL_TABS = ['dashboard','sales','branches-sale','expenses','salary','stock','others','settings','cainta','marikina','antipolo','taytay'];
 let editSaleId = null, editExpId = null, editSalId = null, editOtherId = null, editBranchId = null;
 let empProfileName = '', empCalYear = new Date().getFullYear(), empCalMonth = new Date().getMonth();
 const EMP_CAL_MO = ['JANUARY','FEBRUARY','MARCH','APRIL','MAY','JUNE','JULY','AUGUST','SEPTEMBER','OCTOBER','NOVEMBER','DECEMBER'];
@@ -1386,6 +1606,7 @@ function renderCurrentTab(){
   if(!active) return;
   if(active==='dashboard') renderDashboard();
   else if(active==='sales') renderSales();
+  else if(active==='branches-sale') renderBranchSales();
   else if(active==='expenses') renderExpenses();
   else if(active==='salary') renderSalary();
   else if(active==='stock') renderStock();
@@ -1719,12 +1940,13 @@ function showTab(tab){
     document.querySelectorAll('.nav-item')[i].classList.toggle('active',t===tab);
   });
   if(tab==='dashboard') renderDashboard();
-  else if(tab==='sales')     renderSales();
+  else if(tab==='sales')          renderSales();
+  else if(tab==='branches-sale')  renderBranchSales();
   else if(tab==='expenses')  renderExpenses();
   else if(tab==='salary')    renderSalary();
   else if(tab==='others')    renderOther();
   else if(tab==='stock')     renderStock();
-  else if(tab==='settings')  renderSettings();
+  else if(tab==='settings')  { renderSettings(); loadEmailConfigIntoSettings(); }
   else { const b=BRANCHES.find(x=>x.key===tab); if(b) renderBranch(b); }
 }
 
@@ -1775,7 +1997,7 @@ function renderStockCats(){
   const sel = document.getElementById('stock-cat-sel');
   if(sel){
     const cur = sel.value;
-    sel.innerHTML = `<option value="">No category</option>` + cats.map(c=>`<option value="${c}" ${c===cur?'selected':''}>${c}</option>`).join('');
+    sel.innerHTML = `<option value="">No category</option>` + cats.map(c=>`<option value="${c}" ${c===cur?'selected':''}>${c}</option>`).join('') + `<option value="__custom__">+ Add custom…</option>`;
   }
   // update datalist fallback
   const dl = document.getElementById('stock-cat-list');
@@ -1913,6 +2135,25 @@ function adjustStockQty(id, delta) {
   renderStock();
 }
 
+function setCatField(val){
+  const cats = loadStockCats();
+  const sel = document.getElementById('stock-cat-sel');
+  const custom = document.getElementById('stock-cat-custom');
+  if(!val){ sel.value=''; custom.style.display='none'; custom.value=''; }
+  else if(cats.includes(val)){ sel.value=val; custom.style.display='none'; custom.value=''; }
+  else { sel.value='__custom__'; custom.style.display='block'; custom.value=val; }
+  document.getElementById('stock-cat').value=val||'';
+}
+function toggleCustomCat(){
+  const sel=document.getElementById('stock-cat-sel');
+  const custom=document.getElementById('stock-cat-custom');
+  if(sel.value==='__custom__'){
+    custom.style.display='block'; custom.value=''; custom.focus();
+  } else {
+    custom.style.display='none'; custom.value='';
+  }
+  document.getElementById('stock-cat').value = sel.value==='__custom__' ? '' : sel.value;
+}
 function setUnitField(val){
   const knownUnits=['kg','g','pcs','box','sack','pack','bottle','liter','tray','bundle'];
   const sel=document.getElementById('stock-unit-sel');
@@ -1943,7 +2184,7 @@ function openStockModal(id) {
     const item = loadStock().find(i => i.id === id);
     if (item) {
       document.getElementById('stock-name').value  = item.name || '';
-      document.getElementById('stock-cat-sel').value = item.category || '';
+      setCatField(item.category||'');
       setUnitField(item.unit||'');
       document.getElementById('stock-qty').value   = item.qty ?? 0;
       document.getElementById('stock-min').value   = item.minQty ?? 5;
@@ -1951,7 +2192,7 @@ function openStockModal(id) {
     }
   } else {
     document.getElementById('stock-name').value  = '';
-    document.getElementById('stock-cat-sel').value = '';
+    setCatField('');
     setUnitField('');
     document.getElementById('stock-qty').value   = '';
     document.getElementById('stock-min').value   = '5';
@@ -1968,11 +2209,26 @@ function closeStockModal() {
 function saveStockItem() {
   const name = document.getElementById('stock-name').value.trim();
   if (!name) { alert('Item name is required.'); return; }
+  // Resolve custom category and auto-save it to the categories list
+  let resolvedCat = '';
+  if(document.getElementById('stock-cat-sel').value==='__custom__'){
+    resolvedCat = document.getElementById('stock-cat-custom').value.trim();
+    if(resolvedCat){
+      const cats = loadStockCats();
+      if(!cats.map(c=>c.toLowerCase()).includes(resolvedCat.toLowerCase())){
+        cats.push(resolvedCat);
+        saveStockCats(cats);
+        renderStockCats();
+      }
+    }
+  } else {
+    resolvedCat = document.getElementById('stock-cat-sel').value || '';
+  }
   const items = loadStock();
   const editId = document.getElementById('stock-edit-id').value;
   const payload = {
     name,
-    category: document.getElementById('stock-cat-sel').value,
+    category: resolvedCat,
     unit:     document.getElementById('stock-unit').value.trim(),
     qty:      parseInt(document.getElementById('stock-qty').value) || 0,
     minQty:   parseInt(document.getElementById('stock-min').value) || 5,
@@ -2099,7 +2355,11 @@ function renderDashboard(){
     periodLabel=yr;
   }
 
-  const gross=mSales.reduce((a,s)=>a+s.amount,0);
+  const mainSales   = mSales.filter(s=>!s.branch);
+  const branchSales = mSales.filter(s=>!!s.branch);
+  const mainGross   = mainSales.reduce((a,s)=>a+s.amount,0);
+  const branchGross = branchSales.reduce((a,s)=>a+s.amount,0);
+  const gross       = mainGross + branchGross;
   const totalRec=mOthers.reduce((a,o)=>a+o.amount,0);
   const totalIncome=gross+totalRec;
   const totalExp=mExps.reduce((a,e)=>a+e.amount,0);
@@ -2107,9 +2367,13 @@ function renderDashboard(){
   const totalSal=mSals.reduce((a,s)=>a+s.earned,0);
   const netLess=netSales-totalSal;
 
+  // Count active branches in this period
+  const activeBranches=[...new Set(branchSales.map(s=>s.branch))].length;
+
   document.getElementById('dash-period').textContent=periodLabel;
   document.getElementById('dash-cards').innerHTML=`
-    <div class="card"><div class="card-accent ca-blue"></div><div class="card-icon">💰</div><div class="card-lbl">Gross Sales</div><div class="card-val blue">${fmt(gross)}</div><div class="card-sub">${mSales.length} days recorded</div></div>
+    <div class="card"><div class="card-accent ca-blue"></div><div class="card-icon">💰</div><div class="card-lbl">Gross Sales</div><div class="card-val blue">${fmt(gross)}</div><div class="card-sub">${mSales.length} entries total</div></div>
+    <div class="card" style="cursor:pointer" onclick="showTab('branches-sale')"><div class="card-accent" style="background:#0369a1"></div><div class="card-icon">🏬</div><div class="card-lbl">Branches Sale</div><div class="card-val" style="color:#0369a1">${fmt(branchGross)}</div><div class="card-sub">${branchSales.length} entr${branchSales.length!==1?'ies':'y'} · ${activeBranches} branch${activeBranches!==1?'es':''}</div></div>
     <div class="card"><div class="card-accent ca-blue"></div><div class="card-icon">🧾</div><div class="card-lbl">Receivables</div><div class="card-val blue">${fmt(totalRec)}</div><div class="card-sub">${mOthers.length} entries</div></div>
     <div class="card"><div class="card-accent ca-red"></div><div class="card-icon">📋</div><div class="card-lbl">Total Expenses</div><div class="card-val red">${fmt(totalExp)}</div><div class="card-sub">${mExps.length} entries</div></div>
     <div class="card"><div class="card-accent ca-green"></div><div class="card-icon">📈</div><div class="card-lbl">Net Income</div><div class="card-val ${netSales>=0?'green':'red'}">${fmt(netSales)}</div><div class="card-sub">Sales + Receivables − Expenses</div></div>
@@ -2257,7 +2521,7 @@ function getYearMonthFilter(yearSelId, monthSelId){
 
 // ── SALES ──
 function renderSales(){
-  const sales=getS(K_SALES);
+  const sales=getS(K_SALES).filter(s=>!s.branch);
 
   // show/hide all tables
   SALE_VIEWS.forEach(v=>{ document.getElementById('sales-table-'+v).style.display=salesView===v?'':'none'; });
@@ -2676,7 +2940,7 @@ function saveSale(){
   const data=getS(K_SALES);
   if(editSaleId!==null){ const i=data.findIndex(x=>x.id===editSaleId); if(i>=0) data[i]={...data[i],date,amount,branch}; }
   else data.push({id:Date.now(),date,amount,branch});
-  setS(K_SALES,data); closeModal('sale-modal'); renderSales(); renderDashboard();
+  setS(K_SALES,data); closeModal('sale-modal'); renderSales(); renderDashboard(); renderBranchSales();
 }
 function delSale(id){
   if(!confirm('Delete this sale?')) return;
@@ -2687,24 +2951,32 @@ function delSale(id){
 // ── SETTINGS ──
 function renderSettings(){
   const pins=getPins();
+  const roleColors={admin:'#1E5CA8',cainta:'#1A6B3C',marikina:'#6b21a8',antipolo:'#92400e',taytay:'#9f1239'};
+  const roleBg={admin:'#eff6ff',cainta:'#ecfdf5',marikina:'#faf5ff',antipolo:'#fffbeb',taytay:'#fff1f2'};
   // PIN list
-  document.getElementById('settings-pin-list').innerHTML=USERS.map(u=>`
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border:1px solid var(--border);border-radius:10px;background:#fafbfc">
-      <div style="display:flex;align-items:center;gap:10px">
-        <span style="font-size:1.2rem">${u.emoji}</span>
-        <div>
-          <div style="font-weight:700;font-size:.85rem">${u.label}</div>
-          <div style="font-size:.72rem;color:var(--muted)">${u.role==='admin'?'Administrator':'Branch Account'}</div>
+  document.getElementById('settings-pin-list').innerHTML=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;padding:10px 0">`+USERS.map(u=>`
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border:1px solid var(--border);border-radius:11px;background:#fafbfc;transition:background .15s;gap:12px" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='#fafbfc'">
+      <div style="display:flex;align-items:center;gap:12px;min-width:0">
+        <div style="width:38px;height:38px;border-radius:10px;background:${roleBg[u.role]||'#f3f4f6'};display:flex;align-items:center;justify-content:center;font-size:.8rem;font-weight:800;color:${roleColors[u.role]||'#374151'};flex-shrink:0;letter-spacing:.02em;font-family:inherit">
+          ${u.label.slice(0,2).toUpperCase()}
+        </div>
+        <div style="min-width:0">
+          <div style="font-weight:700;font-size:.88rem;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${u.label}</div>
+          <div style="font-size:.69rem;color:var(--muted);margin-top:2px;display:flex;align-items:center;gap:4px">
+            <span style="width:6px;height:6px;border-radius:50%;background:${roleColors[u.role]||'#9ca3af'};display:inline-block"></span>
+            ${u.role==='admin'?'Administrator':'Branch Account'}
+          </div>
         </div>
       </div>
-      <button class="act-btn" onclick="openPinModal('${u.role}','${u.label}')">Change PIN</button>
-    </div>`).join('');
+      <button onclick="openPinModal('${u.role}','${u.label}')" style="flex-shrink:0;padding:6px 13px;background:#fff;border:1.5px solid var(--border);border-radius:8px;font-size:.74rem;font-weight:600;cursor:pointer;font-family:inherit;color:#475569;transition:all .15s;display:flex;align-items:center;gap:5px" onmouseover="this.style.borderColor='#1E5CA8';this.style.color='#1E5CA8';this.style.background='#eff6ff'" onmouseout="this.style.borderColor='var(--border)';this.style.color='#475569';this.style.background='#fff'">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        PIN
+      </button>
+    </div>`).join('')+`</div>`;
   // Expense categories
-  const cats=loadStockCats();
   const EXP_CATS=['Restock','Marketing','Salary','Utilities','Transport','Other'];
-  const allCats=[...new Set([...EXP_CATS,...cats])];
-  document.getElementById('settings-exp-cats').innerHTML=allCats.map(c=>`
-    <span class="cat-badge ${catClass(c)}" style="font-size:.78rem;padding:5px 12px;display:inline-flex;align-items:center;gap:6px">
+  document.getElementById('settings-exp-cats').innerHTML=EXP_CATS.map(c=>`
+    <span class="cat-badge ${catClass(c)}" style="font-size:.76rem;padding:5px 13px;display:inline-flex;align-items:center;gap:5px;border-radius:20px">
       ${c}
     </span>`).join('');
 }
@@ -2909,6 +3181,76 @@ function renderBranch(b){
       </table>
     </div>`;
   el.innerHTML=html;
+}
+
+// ── BRANCHES SALE PAGE ──
+function renderBranchSales(){
+  const kpiEl = document.getElementById('brsale-kpi');
+  if(!kpiEl) return; // tab not in DOM yet
+
+  const allSales = getS(K_SALES).filter(s=>!!s.branch);
+
+  // Populate year filter
+  const years = [...new Set(allSales.map(s=>s.date.slice(0,4)))].sort((a,b)=>b.localeCompare(a));
+  const yrSel = document.getElementById('brsale-year-f');
+  if(yrSel){
+    const prevYr = yrSel.value || (years[0]||'');
+    yrSel.innerHTML = `<option value="">All Years</option>` + years.map(y=>`<option value="${y}">${y}</option>`).join('');
+    if(prevYr && years.includes(prevYr)) yrSel.value = prevYr;
+    else if(years[0]) yrSel.value = years[0];
+  }
+
+  const yr       = yrSel?.value   || '';
+  const mo       = document.getElementById('brsale-month-f')?.value   || '';
+  const brFilter = document.getElementById('brsale-branch-f')?.value  || '';
+
+  let filtered = allSales;
+  if(yr)       filtered = filtered.filter(s=>s.date.startsWith(yr));
+  if(mo)       filtered = filtered.filter(s=>s.date.slice(5,7)===mo);
+  if(brFilter) filtered = filtered.filter(s=>s.branch===brFilter);
+  filtered.sort((a,b)=>b.date.localeCompare(a.date));
+
+  const total    = filtered.reduce((a,s)=>a+s.amount,0);
+  const branches = [...new Set(filtered.map(s=>s.branch))];
+  const best     = branches.reduce((a,br)=>{
+    const t = filtered.filter(s=>s.branch===br).reduce((x,s)=>x+s.amount,0);
+    return t>a.total?{br,total:t}:a;
+  },{br:'',total:0});
+  const avg      = filtered.length ? total/filtered.length : 0;
+
+  // Sub label
+  const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const subParts = [];
+  if(mo) subParts.push(MONTHS[parseInt(mo)-1]);
+  if(yr) subParts.push(yr);
+  if(brFilter) subParts.push(brFilter.charAt(0).toUpperCase()+brFilter.slice(1));
+  document.getElementById('brsale-sub').textContent = subParts.length ? subParts.join(' · ') : 'All branches · All time';
+
+  // KPI cards
+  kpiEl.innerHTML=`
+    <div class="s-kpi k-blue"><div class="s-kpi-icon">💰</div><div class="s-kpi-lbl">Total Sales</div><div class="s-kpi-val blue">${fmt(total)}</div><div class="s-kpi-sub">${filtered.length} entr${filtered.length!==1?'ies':'y'}</div></div>
+    <div class="s-kpi k-green"><div class="s-kpi-icon">🏪</div><div class="s-kpi-lbl">Branches</div><div class="s-kpi-val green">${branches.length}</div><div class="s-kpi-sub">reporting</div></div>
+    <div class="s-kpi k-orange"><div class="s-kpi-icon">⭐</div><div class="s-kpi-lbl">Top Branch</div><div class="s-kpi-val orange" style="font-size:.85rem">${best.br?best.br.charAt(0).toUpperCase()+best.br.slice(1):'—'}</div><div class="s-kpi-sub">${best.total?fmt(best.total):'no data'}</div></div>
+    <div class="s-kpi k-purple"><div class="s-kpi-icon">📊</div><div class="s-kpi-lbl">Average</div><div class="s-kpi-val purple">${filtered.length?fmt(avg):'—'}</div><div class="s-kpi-sub">per entry</div></div>
+  `;
+
+  document.getElementById('brsale-count').textContent = filtered.length+' record'+(filtered.length!==1?'s':'');
+  document.getElementById('brsale-total-lbl').textContent = filtered.length ? 'Total: '+fmt(total) : '';
+
+  document.getElementById('brsale-tbody').innerHTML = filtered.length
+    ? filtered.map(s=>`
+        <tr>
+          <td><span class="cat-badge" style="background:#e0f2fe;color:#0369a1;font-weight:700">🏪 ${s.branch.charAt(0).toUpperCase()+s.branch.slice(1)}</span></td>
+          <td><span class="day-pill ${dayClass(s.date)}">${dayName(s.date)}</span></td>
+          <td style="color:var(--muted);font-size:.78rem">${fmtDate(s.date)}</td>
+          <td class="amt-pos">${fmt(s.amount)}</td>
+          <td style="color:var(--muted)">${s.desc||'—'}</td>
+          <td style="white-space:nowrap">
+            <button class="act-btn" onclick="openBranchSaleModal('${s.branch}',${s.id})">✏️</button>
+            <button class="act-btn act-del" onclick="delBranchSale('${s.branch}',${s.id})">🗑️</button>
+          </td>
+        </tr>`).join('')
+    : `<tr><td colspan="6" class="empty-row">No branch sales yet.</td></tr>`;
 }
 
 // ── BRANCH ORDERS ────────────────────────────────────────────
@@ -3146,13 +3488,13 @@ function saveBranchSale(){
   } else {
     data.push({id:Date.now(),date,amount,desc,branch:key});
   }
-  setS(K_SALES,data); closeModal('branch-sale-modal'); renderBranch(b); renderDashboard();
+  setS(K_SALES,data); closeModal('branch-sale-modal'); renderBranch(b); renderDashboard(); renderBranchSales();
 }
 function delBranchSale(key,id){
   if(!confirm('Delete this sale?')) return;
   const b=BRANCHES.find(x=>x.key===key); if(!b) return;
   setS(K_SALES,getS(K_SALES).filter(x=>x.id!==id));
-  renderBranch(b); renderDashboard();
+  renderBranch(b); renderDashboard(); renderBranchSales();
 }
 
 // ── EXPENSES ──
@@ -3448,6 +3790,7 @@ window.addEventListener('storage', e=>{
   const active=ALL_TABS.find(t=>document.getElementById('tab-'+t)?.style.display!=='none');
   if(active==='dashboard') renderDashboard();
   else if(active==='sales') renderSales();
+  else if(active==='branches-sale') renderBranchSales();
   else if(active==='expenses') renderExpenses();
   else if(active==='salary') renderSalary();
   else if(active==='others') renderOther();
@@ -3456,13 +3799,69 @@ window.addEventListener('storage', e=>{
   if(active!=='dashboard' && e.key===K_EXP) renderDashboard();
 });
 
+// ── EMAIL CONFIG ──
+const K_EMAIL_CFG = 'ksq_email_cfg';
+function getEmailCfg(){ return JSON.parse(localStorage.getItem(K_EMAIL_CFG)||'{}'); }
+function saveEmailConfig(){
+  const cfg={
+    pubkey:   document.getElementById('ejs-pubkey').value.trim(),
+    service:  document.getElementById('ejs-service').value.trim(),
+    template: document.getElementById('ejs-template').value.trim(),
+  };
+  localStorage.setItem(K_EMAIL_CFG, JSON.stringify(cfg));
+  const st=document.getElementById('ejs-status');
+  if(cfg.pubkey && cfg.service && cfg.template){
+    st.textContent='✓ Configuration saved'; st.style.color='#1A6B3C';
+  } else {
+    st.textContent='⚠ Fill in all three fields to enable email sending'; st.style.color='#92400e';
+  }
+}
+function loadEmailConfigIntoSettings(){
+  const cfg=getEmailCfg();
+  const pk=document.getElementById('ejs-pubkey');
+  const sv=document.getElementById('ejs-service');
+  const tp=document.getElementById('ejs-template');
+  if(pk) pk.value=cfg.pubkey||'';
+  if(sv) sv.value=cfg.service||'';
+  if(tp) tp.value=cfg.template||'';
+  const st=document.getElementById('ejs-status');
+  if(st){
+    if(cfg.pubkey && cfg.service && cfg.template){ st.textContent='✓ Email sending configured'; st.style.color='#1A6B3C'; }
+    else { st.textContent='Not configured — fill in fields above'; st.style.color='#9ca3af'; }
+  }
+}
+
 // ── PDF MODAL ──
+let _pdfMode = 'download';
+function setPdfTab(mode){
+  _pdfMode = mode;
+  const dlBtn = document.getElementById('pdf-tab-dl');
+  const emBtn = document.getElementById('pdf-tab-em');
+  const emailFields = document.getElementById('pdf-email-fields');
+  const actionBtn = document.getElementById('pdf-action-btn');
+  if(mode==='download'){
+    dlBtn.style.background='#1E5CA8'; dlBtn.style.borderColor='#1E5CA8'; dlBtn.style.color='#fff'; dlBtn.style.fontWeight='700';
+    emBtn.style.background='#fff';    emBtn.style.borderColor='var(--border)'; emBtn.style.color='var(--muted)'; emBtn.style.fontWeight='600';
+    emailFields.style.display='none';
+    actionBtn.textContent='Download PDF';
+    actionBtn.onclick=generatePDF;
+  } else {
+    emBtn.style.background='#1E5CA8'; emBtn.style.borderColor='#1E5CA8'; emBtn.style.color='#fff'; emBtn.style.fontWeight='700';
+    dlBtn.style.background='#fff';    dlBtn.style.borderColor='var(--border)'; dlBtn.style.color='var(--muted)'; dlBtn.style.fontWeight='600';
+    emailFields.style.display='';
+    actionBtn.textContent='Send via Email';
+    actionBtn.onclick=sendPDFEmail;
+  }
+}
 function openPdfModal(){
   const sales = getS(K_SALES);
   const months = [...new Set(sales.map(s=>monthKey(s.date)))].sort().reverse();
   const sel = document.getElementById('pdf-month');
   sel.innerHTML = months.map(mk=>`<option value="${mk}">${monthLabel(mk)}</option>`).join('');
   updatePdfMonthSel();
+  setPdfTab('download');
+  document.getElementById('pdf-to-email').value='';
+  document.getElementById('pdf-email-msg').value='';
   document.getElementById('pdf-modal').classList.add('open');
 }
 function updatePdfMonthSel(){
@@ -3478,6 +3877,63 @@ function generatePDF(){
     exportSummaryPDF();
   }
   closeModal('pdf-modal');
+}
+
+// ── SEND PDF VIA EMAIL ──
+async function sendPDFEmail(){
+  const cfg = getEmailCfg();
+  if(!cfg.pubkey || !cfg.service || !cfg.template){
+    alert('Email not configured yet.\n\nGo to Settings → Email Reports and enter your EmailJS credentials.');
+    return;
+  }
+  const toEmail = document.getElementById('pdf-to-email').value.trim();
+  if(!toEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(toEmail)){
+    alert('Please enter a valid recipient email address.'); return;
+  }
+  const type = document.getElementById('pdf-type').value;
+  const mk   = document.getElementById('pdf-month').value;
+  const msg  = document.getElementById('pdf-email-msg').value.trim();
+
+  // Generate PDF as base64
+  let pdfBase64, reportTitle, fileName;
+  try {
+    if(type==='monthly'){
+      const res = exportMonthlyPDFBase64(mk);
+      pdfBase64 = res.base64; reportTitle = res.title; fileName = res.fileName;
+    } else {
+      const res = exportSummaryPDFBase64();
+      pdfBase64 = res.base64; reportTitle = res.title; fileName = res.fileName;
+    }
+  } catch(e){ alert('Failed to generate PDF: '+e.message); return; }
+
+  // Show sending overlay
+  closeModal('pdf-modal');
+  const overlay = document.getElementById('email-sending-overlay');
+  document.getElementById('email-send-msg').textContent = 'Sending report…';
+  document.getElementById('email-send-sub').textContent = 'Please wait';
+  document.getElementById('email-send-spinner').style.display = 'block';
+  overlay.classList.add('open');
+
+  try {
+    emailjs.init(cfg.pubkey);
+    await emailjs.send(cfg.service, cfg.template, {
+      to_email:     toEmail,
+      report_title: reportTitle,
+      message:      msg || 'Please find the attached sales report.',
+      pdf_name:     fileName,
+      pdf_content:  pdfBase64,
+      from_name:    'Kamayan sa Qyusi Business Manager',
+    });
+    document.getElementById('email-send-spinner').style.display='none';
+    document.getElementById('email-send-msg').textContent = '✓ Report Sent!';
+    document.getElementById('email-send-sub').textContent = 'Email delivered to '+toEmail;
+    setTimeout(()=>overlay.classList.remove('open'), 2800);
+  } catch(err){
+    document.getElementById('email-send-spinner').style.display='none';
+    document.getElementById('email-send-msg').textContent = '✗ Failed to send';
+    document.getElementById('email-send-sub').textContent = err?.text || 'Check your EmailJS credentials in Settings.';
+    setTimeout(()=>overlay.classList.remove('open'), 3500);
+  }
 }
 
 // ── PDF HELPERS ──
@@ -3555,6 +4011,33 @@ function exportMonthlyPDF(mk){
   pdfFooters(doc);
   doc.save('KSQ_Sales_'+mk+'.pdf');
 }
+function exportMonthlyPDFBase64(mk){
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+  const sales = getS(K_SALES).filter(s=>!s.branch);
+  const days = sales.filter(s=>monthKey(s.date)===mk).sort((a,b)=>a.date.localeCompare(b.date));
+  const total = days.reduce((a,s)=>a+s.amount,0);
+  const best = days.length ? days.reduce((a,s)=>s.amount>a.amount?s:a,days[0]) : null;
+  const label = monthLabel(mk);
+  pdfHeader(doc, label, 'Business Manager — Monthly Sales Report');
+  const kpiBottom = pdfKpis(doc,[
+    {label:'Total Sales',    val:'₱'+total.toLocaleString('en-PH'),                                         color:[30,58,95]},
+    {label:'Days Recorded',  val:days.length.toString(),                                                     color:[5,150,105]},
+    {label:'Best Single Day',val:best?'₱'+best.amount.toLocaleString('en-PH'):'—',                         color:[217,119,6]},
+    {label:'Avg / Day',      val:days.length?'₱'+Math.round(total/days.length).toLocaleString('en-PH'):'—',color:[124,58,237]},
+  ], 34);
+  doc.autoTable({
+    head:[[{content:label+' — Daily Sales  (Total: ₱'+total.toLocaleString('en-PH')+')', colSpan:4, styles:{fillColor:[30,58,95],textColor:255,fontStyle:'bold',fontSize:8,halign:'left'}}],['Date','Day','Gross Sales','Notes']],
+    body: days.map(s=>[fmtDate(s.date), dayName(s.date), '₱'+s.amount.toLocaleString('en-PH'), s.notes||(s.branch?s.branch.charAt(0).toUpperCase()+s.branch.slice(1):'—')]),
+    startY: kpiBottom+8, margin:{left:14,right:14},
+    headStyles:{fillColor:[240,244,255],textColor:[30,58,95],fontStyle:'bold',fontSize:8},
+    bodyStyles:{fontSize:8,textColor:[30,30,30]}, alternateRowStyles:{fillColor:[250,252,255]},
+    styles:{cellPadding:3,lineColor:[220,220,220],lineWidth:0.2},
+  });
+  pdfFooters(doc);
+  const fileName='KSQ_Sales_'+mk+'.pdf';
+  return { base64: doc.output('datauristring').split(',')[1], title: 'Sales Report — '+label, fileName };
+}
 
 // ── SUMMARY PDF (all months in selected year) ──
 function exportSummaryPDF(){
@@ -3598,6 +4081,38 @@ function exportSummaryPDF(){
   });
   pdfFooters(doc);
   doc.save('KSQ_Sales_Summary_'+yr+'.pdf');
+}
+function exportSummaryPDFBase64(){
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+  const sales = getS(K_SALES);
+  const yr = document.getElementById('sales-year').value || (sales[0]?.date.slice(0,4)||'');
+  const filtered = sales.filter(s=>s.date.startsWith(yr)).sort((a,b)=>a.date.localeCompare(b.date));
+  const total = filtered.reduce((a,s)=>a+s.amount,0);
+  const best = filtered.length ? filtered.reduce((a,s)=>s.amount>a.amount?s:a,filtered[0]) : null;
+  const mMap={};
+  filtered.forEach(s=>{ const mk=monthKey(s.date); if(!mMap[mk]) mMap[mk]={key:mk,days:[],total:0}; mMap[mk].days.push(s); mMap[mk].total+=s.amount; });
+  const months=Object.values(mMap).sort((a,b)=>a.key.localeCompare(b.key));
+  pdfHeader(doc,'Year: '+yr,'Business Manager — Monthly Sales Summary');
+  const kpiBottom = pdfKpis(doc,[
+    {label:'Total Sales',    val:'₱'+total.toLocaleString('en-PH'),                                          color:[30,58,95]},
+    {label:'Days Recorded',  val:filtered.length.toString(),                                                  color:[5,150,105]},
+    {label:'Best Single Day',val:best?'₱'+best.amount.toLocaleString('en-PH'):'—',                          color:[217,119,6]},
+    {label:'Avg / Day',      val:filtered.length?'₱'+Math.round(total/filtered.length).toLocaleString('en-PH'):'—',color:[124,58,237]},
+  ], 34);
+  const body=months.map(m=>[monthLabel(m.key), m.days.length.toString(), '₱'+m.total.toLocaleString('en-PH'), '₱'+Math.round(m.total/m.days.length).toLocaleString('en-PH')]);
+  body.push(['TOTAL', filtered.length.toString(), '₱'+total.toLocaleString('en-PH'), '']);
+  doc.autoTable({
+    head:[['Month','Days','Total Sales','Avg / Day']], body,
+    startY: kpiBottom+8, margin:{left:14,right:14},
+    headStyles:{fillColor:[30,58,95],textColor:255,fontStyle:'bold',fontSize:8},
+    bodyStyles:{fontSize:8,textColor:[30,30,30]}, alternateRowStyles:{fillColor:[245,248,255]},
+    didParseCell(data){ if(data.row.index===body.length-1){ data.cell.styles.fontStyle='bold'; data.cell.styles.fillColor=[220,230,245]; } },
+    styles:{cellPadding:3,lineColor:[220,220,220],lineWidth:0.2},
+  });
+  pdfFooters(doc);
+  const fileName='KSQ_Sales_Summary_'+yr+'.pdf';
+  return { base64: doc.output('datauristring').split(',')[1], title: 'Sales Summary — '+yr, fileName };
 }
 
 window.onload=async()=>{
