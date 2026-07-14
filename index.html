@@ -3738,12 +3738,13 @@ function renderBranchSales(){
   filtered.sort((a,b)=>b.date.localeCompare(a.date));
 
   const total    = filtered.reduce((a,s)=>a+s.amount,0);
-  const branches = [...new Set(filtered.map(s=>s.branch))];
-  const best     = branches.reduce((a,br)=>{
+  const activeBranches = [...new Set(filtered.map(s=>s.branch))];
+  const best     = activeBranches.reduce((a,br)=>{
     const t = filtered.filter(s=>s.branch===br).reduce((x,s)=>x+s.amount,0);
     return t>a.total?{br,total:t}:a;
   },{br:'',total:0});
   const avg      = filtered.length ? total/filtered.length : 0;
+  const branchLabel = key => (BRANCHES.find(b=>b.key===key)||{label:key}).label;
 
   // Sub label
   const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -3756,8 +3757,8 @@ function renderBranchSales(){
   // KPI cards
   kpiEl.innerHTML=`
     <div class="s-kpi k-blue"><div class="s-kpi-icon">💰</div><div class="s-kpi-lbl">Total Sales</div><div class="s-kpi-val blue">${fmt(total)}</div><div class="s-kpi-sub">${filtered.length} entr${filtered.length!==1?'ies':'y'}</div></div>
-    <div class="s-kpi k-green"><div class="s-kpi-icon">🏪</div><div class="s-kpi-lbl">Branches</div><div class="s-kpi-val green">${branches.length}</div><div class="s-kpi-sub">reporting</div></div>
-    <div class="s-kpi k-orange"><div class="s-kpi-icon">⭐</div><div class="s-kpi-lbl">Top Branch</div><div class="s-kpi-val orange" style="font-size:.85rem">${best.br?best.br.charAt(0).toUpperCase()+best.br.slice(1):'—'}</div><div class="s-kpi-sub">${best.total?fmt(best.total):'no data'}</div></div>
+    <div class="s-kpi k-green"><div class="s-kpi-icon">🏪</div><div class="s-kpi-lbl">Branches</div><div class="s-kpi-val green">${BRANCHES.length}</div><div class="s-kpi-sub">${activeBranches.length} reporting</div></div>
+    <div class="s-kpi k-orange"><div class="s-kpi-icon">⭐</div><div class="s-kpi-lbl">Top Branch</div><div class="s-kpi-val orange" style="font-size:.85rem">${best.br?branchLabel(best.br):'—'}</div><div class="s-kpi-sub">${best.total?fmt(best.total):'no data'}</div></div>
     <div class="s-kpi k-purple"><div class="s-kpi-icon">📊</div><div class="s-kpi-lbl">Average</div><div class="s-kpi-val purple">${filtered.length?fmt(avg):'—'}</div><div class="s-kpi-sub">per entry</div></div>
   `;
 
@@ -3767,7 +3768,7 @@ function renderBranchSales(){
   document.getElementById('brsale-tbody').innerHTML = filtered.length
     ? filtered.map(s=>`
         <tr>
-          <td><span class="cat-badge" style="background:#e0f2fe;color:#0369a1;font-weight:700">🏪 ${s.branch.charAt(0).toUpperCase()+s.branch.slice(1)}</span></td>
+          <td><span class="cat-badge" style="background:#e0f2fe;color:#0369a1;font-weight:700">🏪 ${branchLabel(s.branch)}</span></td>
           <td><span class="day-pill ${dayClass(s.date)}">${dayName(s.date)}</span></td>
           <td style="color:var(--muted);font-size:.78rem">${fmtDate(s.date)}</td>
           <td class="amt-pos">${fmt(s.amount)}</td>
