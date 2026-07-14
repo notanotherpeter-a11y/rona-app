@@ -546,6 +546,9 @@ th { background: #F3F5F8; color: #374151; border-bottom-color: #C8D0DB; }
         <div class="nav-item" onclick="showTab('branch-orders');closeMobSidebar()" data-access="admin">
           <span class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></svg></span><span>Branch Orders</span>
         </div>
+        <div class="nav-item" onclick="showTab('reports');closeMobSidebar()" data-access="admin">
+          <span class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="12" y1="9" x2="8" y2="9"/></svg></span><span>Reports</span>
+        </div>
         <div class="nav-item" onclick="showTab('others');closeMobSidebar()" data-access="admin">
           <span class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></span><span>Receivables</span>
         </div>
@@ -1034,6 +1037,54 @@ th { background: #F3F5F8; color: #374151; border-bottom-color: #C8D0DB; }
 
         <div class="card" style="padding:0;overflow:hidden">
           <div id="branch-orders-table"></div>
+        </div>
+      </div>
+
+      <!-- ── REPORTS TAB ── -->
+      <div id="tab-reports" style="display:none">
+        <div class="topbar">
+          <div class="topbar-left">
+            <div class="page-title">Reports</div>
+            <div class="page-sub">Business summary and performance overview</div>
+          </div>
+          <div class="topbar-right">
+            <select id="rpt-month-sel" class="month-sel" onchange="renderReports()"></select>
+            <select id="rpt-year-sel" class="month-sel" onchange="renderReports()"></select>
+            <button onclick="openPdfModal()" style="padding:9px 16px;background:#1e3a5f;color:#fff;border:none;border-radius:var(--r-sm);font-size:.82rem;font-weight:600;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:6px">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              Export PDF
+            </button>
+          </div>
+        </div>
+
+        <!-- Summary KPIs -->
+        <div id="rpt-kpi" class="kpi-grid" style="margin-bottom:20px"></div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+          <!-- Sales by branch -->
+          <div class="card" style="padding:0;overflow:hidden">
+            <div style="padding:16px 20px;border-bottom:1px solid var(--border);font-weight:700;font-size:.9rem">Sales by Branch</div>
+            <div id="rpt-branch-sales" style="padding:4px 0"></div>
+          </div>
+          <!-- Expenses by category -->
+          <div class="card" style="padding:0;overflow:hidden">
+            <div style="padding:16px 20px;border-bottom:1px solid var(--border);font-weight:700;font-size:.9rem">Expenses by Category</div>
+            <div id="rpt-exp-cats" style="padding:4px 0"></div>
+          </div>
+        </div>
+
+        <!-- Detailed tables -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+          <!-- Top sales days -->
+          <div class="card" style="padding:0;overflow:hidden">
+            <div style="padding:16px 20px;border-bottom:1px solid var(--border);font-weight:700;font-size:.9rem">Top Sales Days</div>
+            <table style="width:100%;border-collapse:collapse" id="rpt-top-sales"></table>
+          </div>
+          <!-- Branch orders summary -->
+          <div class="card" style="padding:0;overflow:hidden">
+            <div style="padding:16px 20px;border-bottom:1px solid var(--border);font-weight:700;font-size:.9rem">Branch Orders Summary</div>
+            <div id="rpt-orders-summary" style="padding:4px 0"></div>
+          </div>
         </div>
       </div>
 
@@ -1602,7 +1653,7 @@ const BRANCHES = [
   { key:'quezon-city',  label:'Quezon City',  kKey:'ksq_quezon_city',  sKey:'ksq_quezon_city_sales'  },
 ];
 const branchView = {cainta:'sales',marikina:'sales',antipolo:'sales',taytay:'sales','quezon-city':'sales'};
-const ALL_TABS = ['dashboard','sales','branches-sale','expenses','salary','stock','branch-orders','others','settings','cainta','marikina','antipolo','taytay','quezon-city'];
+const ALL_TABS = ['dashboard','sales','branches-sale','expenses','salary','stock','branch-orders','reports','others','settings','cainta','marikina','antipolo','taytay','quezon-city'];
 let editSaleId = null, editExpId = null, editSalId = null, editOtherId = null, editBranchId = null;
 let empProfileName = '', empCalYear = new Date().getFullYear(), empCalMonth = new Date().getMonth();
 const EMP_CAL_MO = ['JANUARY','FEBRUARY','MARCH','APRIL','MAY','JUNE','JULY','AUGUST','SEPTEMBER','OCTOBER','NOVEMBER','DECEMBER'];
@@ -1684,6 +1735,7 @@ function renderCurrentTab(){
   else if(active==='salary') renderSalary();
   else if(active==='stock') renderStock();
   else if(active==='branch-orders') renderBranchOrdersPage();
+  else if(active==='reports') renderReports();
   else if(active==='others') renderOther();
   else{ const b=BRANCHES.find(x=>x.key===active); if(b) renderBranch(b); }
 }
@@ -2630,6 +2682,122 @@ function renderBranchOrdersPage(){
     }).join('')}
     </tbody>
   </table>`;
+}
+
+// ── REPORTS ──────────────────────────────────────────────────
+function renderReports(){
+  const allSales  = getS(K_SALES);
+  const allExp    = getS(K_EXP);
+  const allSal    = getS(K_SAL);
+  const allOrders = JSON.parse(localStorage.getItem(BRANCH_ORDERS_KEY)||'[]');
+
+  // Populate year/month selectors
+  const years = [...new Set(allSales.map(s=>s.date.slice(0,4)))].sort((a,b)=>b-a);
+  const yrSel = document.getElementById('rpt-year-sel');
+  const moSel = document.getElementById('rpt-month-sel');
+  if(!yrSel||!moSel) return;
+  const prevYr = yrSel.value || (years[0]||new Date().getFullYear().toString());
+  yrSel.innerHTML = years.map(y=>`<option value="${y}">${y}</option>`).join('');
+  if(prevYr && years.includes(prevYr)) yrSel.value = prevYr;
+
+  const MONTHS_SHORT = ['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const MONTHS_FULL  = ['','January','February','March','April','May','June','July','August','September','October','November','December'];
+  const prevMo = moSel.value;
+  moSel.innerHTML = `<option value="">All Months</option>` + MONTHS_FULL.slice(1).map((m,i)=>`<option value="${String(i+1).padStart(2,'0')}">${m}</option>`).join('');
+  if(prevMo) moSel.value = prevMo;
+
+  const yr = yrSel.value || '';
+  const mo = moSel.value || '';
+
+  const filterDate = d => (!yr || d.startsWith(yr)) && (!mo || d.slice(5,7)===mo);
+
+  const sales  = allSales.filter(s=>filterDate(s.date));
+  const exps   = allExp.filter(e=>filterDate(e.date));
+  const sals   = allSal.filter(s=>filterDate(s.date||''));
+  const orders = allOrders.filter(o=>filterDate(o.date||''));
+
+  const totalSales = sales.reduce((a,s)=>a+(s.amount||0),0);
+  const totalExp   = exps.reduce((a,e)=>a+(e.amount||0),0);
+  const totalSal   = sals.reduce((a,s)=>a+(s.net||s.earned||0),0);
+  const netIncome  = totalSales - totalExp;
+
+  // ── KPI cards
+  document.getElementById('rpt-kpi').innerHTML = `
+    <div class="kpi-card"><div class="kpi-label">Total Sales</div><div class="kpi-value" style="color:var(--green)">${fmtK(totalSales)}</div><div class="kpi-label" style="margin-top:4px">${sales.length} entries</div></div>
+    <div class="kpi-card"><div class="kpi-label">Total Expenses</div><div class="kpi-value" style="color:var(--red)">${fmtK(totalExp)}</div><div class="kpi-label" style="margin-top:4px">${exps.length} entries</div></div>
+    <div class="kpi-card"><div class="kpi-label">Net Income</div><div class="kpi-value" style="color:${netIncome>=0?'var(--green)':'var(--red)'}">${fmtK(netIncome)}</div><div class="kpi-label" style="margin-top:4px">Sales − Expenses</div></div>
+    <div class="kpi-card"><div class="kpi-label">Total Salary</div><div class="kpi-value" style="color:var(--blue)">${fmtK(totalSal)}</div><div class="kpi-label" style="margin-top:4px">${sals.length} employees</div></div>
+  `;
+
+  // ── Sales by branch
+  const branchTotals = BRANCHES.map(b=>{
+    const t = sales.filter(s=>s.branch===b.key).reduce((a,s)=>a+(s.amount||0),0);
+    return {label:b.label, total:t};
+  }).filter(b=>b.total>0).sort((a,z)=>z.total-a.total);
+  const branchMax = branchTotals[0]?.total||1;
+  const branchColors2 = ['#2563eb','#059669','#d97706','#7c3aed','#dc2626'];
+  document.getElementById('rpt-branch-sales').innerHTML = branchTotals.length
+    ? branchTotals.map((b,i)=>{
+        const pct = Math.round((b.total/branchMax)*100);
+        return `<div style="padding:12px 20px;border-bottom:1px solid var(--border)">
+          <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+            <span style="font-size:.83rem;font-weight:600">${b.label}</span>
+            <span style="font-size:.83rem;font-weight:700;color:var(--green)">${fmtK(b.total)}</span>
+          </div>
+          <div style="height:6px;background:#f3f4f6;border-radius:4px;overflow:hidden">
+            <div style="height:100%;width:${pct}%;background:${branchColors2[i%branchColors2.length]};border-radius:4px"></div>
+          </div>
+        </div>`;
+      }).join('')
+    : `<div style="padding:32px;text-align:center;color:var(--muted);font-size:.85rem">No branch sales for this period.</div>`;
+
+  // ── Expenses by category
+  const catMap = {};
+  exps.forEach(e=>{ catMap[e.cat||'Other'] = (catMap[e.cat||'Other']||0) + (e.amount||0); });
+  const catList = Object.entries(catMap).sort((a,z)=>z[1]-a[1]);
+  const catMax  = catList[0]?.[1]||1;
+  const catColors = ['#dc2626','#d97706','#2563eb','#059669','#7c3aed','#6b7280'];
+  document.getElementById('rpt-exp-cats').innerHTML = catList.length
+    ? catList.map(([ cat, total ],i)=>{
+        const pct = Math.round((total/catMax)*100);
+        return `<div style="padding:12px 20px;border-bottom:1px solid var(--border)">
+          <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+            <span style="font-size:.83rem;font-weight:600">${cat}</span>
+            <span style="font-size:.83rem;font-weight:700;color:var(--red)">${fmtK(total)}</span>
+          </div>
+          <div style="height:6px;background:#f3f4f6;border-radius:4px;overflow:hidden">
+            <div style="height:100%;width:${pct}%;background:${catColors[i%catColors.length]};border-radius:4px"></div>
+          </div>
+        </div>`;
+      }).join('')
+    : `<div style="padding:32px;text-align:center;color:var(--muted);font-size:.85rem">No expenses for this period.</div>`;
+
+  // ── Top 5 sales days
+  const topSales = sales.slice().sort((a,z)=>z.amount-a.amount).slice(0,5);
+  document.getElementById('rpt-top-sales').innerHTML = topSales.length
+    ? `<thead><tr style="background:#f8f9fb"><th style="padding:10px 16px;text-align:left;font-size:.68rem;font-weight:700;color:var(--muted);text-transform:uppercase;border-bottom:1px solid var(--border)">Date</th><th style="padding:10px 16px;text-align:left;font-size:.68rem;font-weight:700;color:var(--muted);text-transform:uppercase;border-bottom:1px solid var(--border)">Branch</th><th style="padding:10px 16px;text-align:right;font-size:.68rem;font-weight:700;color:var(--muted);text-transform:uppercase;border-bottom:1px solid var(--border)">Amount</th></tr></thead>
+       <tbody>${topSales.map((s,i)=>`<tr style="border-bottom:1px solid var(--border)">
+         <td style="padding:10px 16px;font-size:.82rem">${fmtDate(s.date)}</td>
+         <td style="padding:10px 16px;font-size:.82rem;color:var(--muted)">${s.branch?s.branch.charAt(0).toUpperCase()+s.branch.slice(1):'Main'}</td>
+         <td style="padding:10px 16px;text-align:right;font-weight:700;color:var(--green);font-size:.82rem">${fmt(s.amount)}</td>
+       </tr>`).join('')}</tbody>`
+    : `<tbody><tr><td colspan="3" style="padding:32px;text-align:center;color:var(--muted);font-size:.85rem">No sales for this period.</td></tr></tbody>`;
+
+  // ── Branch orders summary
+  const orderStats = BRANCHES.map(b=>{
+    const bOrders = orders.filter(o=>o.branch===b.key);
+    return { label:b.label, total:bOrders.length, fulfilled:bOrders.filter(o=>o.status==='Fulfilled').length, pending:bOrders.filter(o=>o.status==='Pending').length };
+  }).filter(b=>b.total>0);
+  document.getElementById('rpt-orders-summary').innerHTML = orderStats.length
+    ? orderStats.map(b=>`
+        <div style="padding:12px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px">
+          <span style="font-size:.83rem;font-weight:600">${b.label}</span>
+          <div style="display:flex;gap:8px">
+            <span style="background:#d1fae5;color:#059669;padding:2px 8px;border-radius:20px;font-size:.72rem;font-weight:700">${b.fulfilled} Fulfilled</span>
+            ${b.pending?`<span style="background:#fef3c7;color:#d97706;padding:2px 8px;border-radius:20px;font-size:.72rem;font-weight:700">${b.pending} Pending</span>`:''}
+          </div>
+        </div>`).join('')
+    : `<div style="padding:32px;text-align:center;color:var(--muted);font-size:.85rem">No orders for this period.</div>`;
 }
 
 // ── CHART ──
