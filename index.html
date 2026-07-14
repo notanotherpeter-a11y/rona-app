@@ -1092,154 +1092,62 @@ th { background: #F3F5F8; color: #374151; border-bottom-color: #C8D0DB; }
       <div id="tab-settings" style="display:none">
         <div class="topbar">
           <div class="topbar-left">
-            <div class="page-title">⚙️ Settings</div>
-            <div class="page-sub">Manage user access, categories &amp; data</div>
+            <div class="page-title">Settings</div>
+            <div class="page-sub">Manage access, categories &amp; data</div>
           </div>
         </div>
 
-        <div style="display:flex;flex-direction:column;gap:28px;max-width:980px">
+        <div style="display:flex;flex-direction:column;gap:20px;max-width:860px">
 
-          <!-- SECTION: USER ACCESS -->
-          <div>
-            <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
-              <div style="width:3px;height:18px;background:#1E5CA8;border-radius:2px"></div>
-              <div style="font-size:.7rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#1E5CA8">User Access</div>
+          <!-- User PINs -->
+          <div class="card" style="padding:20px 24px">
+            <div style="font-weight:700;font-size:.85rem;color:var(--text);margin-bottom:14px">🔐 User PINs</div>
+            <div id="settings-pin-list"></div>
+          </div>
+
+          <!-- Expense Categories -->
+          <div class="card" style="padding:20px 24px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+              <div style="font-weight:700;font-size:.85rem;color:var(--text)">🏷️ Expense Categories</div>
+              <button onclick="openSettingsCatModal()" style="display:flex;align-items:center;gap:5px;padding:6px 13px;background:var(--red);color:#fff;border:none;border-radius:8px;font-size:.75rem;font-weight:600;cursor:pointer;font-family:inherit">
+                + Add
+              </button>
             </div>
-            <div style="background:#fff;border-radius:16px;border:1px solid var(--border);box-shadow:0 1px 4px rgba(0,0,0,.06);overflow:hidden">
-              <div style="padding:18px 24px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:14px">
-                <div style="width:38px;height:38px;background:#eff6ff;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
-                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#1E5CA8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                </div>
-                <div>
-                  <div style="font-weight:700;font-size:.93rem;color:var(--text)">Account PINs</div>
-                  <div style="font-size:.73rem;color:var(--muted);margin-top:2px">Each user logs in with a 4-digit PIN — click <strong>Change PIN</strong> to update</div>
-                </div>
+            <div id="settings-exp-cats" style="display:flex;flex-wrap:wrap;gap:8px;min-height:28px"></div>
+          </div>
+
+          <!-- Email Reports -->
+          <div class="card" style="padding:20px 24px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+              <div style="font-weight:700;font-size:.85rem;color:var(--text)">📧 Email Reports</div>
+              <button onclick="saveEmailConfig()" style="padding:6px 13px;background:var(--red);color:#fff;border:none;border-radius:8px;font-size:.75rem;font-weight:600;cursor:pointer;font-family:inherit">Save</button>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <div>
+                <label class="f-lbl">Public Key</label>
+                <input type="text" id="ejs-pubkey" class="f-inp" placeholder="user_xxxxxxxxxxxxxxx">
               </div>
-              <div style="padding:6px 16px 16px" id="settings-pin-list"></div>
+              <div>
+                <label class="f-lbl">Service ID</label>
+                <input type="text" id="ejs-service" class="f-inp" placeholder="service_xxxxxxx">
+              </div>
+              <div>
+                <label class="f-lbl">Template ID</label>
+                <input type="text" id="ejs-template" class="f-inp" placeholder="template_xxxxxxx">
+              </div>
+              <div id="ejs-status" style="font-size:.72rem;font-weight:600;margin-top:2px"></div>
             </div>
           </div>
 
-          <!-- SECTION: CONFIGURATION -->
-          <div>
-            <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
-              <div style="width:3px;height:18px;background:#92400e;border-radius:2px"></div>
-              <div style="font-size:.7rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#92400e">Configuration</div>
+          <!-- Data Management -->
+          <div class="card" style="padding:20px 24px">
+            <div style="font-weight:700;font-size:.85rem;color:var(--text);margin-bottom:14px">💾 Data Management</div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap">
+              <button onclick="exportAllData()" style="flex:1;min-width:120px;padding:10px;background:#1A6B3C;color:#fff;border:none;border-radius:9px;font-size:.8rem;font-weight:600;cursor:pointer;font-family:inherit">⬇ Export Backup</button>
+              <button onclick="document.getElementById('import-file').click()" style="flex:1;min-width:120px;padding:10px;background:#1E5CA8;color:#fff;border:none;border-radius:9px;font-size:.8rem;font-weight:600;cursor:pointer;font-family:inherit">⬆ Import Backup</button>
+              <button onclick="clearAllData()" style="flex:1;min-width:120px;padding:10px;background:#A52B23;color:#fff;border:none;border-radius:9px;font-size:.8rem;font-weight:600;cursor:pointer;font-family:inherit">🗑 Clear All Data</button>
             </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start">
-
-              <!-- Expense Categories -->
-              <div style="background:#fff;border-radius:16px;border:1px solid var(--border);box-shadow:0 1px 4px rgba(0,0,0,.06);overflow:hidden">
-                <div style="padding:18px 24px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px">
-                  <div style="display:flex;align-items:center;gap:12px">
-                    <div style="width:38px;height:38px;background:#fffbeb;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
-                      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#92400e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
-                    </div>
-                    <div>
-                      <div style="font-weight:700;font-size:.93rem;color:var(--text)">Expense Categories</div>
-                      <div style="font-size:.73rem;color:var(--muted);margin-top:2px">Classification tags for expenses</div>
-                    </div>
-                  </div>
-                  <button onclick="openSettingsCatModal()" style="display:flex;align-items:center;gap:5px;padding:6px 13px;background:#1E5CA8;color:#fff;border:none;border-radius:8px;font-size:.75rem;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;transition:background .15s" onmouseover="this.style.background='#1648a0'" onmouseout="this.style.background='#1E5CA8'">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                    Add
-                  </button>
-                </div>
-                <div style="padding:16px 24px">
-                  <div id="settings-exp-cats" style="display:flex;flex-wrap:wrap;gap:8px;min-height:32px"></div>
-                </div>
-              </div>
-
-              <!-- Email Reports -->
-              <div style="background:#fff;border-radius:16px;border:1px solid var(--border);box-shadow:0 1px 4px rgba(0,0,0,.06);overflow:hidden">
-                <div style="padding:18px 24px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px">
-                  <div style="display:flex;align-items:center;gap:12px">
-                    <div style="width:38px;height:38px;background:#f0f9ff;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
-                      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#0369a1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-                    </div>
-                    <div>
-                      <div style="font-weight:700;font-size:.93rem;color:var(--text)">Email Reports</div>
-                      <div style="font-size:.73rem;color:var(--muted);margin-top:2px">EmailJS config for PDF delivery</div>
-                    </div>
-                  </div>
-                  <button onclick="saveEmailConfig()" style="padding:6px 13px;background:#0369a1;color:#fff;border:none;border-radius:8px;font-size:.75rem;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;transition:background .15s" onmouseover="this.style.background='#025987'" onmouseout="this.style.background='#0369a1'">Save</button>
-                </div>
-                <div style="padding:16px 24px;display:flex;flex-direction:column;gap:10px">
-                  <div style="display:flex;gap:8px;align-items:flex-start;padding:10px 12px;background:#f8fafc;border:1px solid var(--border);border-radius:9px">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" style="flex-shrink:0;margin-top:1px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                    <span style="font-size:.72rem;color:#64748b;line-height:1.6">Get free credentials at <strong style="color:#334155">emailjs.com</strong> → Create account → Add Email Service → Create Template → Copy IDs below.</span>
-                  </div>
-                  <div>
-                    <label class="f-lbl">Public Key</label>
-                    <input type="text" id="ejs-pubkey" class="f-inp" placeholder="user_xxxxxxxxxxxxxxx">
-                  </div>
-                  <div>
-                    <label class="f-lbl">Service ID</label>
-                    <input type="text" id="ejs-service" class="f-inp" placeholder="service_xxxxxxx">
-                  </div>
-                  <div>
-                    <label class="f-lbl">Template ID</label>
-                    <input type="text" id="ejs-template" class="f-inp" placeholder="template_xxxxxxx">
-                  </div>
-                  <div id="ejs-status" style="font-size:.72rem;font-weight:600;margin-top:2px"></div>
-                </div>
-              </div>
-
-            </div>
-          </div>
-
-          <!-- SECTION: DATA MANAGEMENT -->
-          <div>
-            <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
-              <div style="width:3px;height:18px;background:#1A6B3C;border-radius:2px"></div>
-              <div style="font-size:.7rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#1A6B3C">Data Management</div>
-            </div>
-            <div style="background:#fff;border-radius:16px;border:1px solid var(--border);box-shadow:0 1px 4px rgba(0,0,0,.06);overflow:hidden">
-              <div style="padding:18px 24px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:14px">
-                <div style="width:38px;height:38px;background:#ecfdf5;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
-                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#1A6B3C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
-                </div>
-                <div>
-                  <div style="font-weight:700;font-size:.93rem;color:var(--text)">Backup &amp; Restore</div>
-                  <div style="font-size:.73rem;color:var(--muted);margin-top:2px">Export, import or permanently clear all records</div>
-                </div>
-              </div>
-              <div style="padding:16px 24px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
-                <!-- Export -->
-                <div style="border:1px solid #d1fae5;border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:10px;background:linear-gradient(135deg,#f0fdf4,#fff)">
-                  <div style="width:36px;height:36px;background:#d1fae5;border-radius:9px;display:flex;align-items:center;justify-content:center">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1A6B3C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                  </div>
-                  <div>
-                    <div style="font-size:.85rem;font-weight:700;color:#1A6B3C">Export Backup</div>
-                    <div style="font-size:.72rem;color:#6b7280;margin-top:3px;line-height:1.5">Download all records as a JSON file</div>
-                  </div>
-                  <button onclick="exportAllData()" style="width:100%;padding:8px;background:#1A6B3C;color:#fff;border:none;border-radius:8px;font-size:.78rem;font-weight:600;cursor:pointer;font-family:inherit;transition:background .15s" onmouseover="this.style.background='#145a31'" onmouseout="this.style.background='#1A6B3C'">Export</button>
-                </div>
-                <!-- Import -->
-                <div style="border:1px solid #bfdbfe;border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:10px;background:linear-gradient(135deg,#eff6ff,#fff)">
-                  <div style="width:36px;height:36px;background:#dbeafe;border-radius:9px;display:flex;align-items:center;justify-content:center">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1E5CA8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 5 17 10"/><line x1="12" y1="5" x2="12" y2="15"/></svg>
-                  </div>
-                  <div>
-                    <div style="font-size:.85rem;font-weight:700;color:#1E5CA8">Import Backup</div>
-                    <div style="font-size:.72rem;color:#6b7280;margin-top:3px;line-height:1.5">Restore records from a backup file</div>
-                  </div>
-                  <button onclick="document.getElementById('import-file').click()" style="width:100%;padding:8px;background:#1E5CA8;color:#fff;border:none;border-radius:8px;font-size:.78rem;font-weight:600;cursor:pointer;font-family:inherit;transition:background .15s" onmouseover="this.style.background='#1648a0'" onmouseout="this.style.background='#1E5CA8'">Import</button>
-                </div>
-                <input type="file" id="import-file" accept=".json" style="display:none" onchange="importAllData(event)">
-                <!-- Clear -->
-                <div style="border:1px solid #fecaca;border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:10px;background:linear-gradient(135deg,#fff5f5,#fff)">
-                  <div style="width:36px;height:36px;background:#fee2e2;border-radius:9px;display:flex;align-items:center;justify-content:center">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#A52B23" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
-                  </div>
-                  <div>
-                    <div style="font-size:.85rem;font-weight:700;color:#A52B23">Clear All Data</div>
-                    <div style="font-size:.72rem;color:#6b7280;margin-top:3px;line-height:1.5">Permanently remove all records</div>
-                  </div>
-                  <button onclick="clearAllData()" style="width:100%;padding:8px;background:#A52B23;color:#fff;border:none;border-radius:8px;font-size:.78rem;font-weight:600;cursor:pointer;font-family:inherit;transition:background .15s" onmouseover="this.style.background='#8b221b'" onmouseout="this.style.background='#A52B23'">Clear</button>
-                </div>
-              </div>
-            </div>
+            <input type="file" id="import-file" accept=".json" style="display:none" onchange="importAllData(event)">
           </div>
 
         </div>
@@ -3523,28 +3431,19 @@ function renderSettings(){
   };
   // PIN list
   document.getElementById('settings-pin-list').innerHTML=
-    `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:10px;padding:10px 0">` +
+    `<div style="display:flex;flex-direction:column;gap:8px">` +
     USERS.map(u=>{
       const c=roleColors[u.role]||'#374151';
       const bg=roleBg[u.role]||'#f3f4f6';
-      const desc=roleDesc[u.role]||'Account';
       const badge=roleBadge[u.role]||{label:'User',color:'#374151',bg:'#f3f4f6'};
       return `
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:13px 16px;border:1px solid var(--border);border-radius:12px;background:#fafbfc;transition:background .15s;gap:12px" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='#fafbfc'">
-      <div style="display:flex;align-items:center;gap:12px;min-width:0">
-        <div style="width:42px;height:42px;border-radius:11px;background:${bg};display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0">${u.emoji}</div>
-        <div style="min-width:0">
-          <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap">
-            <span style="font-weight:700;font-size:.88rem;color:var(--text)">${u.label}</span>
-            <span style="font-size:.65rem;font-weight:700;padding:2px 7px;border-radius:20px;background:${badge.bg};color:${badge.color};letter-spacing:.03em">${badge.label}</span>
-          </div>
-          <div style="font-size:.69rem;color:var(--muted);margin-top:3px">${desc}</div>
-        </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border:1px solid var(--border);border-radius:10px;background:#fafbfc;gap:12px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font-size:1.1rem">${u.emoji}</span>
+        <span style="font-weight:600;font-size:.875rem;color:var(--text)">${u.label}</span>
+        <span style="font-size:.65rem;font-weight:700;padding:2px 7px;border-radius:20px;background:${badge.bg};color:${badge.color}">${badge.label}</span>
       </div>
-      <button onclick="openPinModal('${u.role}','${u.label}')" style="flex-shrink:0;padding:7px 14px;background:#fff;border:1.5px solid var(--border);border-radius:8px;font-size:.74rem;font-weight:600;cursor:pointer;font-family:inherit;color:#475569;transition:all .15s;display:flex;align-items:center;gap:5px" onmouseover="this.style.borderColor='${c}';this.style.color='${c}';this.style.background='${bg}'" onmouseout="this.style.borderColor='var(--border)';this.style.color='#475569';this.style.background='#fff'">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-        Change PIN
-      </button>
+      <button onclick="openPinModal('${u.role}','${u.label}')" style="padding:5px 12px;background:#fff;border:1.5px solid var(--border);border-radius:7px;font-size:.74rem;font-weight:600;cursor:pointer;font-family:inherit;color:#475569">Change PIN</button>
     </div>`;
     }).join('')+`</div>`;
   // Expense categories — load from dynamic store
