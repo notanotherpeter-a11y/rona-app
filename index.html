@@ -859,7 +859,18 @@ th { background: #F3F5F8; color: #374151; border-bottom-color: #C8D0DB; }
             <div class="page-title">Inventory</div>
             <div class="page-sub">Manage inventory items across all branches</div>
           </div>
-          <div class="topbar-right">
+          <div class="topbar-right" style="position:relative">
+            <!-- Category filter dropdown -->
+            <div style="position:relative">
+              <button id="stock-cat-filter-btn" onclick="toggleCatFilterDropdown()" style="padding:9px 14px;border:1.5px solid var(--border);border-radius:var(--r-sm);font-size:.82rem;font-weight:600;cursor:pointer;font-family:inherit;background:#fff;color:var(--text);box-shadow:var(--sh-sm);display:flex;align-items:center;gap:7px;white-space:nowrap">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+                <span id="stock-cat-filter-label">All Categories</span>
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
+              <div id="stock-cat-filter-menu" style="display:none;position:absolute;top:calc(100% + 6px);right:0;background:#fff;border:1.5px solid var(--border);border-radius:var(--r-sm);box-shadow:var(--sh);z-index:200;min-width:180px;overflow:hidden">
+                <div id="stock-cat-filter-list"></div>
+              </div>
+            </div>
             <button onclick="openStockLog()" style="padding:9px 16px;border:1.5px solid var(--border);border-radius:var(--r-sm);font-size:.82rem;font-weight:600;cursor:pointer;font-family:inherit;background:#fff;color:var(--text);box-shadow:var(--sh-sm);display:flex;align-items:center;gap:7px">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
               Log History
@@ -2173,12 +2184,58 @@ function renderStockPendingOrders(){
   </table>`;
 }
 
+let _stockCatFilter = '';
+
+function toggleCatFilterDropdown(){
+  const menu = document.getElementById('stock-cat-filter-menu');
+  if(!menu) return;
+  const isOpen = menu.style.display !== 'none';
+  menu.style.display = isOpen ? 'none' : 'block';
+  if(!isOpen) populateCatFilterMenu();
+}
+
+function populateCatFilterMenu(){
+  const cats = loadStockCats();
+  const list = document.getElementById('stock-cat-filter-list');
+  if(!list) return;
+  const itemStyle = 'padding:9px 16px;font-size:.82rem;font-weight:500;cursor:pointer;display:block;width:100%;text-align:left;border:none;background:none;font-family:inherit;color:var(--text);transition:background .1s';
+  list.innerHTML = `<button style="${itemStyle}" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='none'" onclick="setCatFilter('')">All Categories</button>`
+    + cats.map(c => `<button style="${itemStyle};border-top:1px solid var(--border)" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='none'" onclick="setCatFilter('${c.replace(/'/g,"\\'")}')">
+      <span style="display:flex;align-items:center;gap:8px">
+        <span style="width:8px;height:8px;border-radius:50%;background:#2563eb;display:inline-block;flex-shrink:0"></span>${c}
+      </span></button>`).join('');
+}
+
+function setCatFilter(cat){
+  _stockCatFilter = cat;
+  const btn = document.getElementById('stock-cat-filter-btn');
+  const lbl = document.getElementById('stock-cat-filter-label');
+  if(lbl) lbl.textContent = cat || 'All Categories';
+  if(btn){
+    btn.style.borderColor = cat ? 'var(--blue)' : 'var(--border)';
+    btn.style.color = cat ? 'var(--blue)' : 'var(--text)';
+    btn.style.background = cat ? 'var(--blue-bg)' : '#fff';
+  }
+  document.getElementById('stock-cat-filter-menu').style.display = 'none';
+  renderStock();
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click', e => {
+  const menu = document.getElementById('stock-cat-filter-menu');
+  const btn  = document.getElementById('stock-cat-filter-btn');
+  if(menu && btn && !btn.contains(e.target) && !menu.contains(e.target)){
+    menu.style.display = 'none';
+  }
+});
+
 function renderStock() {
   renderStockCats();
   renderStockPendingOrders();
   const items = loadStock();
   const q = (document.getElementById('stock-search')?.value || '').toLowerCase();
-  const filtered = q ? items.filter(i => i.name.toLowerCase().includes(q) || (i.category||'').toLowerCase().includes(q)) : items;
+  let filtered = q ? items.filter(i => i.name.toLowerCase().includes(q) || (i.category||'').toLowerCase().includes(q)) : items;
+  if(_stockCatFilter) filtered = filtered.filter(i => (i.category||'') === _stockCatFilter);
 
   // KPI cards
   const total = items.length;
