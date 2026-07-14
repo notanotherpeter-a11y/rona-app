@@ -1108,7 +1108,7 @@ th { background: #F3F5F8; color: #374151; border-bottom-color: #C8D0DB; }
           <!-- Expense Categories -->
           <div class="card" style="padding:20px 24px">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-              <div style="font-weight:700;font-size:.85rem;color:var(--text)">🏷️ Expense Categories</div>
+              <div style="font-weight:700;font-size:.85rem;color:var(--text)">🏷️ Inventory Categories</div>
               <button onclick="openSettingsCatModal()" style="display:flex;align-items:center;gap:5px;padding:6px 13px;background:var(--red);color:#fff;border:none;border-radius:8px;font-size:.75rem;font-weight:600;cursor:pointer;font-family:inherit">
                 + Add
               </button>
@@ -1341,6 +1341,7 @@ th { background: #F3F5F8; color: #374151; border-bottom-color: #C8D0DB; }
         <option value="marikina">Marikina</option>
         <option value="antipolo">Antipolo</option>
         <option value="taytay">Taytay</option>
+        <option value="quezon-city">Quezon City</option>
       </select>
     </div>
     <div class="modal-btns">
@@ -1968,19 +1969,23 @@ function populateMonthSel(selId, months, curr){
 // ── TABS ──
 function showTab(tab){
   const role=sessionStorage.getItem('ksq_role')||'admin';
-  // Branch users can only access their own page
-  if(role!=='admin' && tab!==role) tab=role;
+  // Branch users (not admin, not investor) can only access their own branch page
+  if(role!=='admin' && role!=='investor' && tab!==role) tab=role;
+  // Investor cannot access settings
+  if(role==='investor' && tab==='settings') tab='dashboard';
   ALL_TABS.forEach((t,i)=>{
     document.getElementById('tab-'+t).style.display=t===tab?'':'none';
     document.querySelectorAll('.nav-item')[i].classList.toggle('active',t===tab);
   });
-  if(tab==='dashboard') renderDashboard();
+  if(tab==='dashboard')      renderDashboard();
   else if(tab==='sales')          renderSales();
   else if(tab==='branches-sale')  renderBranchSales();
-  else if(tab==='expenses')  renderExpenses();
-  else if(tab==='salary')    renderSalary();
-  else if(tab==='others')    renderOther();
-  else if(tab==='stock')     renderStock();
+  else if(tab==='expenses')       renderExpenses();
+  else if(tab==='salary')         renderSalary();
+  else if(tab==='others')         renderOther();
+  else if(tab==='stock')          renderStock();
+  else if(tab==='branch-orders')  renderBranchOrdersPage();
+  else if(tab==='reports')        renderReports();
   else if(tab==='settings')  { renderSettings(); loadEmailConfigIntoSettings(); }
   else { const b=BRANCHES.find(x=>x.key===tab); if(b) renderBranch(b); }
 }
@@ -2172,7 +2177,7 @@ function renderStockPendingOrders(){
   }
 
   const statusColors = { Pending:'background:#fef3c7;color:#d97706', Fulfilled:'background:#d1fae5;color:#059669', Cancelled:'background:#fee2e2;color:#dc2626' };
-  const branchColors = { cainta:'#2563eb', marikina:'#059669', antipolo:'#d97706', taytay:'#7c3aed' };
+  const branchColors = { cainta:'#2563eb', marikina:'#059669', antipolo:'#d97706', taytay:'#7c3aed', 'quezon-city':'#0891b2' };
 
   wrap.innerHTML = `
   <table style="width:100%;border-collapse:collapse;font-size:.83rem">
@@ -2555,7 +2560,7 @@ function renderBranchOrdersPage(){
   }
 
   const statusColors = { Pending:'background:#fef3c7;color:#d97706', Fulfilled:'background:#d1fae5;color:#059669', Cancelled:'background:#fee2e2;color:#dc2626' };
-  const branchColors = { cainta:'#2563eb', marikina:'#059669', antipolo:'#d97706', taytay:'#7c3aed' };
+  const branchColors = { cainta:'#2563eb', marikina:'#059669', antipolo:'#d97706', taytay:'#7c3aed', 'quezon-city':'#0891b2' };
 
   wrap.innerHTML = `
   <table style="width:100%;border-collapse:collapse;font-size:.83rem">
@@ -2622,7 +2627,7 @@ function renderReports(){
 
   const sales  = allSales.filter(s=>filterDate(s.date));
   const exps   = allExp.filter(e=>filterDate(e.date));
-  const sals   = allSal.filter(s=>filterDate(s.date||''));
+  const sals   = allSal.filter(s=>filterDate(s.month||s.date||''));
   const orders = allOrders.filter(o=>filterDate(o.date||''));
 
   const totalSales = sales.reduce((a,s)=>a+(s.amount||0),0);
@@ -3493,9 +3498,9 @@ function saveSettingsCat(){
 
 function exportAllData(){
   const keys=['ksq_sales','ksq_expenses','ksq_salary','ksq_sal_daily','ksq_employees_v1','ksq_other',
-    'ksq_stock_v1','ksq_stock_cats_v1','ksq_branch_orders_v1','ksq_pins',
-    'ksq_cainta','ksq_marikina','ksq_antipolo','ksq_taytay',
-    'ksq_cainta_sales','ksq_marikina_sales','ksq_antipolo_sales','ksq_taytay_sales'];
+    'ksq_stock_v1','ksq_stock_cats_v1','ksq_stock_log_v1','ksq_branch_orders_v1','ksq_pins',
+    'ksq_cainta','ksq_marikina','ksq_antipolo','ksq_taytay','ksq_quezon_city',
+    'ksq_cainta_sales','ksq_marikina_sales','ksq_antipolo_sales','ksq_taytay_sales','ksq_quezon_city_sales'];
   const data={};
   keys.forEach(k=>{ const v=localStorage.getItem(k); if(v) data[k]=JSON.parse(v); });
   const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
@@ -3525,9 +3530,9 @@ function clearAllData(){
   if(!confirm('This will permanently delete ALL records. This cannot be undone. Continue?')) return;
   if(!confirm('Are you sure? All sales, expenses, salary, stock, and branch data will be erased.')) return;
   ['ksq_sales','ksq_expenses','ksq_salary','ksq_sal_daily','ksq_employees_v1','ksq_other',
-   'ksq_stock_v1','ksq_stock_cats_v1','ksq_branch_orders_v1',
-   'ksq_cainta','ksq_marikina','ksq_antipolo','ksq_taytay',
-   'ksq_cainta_sales','ksq_marikina_sales','ksq_antipolo_sales','ksq_taytay_sales']
+   'ksq_stock_v1','ksq_stock_cats_v1','ksq_stock_log_v1','ksq_branch_orders_v1',
+   'ksq_cainta','ksq_marikina','ksq_antipolo','ksq_taytay','ksq_quezon_city',
+   'ksq_cainta_sales','ksq_marikina_sales','ksq_antipolo_sales','ksq_taytay_sales','ksq_quezon_city_sales']
   .forEach(k=>localStorage.removeItem(k));
   alert('All data cleared. The page will reload.');
   location.reload();
@@ -4303,7 +4308,7 @@ function init(){
   seed(); migrateExpenses(); migrateSalaryNames(); migrateFbAds();
   const role=sessionStorage.getItem('ksq_role')||'admin';
   applyRoleUI(role);
-  showTab(role==='admin'?'dashboard':role);
+  showTab((role==='admin'||role==='investor')?'dashboard':role);
 }
 
 // ── CROSS-TAB / AUTO-SYNC ──
