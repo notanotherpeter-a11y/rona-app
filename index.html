@@ -36,6 +36,12 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); font-size: 14px; }
 
+/* ── VIEWER MODE (investor role) — hide all action buttons ── */
+.viewer-mode .btn-red,
+.viewer-mode .act-btn,
+.viewer-mode .act-del,
+.viewer-mode [data-viewer-hide] { display:none !important; }
+
 /* ── LOGIN ── */
 #login { display: flex; align-items: center; justify-content: center; min-height: 100vh; background: linear-gradient(135deg, #0F1C2E 0%, #1A2F4E 60%, #0E2040 100%); }
 .login-card { background: var(--white); border-radius: 20px; box-shadow: 0 25px 60px rgba(0,0,0,.35); padding: 48px 44px; width: 100%; max-width: 380px; }
@@ -543,7 +549,7 @@ th { background: #F3F5F8; color: #374151; border-bottom-color: #C8D0DB; }
         <div class="nav-item" onclick="showTab('others');closeMobSidebar()" data-access="admin">
           <span class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></span><span>Receivables</span>
         </div>
-        <div class="nav-item" onclick="showTab('settings');closeMobSidebar()" data-access="admin">
+        <div class="nav-item" onclick="showTab('settings');closeMobSidebar()" data-access="admin-only">
           <span class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span><span>Settings</span>
         </div>
         <div class="nav-section" data-access="branches">Branches</div>
@@ -1554,7 +1560,8 @@ th { background: #F3F5F8; color: #374151; border-bottom-color: #C8D0DB; }
 
 <script>
 const USERS = [
-  { role:'admin',        pin:'0000', label:'Admin',        emoji:'👑', access:'admin'    },
+  { role:'admin',        pin:'0000', label:'Admin/Owner',  emoji:'👑', access:'admin'    },
+  { role:'investor',     pin:'0000', label:'Investor',     emoji:'👁️', access:'viewer'   },
   { role:'cainta',       pin:'0000', label:'Cainta',       emoji:'🏪', access:'branch'   },
   { role:'marikina',     pin:'0000', label:'Marikina',     emoji:'🏪', access:'branch'   },
   { role:'antipolo',     pin:'0000', label:'Antipolo',     emoji:'🏪', access:'branch'   },
@@ -1632,20 +1639,25 @@ function logout() {
   document.getElementById('login-err').textContent = '';
 }
 function applyRoleUI(role){
-  const isAdmin = role==='admin';
+  const isAdmin  = role==='admin';
+  const isViewer = role==='investor';
+  window._isViewer = isViewer;
+  // Apply viewer-mode class to body (hides all action buttons via CSS)
+  document.body.classList.toggle('viewer-mode', isViewer);
   document.querySelectorAll('[data-access]').forEach(el=>{
     const a=el.dataset.access;
-    if(a==='admin')          el.style.display = isAdmin?'':'none';
+    if(a==='admin-only')     el.style.display = isAdmin?'':'none';
+    else if(a==='admin')    el.style.display = (isAdmin||isViewer)?'':'none';
     else if(a==='branches')  el.style.display = '';
     else if(a.startsWith('branch-')){
       const bk=a.replace('branch-','');
-      el.style.display=(isAdmin||role===bk)?'':'none';
+      el.style.display=(isAdmin||isViewer||role===bk)?'':'none';
     }
   });
   const u=USERS.find(x=>x.role===role);
   document.getElementById('sb-user-ic').textContent  = u?u.emoji:'👤';
   document.getElementById('sb-user-name').textContent = u?u.label:role;
-  document.getElementById('sb-user-role').textContent = isAdmin?'Administrator':'Branch User';
+  document.getElementById('sb-user-role').textContent = isAdmin?'Admin/Owner':isViewer?'Investor (View Only)':'Branch User';
 }
 
 // ── MOBILE SIDEBAR ──
@@ -2609,7 +2621,7 @@ function renderBranchOrdersPage(){
         <td style="padding:11px 20px;text-align:center;font-weight:700">${o.qty}</td>
         <td style="padding:11px 20px;text-align:center"><span style="${sc};padding:3px 10px;border-radius:20px;font-size:.72rem;font-weight:700">${o.status}</span></td>
         <td style="padding:11px 20px;text-align:center">
-          ${isPending ? `<div style="display:flex;gap:6px;justify-content:center">
+          ${isPending && !window._isViewer ? `<div style="display:flex;gap:6px;justify-content:center">
             <button onclick="updateBranchOrderStatus('${o.branch}','${o.id}','Fulfilled')" style="padding:5px 14px;background:#059669;color:#fff;border:none;border-radius:6px;font-size:.75rem;font-weight:700;cursor:pointer;font-family:inherit">✓ Confirm</button>
             <button onclick="updateBranchOrderStatus('${o.branch}','${o.id}','Cancelled')" style="padding:5px 14px;background:#fff;color:#dc2626;border:1.5px solid #dc2626;border-radius:6px;font-size:.75rem;font-weight:700;cursor:pointer;font-family:inherit">✕ Cancel</button>
           </div>` : `<span style="color:var(--light);font-size:.78rem">—</span>`}
@@ -3575,10 +3587,10 @@ function renderBranch(b){
         <div class="page-sub">${b.label} branch tracker</div>
       </div>
       <div class="topbar-right">
-        <button class="btn" onclick="openBranchOrderModal('${b.key}')" style="background:#fff;border:1.5px solid var(--border);color:var(--text);font-weight:600;padding:9px 16px;border-radius:8px;cursor:pointer;font-family:inherit;font-size:.83rem;display:flex;align-items:center;gap:6px;box-shadow:var(--sh-sm)">
+        ${window._isViewer?'':`<button class="btn" onclick="openBranchOrderModal('${b.key}')" style="background:#fff;border:1.5px solid var(--border);color:var(--text);font-weight:600;padding:9px 16px;border-radius:8px;cursor:pointer;font-family:inherit;font-size:.83rem;display:flex;align-items:center;gap:6px;box-shadow:var(--sh-sm)">
           🛒 Order${pendingOrders?` <span style="background:var(--red);color:#fff;border-radius:10px;padding:1px 7px;font-size:.7rem;font-weight:700">${pendingOrders}</span>`:''}
         </button>
-        <button class="btn btn-red" onclick="openBranchSaleModal('${b.key}')">＋ Add Sale</button>
+        <button class="btn btn-red" onclick="openBranchSaleModal('${b.key}')">＋ Add Sale</button>`}
       </div>
     </div>
 
