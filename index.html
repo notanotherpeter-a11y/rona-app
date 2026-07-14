@@ -864,19 +864,6 @@ th { background: #F3F5F8; color: #374151; border-bottom-color: #C8D0DB; }
         <!-- Summary cards -->
         <div class="kpi-grid" id="stock-kpi" style="margin-bottom:24px"></div>
 
-        <!-- Categories panel -->
-        <div class="card" style="padding:16px 20px;margin-bottom:16px">
-          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
-            <div style="font-weight:700;font-size:.88rem">Categories</div>
-            <div style="display:flex;gap:8px;align-items:center">
-              <input id="new-cat-inp" type="text" placeholder="New category name…" class="f-inp" style="padding:7px 12px;width:180px;font-size:.82rem"
-                onkeydown="if(event.key==='Enter') addStockCat()">
-              <button onclick="addStockCat()" style="padding:7px 16px;background:var(--red);color:#fff;border:none;border-radius:8px;font-size:.82rem;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap">+ Add</button>
-            </div>
-          </div>
-          <div id="stock-cats-list" style="margin-top:12px;min-height:28px"></div>
-        </div>
-
         <!-- Items table -->
         <div class="card" style="padding:0;overflow:hidden">
           <div style="padding:18px 22px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px">
