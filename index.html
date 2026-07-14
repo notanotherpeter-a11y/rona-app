@@ -2015,42 +2015,76 @@ function addStockLog(action, itemName, details){
   saveStockLog(log);
 }
 
-const ACTION_STYLES = {
-  'Added':     { bg:'#d1fae5', color:'#059669', icon:'＋' },
-  'Edited':    { bg:'#dbeafe', color:'#2563eb', icon:'✎'  },
-  'Deleted':   { bg:'#fee2e2', color:'#dc2626', icon:'✕'  },
-  'Qty +':     { bg:'#ede9fe', color:'#7c3aed', icon:'▲'  },
-  'Qty −':     { bg:'#fef3c7', color:'#d97706', icon:'▼'  },
-  'Fulfilled': { bg:'#d1fae5', color:'#059669', icon:'✔'  },
-  'Cancelled': { bg:'#fee2e2', color:'#dc2626', icon:'✕'  },
+const ACTION_META = {
+  'Added':     { color:'#059669', bar:'#059669', label:'Added'      },
+  'Edited':    { color:'#2563eb', bar:'#2563eb', label:'Updated'    },
+  'Deleted':   { color:'#dc2626', bar:'#dc2626', label:'Deleted'    },
+  'Qty +':     { color:'#7c3aed', bar:'#7c3aed', label:'Restocked'  },
+  'Qty −':     { color:'#d97706', bar:'#d97706', label:'Used'       },
+  'Fulfilled': { color:'#059669', bar:'#059669', label:'Fulfilled'  },
+  'Cancelled': { color:'#dc2626', bar:'#dc2626', label:'Cancelled'  },
 };
+
+function buildLogSentence(entry){
+  const n = `<strong>${entry.itemName}</strong>`;
+  const d = entry.details || '';
+  switch(entry.action){
+    case 'Added':
+      return `${n} was added to inventory${d ? ` — <em>${d}</em>` : ''}.`;
+    case 'Edited':
+      return `${n} details were updated${d ? ` — <em>${d}</em>` : ''}.`;
+    case 'Deleted':
+      return `${n} was removed from inventory${d ? ` (${d})` : ''}.`;
+    case 'Qty +':
+      return `${n} stock was increased — <em>${d}</em>.`;
+    case 'Qty −':
+      return `${n} stock was decreased — <em>${d}</em>.`;
+    case 'Fulfilled':
+      return `Branch order for ${n} was confirmed and stock deducted — <em>${d}</em>.`;
+    case 'Cancelled':
+      return `Branch order for ${n} was cancelled — <em>${d}</em>.`;
+    default:
+      return `${n} — ${d}`;
+  }
+}
 
 function renderStockLog(){
   const wrap = document.getElementById('stock-log-wrap');
   if(!wrap) return;
   const log = loadStockLog();
   if(!log.length){
-    wrap.innerHTML = `<div style="padding:32px;text-align:center;color:var(--muted);font-size:.85rem">No activity yet. Changes will appear here.</div>`;
+    wrap.innerHTML = `<div style="padding:40px;text-align:center;color:var(--muted);font-size:.88rem">No activity yet. Changes will appear here.</div>`;
     return;
   }
-  wrap.innerHTML = log.map(entry => {
-    const s = ACTION_STYLES[entry.action] || { bg:'#f3f4f6', color:'#6b7280', icon:'•' };
+
+  // Group by date
+  const groups = {};
+  log.forEach(entry => {
     const d = new Date(entry.ts);
-    const dateStr = d.toLocaleDateString('en-PH',{month:'short',day:'numeric',year:'numeric'});
-    const timeStr = d.toLocaleTimeString('en-PH',{hour:'2-digit',minute:'2-digit'});
-    return `
-    <div style="display:flex;align-items:flex-start;gap:12px;padding:11px 20px;border-bottom:1px solid var(--border)">
-      <span style="flex-shrink:0;width:26px;height:26px;border-radius:50%;background:${s.bg};color:${s.color};display:flex;align-items:center;justify-content:center;font-size:.8rem;font-weight:700;margin-top:1px">${s.icon}</span>
-      <div style="flex:1;min-width:0">
-        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-          <span style="font-weight:700;font-size:.84rem">${entry.itemName}</span>
-          <span style="background:${s.bg};color:${s.color};padding:2px 8px;border-radius:20px;font-size:.69rem;font-weight:700">${entry.action}</span>
-          ${entry.details ? `<span style="color:var(--muted);font-size:.8rem">${entry.details}</span>` : ''}
-        </div>
-        <div style="color:var(--light);font-size:.74rem;margin-top:2px">${dateStr} · ${timeStr}</div>
-      </div>
-    </div>`;
-  }).join('');
+    const key = d.toLocaleDateString('en-PH',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
+    if(!groups[key]) groups[key] = [];
+    groups[key].push(entry);
+  });
+
+  wrap.innerHTML = Object.entries(groups).map(([date, entries]) => `
+    <div>
+      <div style="padding:10px 24px 6px;font-size:.7rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;background:#f8f9fb;border-bottom:1px solid var(--border)">${date}</div>
+      ${entries.map(entry => {
+        const m = ACTION_META[entry.action] || { color:'#6b7280', bar:'#6b7280', label:entry.action };
+        const t = new Date(entry.ts).toLocaleTimeString('en-PH',{hour:'2-digit',minute:'2-digit'});
+        return `
+        <div style="display:flex;gap:0;border-bottom:1px solid var(--border)">
+          <div style="width:3px;background:${m.bar};flex-shrink:0"></div>
+          <div style="padding:13px 20px;flex:1">
+            <div style="font-size:.85rem;color:var(--text);line-height:1.5">${buildLogSentence(entry)}</div>
+            <div style="margin-top:5px;display:flex;align-items:center;gap:8px">
+              <span style="font-size:.7rem;font-weight:700;color:${m.color};background:${m.color}18;padding:2px 8px;border-radius:20px">${m.label}</span>
+              <span style="font-size:.72rem;color:var(--light)">${t}</span>
+            </div>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`).join('');
 }
 
 function openStockLog(){
