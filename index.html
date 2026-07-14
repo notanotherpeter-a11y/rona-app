@@ -949,15 +949,10 @@ th { background: #F3F5F8; color: #374151; border-bottom-color: #C8D0DB; }
               <input type="hidden" id="stock-unit">
             </div>
           </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
-            <div>
-              <label class="f-lbl">Quantity</label>
-              <input id="stock-qty" type="number" class="f-inp" placeholder="0" min="0">
-            </div>
-            <div>
-              <label class="f-lbl">Low Stock Alert</label>
-              <input id="stock-min" type="number" class="f-inp" placeholder="5" min="0">
-            </div>
+          <div style="margin-bottom:14px">
+            <label class="f-lbl">Quantity</label>
+            <input id="stock-qty" type="number" class="f-inp" placeholder="0" min="0">
+            <input type="hidden" id="stock-min" value="0">
           </div>
           <div style="margin-bottom:20px">
             <label class="f-lbl">Notes</label>
