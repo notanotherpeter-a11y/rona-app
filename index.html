@@ -1092,8 +1092,8 @@ th { background: #F3F5F8; color: #374151; border-bottom-color: #C8D0DB; }
       <div id="tab-settings" style="display:none">
         <div class="topbar">
           <div class="topbar-left">
-            <div class="page-title">Settings</div>
-            <div class="page-sub">Manage access, categories &amp; data</div>
+            <div class="page-title">⚙️ Settings</div>
+            <div class="page-sub">Manage user access, categories &amp; data</div>
           </div>
         </div>
 
@@ -1112,7 +1112,7 @@ th { background: #F3F5F8; color: #374151; border-bottom-color: #C8D0DB; }
                 </div>
                 <div>
                   <div style="font-weight:700;font-size:.93rem;color:var(--text)">Account PINs</div>
-                  <div style="font-size:.73rem;color:var(--muted);margin-top:2px">Each account uses a 4-digit PIN to log in</div>
+                  <div style="font-size:.73rem;color:var(--muted);margin-top:2px">Each user logs in with a 4-digit PIN — click <strong>Change PIN</strong> to update</div>
                 </div>
               </div>
               <div style="padding:6px 16px 16px" id="settings-pin-list"></div>
@@ -1259,6 +1259,7 @@ th { background: #F3F5F8; color: #374151; border-bottom-color: #C8D0DB; }
               <option value="marikina">Marikina</option>
               <option value="antipolo">Antipolo</option>
               <option value="taytay">Taytay</option>
+              <option value="quezon-city">Quezon City</option>
             </select>
             <select class="month-sel" id="brsale-month-f" onchange="renderBranchSales()">
               <option value="">All Months</option>
@@ -3494,34 +3495,66 @@ function delSale(id){
 // ── SETTINGS ──
 function renderSettings(){
   const pins=getPins();
-  const roleColors={admin:'#1E5CA8',cainta:'#1A6B3C',marikina:'#6b21a8',antipolo:'#92400e',taytay:'#9f1239'};
-  const roleBg={admin:'#eff6ff',cainta:'#ecfdf5',marikina:'#faf5ff',antipolo:'#fffbeb',taytay:'#fff1f2'};
+  const roleColors={
+    admin:'#1E5CA8', investor:'#7c3aed',
+    cainta:'#1A6B3C', marikina:'#0e7490', antipolo:'#92400e', taytay:'#9f1239', 'quezon-city':'#065f46'
+  };
+  const roleBg={
+    admin:'#eff6ff', investor:'#f5f3ff',
+    cainta:'#ecfdf5', marikina:'#e0f2fe', antipolo:'#fffbeb', taytay:'#fff1f2', 'quezon-city':'#d1fae5'
+  };
+  const roleDesc={
+    admin:'Administrator · Full Access',
+    investor:'Investor · View Only',
+    cainta:'Branch Account',
+    marikina:'Branch Account',
+    antipolo:'Branch Account',
+    taytay:'Branch Account',
+    'quezon-city':'Branch Account'
+  };
+  const roleBadge={
+    admin:{label:'Admin',color:'#1E5CA8',bg:'#dbeafe'},
+    investor:{label:'Investor',color:'#7c3aed',bg:'#ede9fe'},
+    cainta:{label:'Branch',color:'#1A6B3C',bg:'#d1fae5'},
+    marikina:{label:'Branch',color:'#0e7490',bg:'#cffafe'},
+    antipolo:{label:'Branch',color:'#92400e',bg:'#fef3c7'},
+    taytay:{label:'Branch',color:'#9f1239',bg:'#ffe4e6'},
+    'quezon-city':{label:'Branch',color:'#065f46',bg:'#a7f3d0'}
+  };
   // PIN list
-  document.getElementById('settings-pin-list').innerHTML=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;padding:10px 0">`+USERS.map(u=>`
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border:1px solid var(--border);border-radius:11px;background:#fafbfc;transition:background .15s;gap:12px" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='#fafbfc'">
+  document.getElementById('settings-pin-list').innerHTML=
+    `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:10px;padding:10px 0">` +
+    USERS.map(u=>{
+      const c=roleColors[u.role]||'#374151';
+      const bg=roleBg[u.role]||'#f3f4f6';
+      const desc=roleDesc[u.role]||'Account';
+      const badge=roleBadge[u.role]||{label:'User',color:'#374151',bg:'#f3f4f6'};
+      return `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:13px 16px;border:1px solid var(--border);border-radius:12px;background:#fafbfc;transition:background .15s;gap:12px" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='#fafbfc'">
       <div style="display:flex;align-items:center;gap:12px;min-width:0">
-        <div style="width:38px;height:38px;border-radius:10px;background:${roleBg[u.role]||'#f3f4f6'};display:flex;align-items:center;justify-content:center;font-size:.8rem;font-weight:800;color:${roleColors[u.role]||'#374151'};flex-shrink:0;letter-spacing:.02em;font-family:inherit">
-          ${u.label.slice(0,2).toUpperCase()}
-        </div>
+        <div style="width:42px;height:42px;border-radius:11px;background:${bg};display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0">${u.emoji}</div>
         <div style="min-width:0">
-          <div style="font-weight:700;font-size:.88rem;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${u.label}</div>
-          <div style="font-size:.69rem;color:var(--muted);margin-top:2px;display:flex;align-items:center;gap:4px">
-            <span style="width:6px;height:6px;border-radius:50%;background:${roleColors[u.role]||'#9ca3af'};display:inline-block"></span>
-            ${u.role==='admin'?'Administrator':'Branch Account'}
+          <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap">
+            <span style="font-weight:700;font-size:.88rem;color:var(--text)">${u.label}</span>
+            <span style="font-size:.65rem;font-weight:700;padding:2px 7px;border-radius:20px;background:${badge.bg};color:${badge.color};letter-spacing:.03em">${badge.label}</span>
           </div>
+          <div style="font-size:.69rem;color:var(--muted);margin-top:3px">${desc}</div>
         </div>
       </div>
-      <button onclick="openPinModal('${u.role}','${u.label}')" style="flex-shrink:0;padding:6px 13px;background:#fff;border:1.5px solid var(--border);border-radius:8px;font-size:.74rem;font-weight:600;cursor:pointer;font-family:inherit;color:#475569;transition:all .15s;display:flex;align-items:center;gap:5px" onmouseover="this.style.borderColor='#1E5CA8';this.style.color='#1E5CA8';this.style.background='#eff6ff'" onmouseout="this.style.borderColor='var(--border)';this.style.color='#475569';this.style.background='#fff'">
+      <button onclick="openPinModal('${u.role}','${u.label}')" style="flex-shrink:0;padding:7px 14px;background:#fff;border:1.5px solid var(--border);border-radius:8px;font-size:.74rem;font-weight:600;cursor:pointer;font-family:inherit;color:#475569;transition:all .15s;display:flex;align-items:center;gap:5px" onmouseover="this.style.borderColor='${c}';this.style.color='${c}';this.style.background='${bg}'" onmouseout="this.style.borderColor='var(--border)';this.style.color='#475569';this.style.background='#fff'">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-        PIN
+        Change PIN
       </button>
-    </div>`).join('')+`</div>`;
-  // Expense categories
-  const EXP_CATS=['Restock','Marketing','Salary','Utilities','Transport','Other'];
-  document.getElementById('settings-exp-cats').innerHTML=EXP_CATS.map(c=>`
-    <span class="cat-badge ${catClass(c)}" style="font-size:.76rem;padding:5px 13px;display:inline-flex;align-items:center;gap:5px;border-radius:20px">
-      ${c}
-    </span>`).join('');
+    </div>`;
+    }).join('')+`</div>`;
+  // Expense categories — load from dynamic store
+  const cats=loadStockCats();
+  document.getElementById('settings-exp-cats').innerHTML=cats.length
+    ? cats.map(c=>`
+      <span class="cat-badge ${catClass(c)}" style="font-size:.76rem;padding:5px 13px;display:inline-flex;align-items:center;gap:5px;border-radius:20px">
+        ${c}
+      </span>`).join('')
+    : `<span style="font-size:.75rem;color:var(--muted)">No categories yet. Add one above.</span>`;
 }
 
 function openPinModal(role,label){
