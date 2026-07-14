@@ -879,12 +879,12 @@ th { background: #F3F5F8; color: #374151; border-bottom-color: #C8D0DB; }
           </div>
         </div>
 
-        <!-- Summary cards -->
-        <div class="kpi-grid" id="stock-kpi" style="margin-bottom:24px"></div>
+        <!-- Summary stats -->
+        <div class="card" style="padding:20px 28px;margin-bottom:16px" id="stock-kpi"></div>
 
         <!-- Items table -->
         <div class="card" style="padding:0;overflow:hidden">
-          <div style="padding:18px 22px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px">
+          <div style="padding:16px 22px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px">
             <div style="font-weight:700;font-size:.95rem">Items</div>
             <input id="stock-search" type="text" placeholder="Search items…" oninput="renderStock()"
               style="padding:7px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:.82rem;outline:none;font-family:inherit;width:200px">
@@ -892,11 +892,11 @@ th { background: #F3F5F8; color: #374151; border-bottom-color: #C8D0DB; }
           <table style="width:100%;border-collapse:collapse">
             <thead>
               <tr style="background:#f8f9fb">
-                <th style="padding:11px 20px;text-align:left;font-size:.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;border-bottom:1px solid var(--border)">#</th>
-                <th style="padding:11px 20px;text-align:left;font-size:.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;border-bottom:1px solid var(--border)">Item Name</th>
+                <th style="padding:11px 20px;text-align:left;font-size:.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;border-bottom:1px solid var(--border)">Item</th>
                 <th style="padding:11px 20px;text-align:left;font-size:.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;border-bottom:1px solid var(--border)">Category</th>
                 <th style="padding:11px 20px;text-align:center;font-size:.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;border-bottom:1px solid var(--border)">Qty</th>
                 <th style="padding:11px 20px;text-align:left;font-size:.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;border-bottom:1px solid var(--border)">Unit</th>
+                <th style="padding:11px 20px;text-align:center;font-size:.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;border-bottom:1px solid var(--border)">Min</th>
                 <th style="padding:11px 20px;text-align:left;font-size:.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;border-bottom:1px solid var(--border)">Status</th>
               </tr>
             </thead>
@@ -2231,16 +2231,18 @@ function renderStock() {
   let filtered = q ? items.filter(i => i.name.toLowerCase().includes(q) || (i.category||'').toLowerCase().includes(q)) : items;
   if(_stockCatFilter) filtered = filtered.filter(i => (i.category||'') === _stockCatFilter);
 
-  // KPI cards
-  const total = items.length;
-  const low   = items.filter(i => i.qty <= i.minQty).length;
-  const ok    = items.filter(i => i.qty > i.minQty).length;
-  const cats  = [...new Set(items.map(i => i.category).filter(Boolean))].length;
+  // Summary stats
+  const total   = items.length;
+  const outOf   = items.filter(i => i.qty === 0).length;
+  const lowSt   = items.filter(i => i.qty > 0 && i.qty <= (i.minQty||0)).length;
+  const inSt    = items.filter(i => i.qty > (i.minQty||0)).length;
   document.getElementById('stock-kpi').innerHTML = `
-    <div class="kpi-card"><div class="kpi-label">Total Items</div><div class="kpi-value">${total}</div></div>
-    <div class="kpi-card"><div class="kpi-label">In Stock</div><div class="kpi-value" style="color:var(--green)">${ok}</div></div>
-    <div class="kpi-card"><div class="kpi-label">Low / Out</div><div class="kpi-value" style="color:var(--red)">${low}</div></div>
-    <div class="kpi-card"><div class="kpi-label">Categories</div><div class="kpi-value">${cats}</div></div>
+    <div style="display:flex;gap:32px;flex-wrap:wrap;font-size:.9rem">
+      <div><span style="color:var(--muted)">Total Items:</span> <span style="font-weight:700">${total}</span></div>
+      <div><span style="color:var(--muted)">In Stock:</span> <span style="font-weight:700;color:var(--green)">${inSt}</span></div>
+      <div><span style="color:var(--muted)">Low Stock:</span> <span style="font-weight:700;color:var(--orange)">${lowSt}</span></div>
+      <div><span style="color:var(--muted)">Out of Stock:</span> <span style="font-weight:700;color:var(--red)">${outOf}</span></div>
+    </div>
   `;
 
   const tbody = document.getElementById('stock-tbody');
@@ -2253,21 +2255,25 @@ function renderStock() {
   }
   empty.style.display = 'none';
 
-  tbody.innerHTML = filtered.map((item, idx) => {
-    const isLow = item.qty <= item.minQty;
-    const statusBadge = item.qty === 0
-      ? `<span style="background:#fee2e2;color:#dc2626;padding:3px 10px;border-radius:20px;font-size:.72rem;font-weight:700">Out</span>`
-      : isLow
-      ? `<span style="background:#fef3c7;color:#d97706;padding:3px 10px;border-radius:20px;font-size:.72rem;font-weight:700">Low</span>`
-      : `<span style="background:#d1fae5;color:#059669;padding:3px 10px;border-radius:20px;font-size:.72rem;font-weight:700">OK</span>`;
+  tbody.innerHTML = filtered.map((item) => {
+    const min = item.minQty || 0;
+    const isOut = item.qty === 0;
+    const isLow = !isOut && item.qty <= min && min > 0;
+    const dotColor = isOut ? '#dc2626' : isLow ? '#d97706' : '#059669';
+    const statusLabel = isOut ? 'Out of Stock' : isLow ? 'Low' : 'Good';
     return `
     <tr style="border-bottom:1px solid var(--border);transition:background .1s" onmouseover="this.style.background='#f8f9fb'" onmouseout="this.style.background=''">
-      <td style="padding:13px 20px;color:var(--muted);font-size:.8rem">${idx+1}</td>
       <td style="padding:13px 20px;font-weight:600">${item.name}</td>
       <td style="padding:13px 20px;color:var(--muted)">${item.category||'—'}</td>
       <td style="padding:13px 20px;text-align:center;font-weight:700">${item.qty}</td>
       <td style="padding:13px 20px;color:var(--muted)">${item.unit||'—'}</td>
-      <td style="padding:13px 20px">${statusBadge}</td>
+      <td style="padding:13px 20px;text-align:center;color:var(--muted)">${min || '—'}</td>
+      <td style="padding:13px 20px">
+        <span style="display:inline-flex;align-items:center;gap:7px;font-size:.83rem;font-weight:600;color:${dotColor}">
+          <span style="width:9px;height:9px;border-radius:50%;background:${dotColor};flex-shrink:0;display:inline-block"></span>
+          ${statusLabel}
+        </span>
+      </td>
     </tr>`;
   }).join('');
 }
