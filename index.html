@@ -909,6 +909,18 @@ th { background: #F3F5F8; color: #374151; border-bottom-color: #C8D0DB; }
           </table>
           <div id="stock-empty" style="display:none;padding:48px;text-align:center;color:var(--muted);font-size:.88rem">No items yet. Click <b>+ Add Item</b> to get started.</div>
         </div>
+
+        <!-- Log History panel -->
+        <div class="card" style="padding:0;overflow:hidden;margin-top:16px">
+          <div style="padding:16px 22px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px">
+            <div>
+              <div style="font-weight:700;font-size:.95rem">Log History</div>
+              <div style="font-size:.75rem;color:var(--muted);margin-top:2px">All changes to inventory items</div>
+            </div>
+            <button onclick="clearStockLog()" style="padding:5px 14px;border:1.5px solid #fecaca;border-radius:6px;background:#fff;cursor:pointer;font-size:.76rem;font-weight:600;font-family:inherit;color:var(--red)">Clear Log</button>
+          </div>
+          <div id="stock-log-wrap" style="max-height:380px;overflow-y:auto"></div>
+        </div>
       </div>
 
       <!-- ── STOCK MODAL ── -->
@@ -1953,6 +1965,68 @@ function showTab(tab){
 // ── STOCK ────────────────────────────────────────────────────
 const STOCK_KEY = 'ksq_stock_v1';
 const STOCK_CATS_KEY = 'ksq_stock_cats_v1';
+const STOCK_LOG_KEY = 'ksq_stock_log_v1';
+
+function loadStockLog(){ return JSON.parse(localStorage.getItem(STOCK_LOG_KEY)||'[]'); }
+function saveStockLog(log){ localStorage.setItem(STOCK_LOG_KEY, JSON.stringify(log)); }
+
+function addStockLog(action, itemName, details){
+  const log = loadStockLog();
+  log.unshift({
+    id: Date.now(),
+    ts: new Date().toISOString(),
+    action,
+    itemName,
+    details: details||''
+  });
+  // Keep last 200 entries
+  if(log.length > 200) log.length = 200;
+  saveStockLog(log);
+}
+
+const ACTION_STYLES = {
+  'Added':     { bg:'#d1fae5', color:'#059669', icon:'＋' },
+  'Edited':    { bg:'#dbeafe', color:'#2563eb', icon:'✎'  },
+  'Deleted':   { bg:'#fee2e2', color:'#dc2626', icon:'✕'  },
+  'Qty +':     { bg:'#ede9fe', color:'#7c3aed', icon:'▲'  },
+  'Qty −':     { bg:'#fef3c7', color:'#d97706', icon:'▼'  },
+  'Fulfilled': { bg:'#d1fae5', color:'#059669', icon:'✔'  },
+  'Cancelled': { bg:'#fee2e2', color:'#dc2626', icon:'✕'  },
+};
+
+function renderStockLog(){
+  const wrap = document.getElementById('stock-log-wrap');
+  if(!wrap) return;
+  const log = loadStockLog();
+  if(!log.length){
+    wrap.innerHTML = `<div style="padding:32px;text-align:center;color:var(--muted);font-size:.85rem">No activity yet. Changes will appear here.</div>`;
+    return;
+  }
+  wrap.innerHTML = log.map(entry => {
+    const s = ACTION_STYLES[entry.action] || { bg:'#f3f4f6', color:'#6b7280', icon:'•' };
+    const d = new Date(entry.ts);
+    const dateStr = d.toLocaleDateString('en-PH',{month:'short',day:'numeric',year:'numeric'});
+    const timeStr = d.toLocaleTimeString('en-PH',{hour:'2-digit',minute:'2-digit'});
+    return `
+    <div style="display:flex;align-items:flex-start;gap:12px;padding:11px 20px;border-bottom:1px solid var(--border)">
+      <span style="flex-shrink:0;width:26px;height:26px;border-radius:50%;background:${s.bg};color:${s.color};display:flex;align-items:center;justify-content:center;font-size:.8rem;font-weight:700;margin-top:1px">${s.icon}</span>
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <span style="font-weight:700;font-size:.84rem">${entry.itemName}</span>
+          <span style="background:${s.bg};color:${s.color};padding:2px 8px;border-radius:20px;font-size:.69rem;font-weight:700">${entry.action}</span>
+          ${entry.details ? `<span style="color:var(--muted);font-size:.8rem">${entry.details}</span>` : ''}
+        </div>
+        <div style="color:var(--light);font-size:.74rem;margin-top:2px">${dateStr} · ${timeStr}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function clearStockLog(){
+  if(!confirm('Clear all log history? This cannot be undone.')) return;
+  saveStockLog([]);
+  renderStockLog();
+}
 const DEFAULT_CATS = ['Food', 'Drinks', 'Packaging', 'Supplies', 'Equipment', 'General'];
 
 function loadStockCats(){
@@ -2069,6 +2143,7 @@ function renderStockPendingOrders(){
 function renderStock() {
   renderStockCats();
   renderStockPendingOrders();
+  renderStockLog();
   const items = loadStock();
   const q = (document.getElementById('stock-search')?.value || '').toLowerCase();
   const filtered = q ? items.filter(i => i.name.toLowerCase().includes(q) || (i.category||'').toLowerCase().includes(q)) : items;
@@ -2130,8 +2205,10 @@ function adjustStockQty(id, delta) {
   const items = loadStock();
   const item = items.find(i => i.id === id);
   if (!item) return;
-  item.qty = Math.max(0, (item.qty||0) + delta);
+  const oldQty = item.qty || 0;
+  item.qty = Math.max(0, oldQty + delta);
   saveStock(items);
+  addStockLog(delta > 0 ? 'Qty +' : 'Qty −', item.name, `${oldQty} → ${item.qty} ${item.unit||''}`.trim());
   renderStock();
 }
 
@@ -2236,9 +2313,13 @@ function saveStockItem() {
   };
   if (editId) {
     const idx = items.findIndex(i => i.id === editId);
-    if (idx !== -1) items[idx] = { ...items[idx], ...payload };
+    if (idx !== -1) {
+      items[idx] = { ...items[idx], ...payload };
+      addStockLog('Edited', name, `${payload.qty} ${payload.unit||''}`.trim());
+    }
   } else {
     items.push({ id: 's' + Date.now(), ...payload });
+    addStockLog('Added', name, `${payload.qty} ${payload.unit||''}`.trim());
   }
   saveStock(items);
   closeStockModal();
@@ -2247,8 +2328,11 @@ function saveStockItem() {
 
 function deleteStockItem(id) {
   if (!confirm('Delete this item?')) return;
-  const items = loadStock().filter(i => i.id !== id);
-  saveStock(items);
+  const all = loadStock();
+  const item = all.find(i => i.id === id);
+  const remaining = all.filter(i => i.id !== id);
+  saveStock(remaining);
+  if(item) addStockLog('Deleted', item.name, `Was ${item.qty} ${item.unit||''}`.trim());
   renderStock();
 }
 
@@ -3393,6 +3477,8 @@ function updateBranchOrderStatus(branchKey, orderId, newStatus){
     const si = stock.find(i=>i.id===o.itemId);
     if(si){ si.qty = Math.max(0, (si.qty||0) - o.qty); saveStock(stock); }
     o.deducted = true;
+    const branchLabel = (BRANCHES.find(b=>b.key===branchKey)||{label:branchKey}).label;
+    addStockLog('Fulfilled', o.itemName, `${o.qty} ${o.unit||''} — ${branchLabel} order`.trim());
   }
   // Restore stock if un-confirming a previously fulfilled order
   if(prev === 'Fulfilled' && newStatus !== 'Fulfilled' && o.deducted){
@@ -3400,6 +3486,8 @@ function updateBranchOrderStatus(branchKey, orderId, newStatus){
     const si = stock.find(i=>i.id===o.itemId);
     if(si){ si.qty = (si.qty||0) + o.qty; saveStock(stock); }
     o.deducted = false;
+    const branchLabel = (BRANCHES.find(b=>b.key===branchKey)||{label:branchKey}).label;
+    addStockLog('Cancelled', o.itemName, `${o.qty} ${o.unit||''} — ${branchLabel} order`.trim());
   }
 
   saveBranchOrders(all);
