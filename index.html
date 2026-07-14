@@ -559,6 +559,9 @@ th { background: #F3F5F8; color: #374151; border-bottom-color: #C8D0DB; }
         <div class="nav-item" onclick="showTab('taytay');closeMobSidebar()" data-access="branch-taytay">
           <span class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></span><span>Taytay</span>
         </div>
+        <div class="nav-item" onclick="showTab('quezon-city');closeMobSidebar()" data-access="branch-quezon-city">
+          <span class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></span><span>Quezon City</span>
+        </div>
       </nav>
       <div class="sb-footer">
         <div class="sb-user">
@@ -1196,10 +1199,11 @@ th { background: #F3F5F8; color: #374151; border-bottom-color: #C8D0DB; }
         </div>
       </div>
 
-      <div id="tab-cainta"   style="display:none" data-branch="cainta"></div>
-      <div id="tab-marikina" style="display:none" data-branch="marikina"></div>
-      <div id="tab-antipolo" style="display:none" data-branch="antipolo"></div>
-      <div id="tab-taytay"   style="display:none" data-branch="taytay"></div>
+      <div id="tab-cainta"       style="display:none" data-branch="cainta"></div>
+      <div id="tab-marikina"     style="display:none" data-branch="marikina"></div>
+      <div id="tab-antipolo"     style="display:none" data-branch="antipolo"></div>
+      <div id="tab-taytay"       style="display:none" data-branch="taytay"></div>
+      <div id="tab-quezon-city"  style="display:none" data-branch="quezon-city"></div>
 
     </div><!-- /main -->
   </div>
@@ -1510,11 +1514,12 @@ th { background: #F3F5F8; color: #374151; border-bottom-color: #C8D0DB; }
 
 <script>
 const USERS = [
-  { role:'admin',    pin:'0000', label:'Admin',    emoji:'👑', access:'admin'    },
-  { role:'cainta',   pin:'0000', label:'Cainta',   emoji:'🏪', access:'branch'   },
-  { role:'marikina', pin:'0000', label:'Marikina', emoji:'🏪', access:'branch'   },
-  { role:'antipolo', pin:'0000', label:'Antipolo', emoji:'🏪', access:'branch'   },
-  { role:'taytay',   pin:'0000', label:'Taytay',   emoji:'🏪', access:'branch'   },
+  { role:'admin',        pin:'0000', label:'Admin',        emoji:'👑', access:'admin'    },
+  { role:'cainta',       pin:'0000', label:'Cainta',       emoji:'🏪', access:'branch'   },
+  { role:'marikina',     pin:'0000', label:'Marikina',     emoji:'🏪', access:'branch'   },
+  { role:'antipolo',     pin:'0000', label:'Antipolo',     emoji:'🏪', access:'branch'   },
+  { role:'taytay',       pin:'0000', label:'Taytay',       emoji:'🏪', access:'branch'   },
+  { role:'quezon-city',  pin:'0000', label:'Quezon City',  emoji:'🏪', access:'branch'   },
 ];
 const K_PINS = 'ksq_pins';
 function getPins(){
@@ -1543,13 +1548,14 @@ function saveEmployees(names){
 }
 const K_OTHER     = 'ksq_other';
 const BRANCHES = [
-  { key:'cainta',   label:'Cainta',   kKey:'ksq_cainta',   sKey:'ksq_cainta_sales'   },
-  { key:'marikina', label:'Marikina', kKey:'ksq_marikina', sKey:'ksq_marikina_sales' },
-  { key:'antipolo', label:'Antipolo', kKey:'ksq_antipolo', sKey:'ksq_antipolo_sales' },
-  { key:'taytay',   label:'Taytay',   kKey:'ksq_taytay',   sKey:'ksq_taytay_sales'   },
+  { key:'cainta',       label:'Cainta',       kKey:'ksq_cainta',       sKey:'ksq_cainta_sales'       },
+  { key:'marikina',     label:'Marikina',     kKey:'ksq_marikina',     sKey:'ksq_marikina_sales'     },
+  { key:'antipolo',     label:'Antipolo',     kKey:'ksq_antipolo',     sKey:'ksq_antipolo_sales'     },
+  { key:'taytay',       label:'Taytay',       kKey:'ksq_taytay',       sKey:'ksq_taytay_sales'       },
+  { key:'quezon-city',  label:'Quezon City',  kKey:'ksq_quezon_city',  sKey:'ksq_quezon_city_sales'  },
 ];
-const branchView = {cainta:'expenses',marikina:'expenses',antipolo:'expenses',taytay:'expenses'};
-const ALL_TABS = ['dashboard','sales','branches-sale','expenses','salary','stock','branch-orders','others','settings','cainta','marikina','antipolo','taytay'];
+const branchView = {cainta:'expenses',marikina:'expenses',antipolo:'expenses',taytay:'expenses','quezon-city':'expenses'};
+const ALL_TABS = ['dashboard','sales','branches-sale','expenses','salary','stock','branch-orders','others','settings','cainta','marikina','antipolo','taytay','quezon-city'];
 let editSaleId = null, editExpId = null, editSalId = null, editOtherId = null, editBranchId = null;
 let empProfileName = '', empCalYear = new Date().getFullYear(), empCalMonth = new Date().getMonth();
 const EMP_CAL_MO = ['JANUARY','FEBRUARY','MARCH','APRIL','MAY','JUNE','JULY','AUGUST','SEPTEMBER','OCTOBER','NOVEMBER','DECEMBER'];
@@ -1636,8 +1642,8 @@ const SB_KEY = 'sb_publishable_AnhZhNqXNPYwznpR2zZzxQ_ordj3CKi';
 const SB_SYNC_KEYS = [
   'ksq_sales','ksq_expenses','ksq_salary','ksq_sal_daily','ksq_employees_v1','ksq_other',
   'ksq_stock_v1','ksq_stock_cats_v1','ksq_branch_orders_v1','ksq_pins',
-  'ksq_cainta','ksq_marikina','ksq_antipolo','ksq_taytay',
-  'ksq_cainta_sales','ksq_marikina_sales','ksq_antipolo_sales','ksq_taytay_sales'
+  'ksq_cainta','ksq_marikina','ksq_antipolo','ksq_taytay','ksq_quezon_city',
+  'ksq_cainta_sales','ksq_marikina_sales','ksq_antipolo_sales','ksq_taytay_sales','ksq_quezon_city_sales'
 ];
 let _sb = null;
 let _sbReady = false;
