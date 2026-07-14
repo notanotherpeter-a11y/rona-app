@@ -1594,7 +1594,7 @@ const BRANCHES = [
   { key:'taytay',       label:'Taytay',       kKey:'ksq_taytay',       sKey:'ksq_taytay_sales'       },
   { key:'quezon-city',  label:'Quezon City',  kKey:'ksq_quezon_city',  sKey:'ksq_quezon_city_sales'  },
 ];
-const branchView = {cainta:'expenses',marikina:'expenses',antipolo:'expenses',taytay:'expenses','quezon-city':'expenses'};
+const branchView = {cainta:'sales',marikina:'sales',antipolo:'sales',taytay:'sales','quezon-city':'sales'};
 const ALL_TABS = ['dashboard','sales','branches-sale','expenses','salary','stock','branch-orders','others','settings','cainta','marikina','antipolo','taytay','quezon-city'];
 let editSaleId = null, editExpId = null, editSalId = null, editOtherId = null, editBranchId = null;
 let empProfileName = '', empCalYear = new Date().getFullYear(), empCalMonth = new Date().getMonth();
@@ -3499,27 +3499,22 @@ function setBranchView(key, view){ branchView[key]=view; renderBranch(BRANCHES.f
 
 function renderBranch(b){
   const el=document.getElementById('tab-'+b.key);
+  const activeTab = branchView[b.key] || 'sales';
   const sales=getS(K_SALES).filter(s=>s.branch===b.key);
   const total=sales.reduce((a,x)=>a+x.amount,0);
   const avg=sales.length?total/sales.length:0;
   const best=sales.reduce((a,x)=>x.amount>a?x.amount:a,0);
   const latest=sales.slice().sort((a,z)=>z.date.localeCompare(a.date))[0];
-  // Count pending orders for this branch
   const orders=getBranchOrders(b.key);
   const pendingOrders=orders.filter(o=>o.status==='Pending').length;
-  let html=`
-    <div class="topbar">
-      <div class="topbar-left">
-        <div class="page-title">🏪 Kamayan sa ${b.label}</div>
-        <div class="page-sub">${b.label} branch tracker</div>
-      </div>
-      <div class="topbar-right">
-        <button class="btn" onclick="openBranchOrderModal('${b.key}')" style="background:#fff;border:1.5px solid var(--border);color:var(--text);font-weight:600;padding:9px 16px;border-radius:8px;cursor:pointer;font-family:inherit;font-size:.83rem;display:flex;align-items:center;gap:6px;box-shadow:var(--sh-sm)">
-          🛒 Order${pendingOrders?` <span style="background:var(--red);color:#fff;border-radius:10px;padding:1px 7px;font-size:.7rem;font-weight:700">${pendingOrders}</span>`:''}
-        </button>
-        <button class="btn btn-red" onclick="openBranchSaleModal('${b.key}')">＋ Add Sale</button>
-      </div>
-    </div>
+
+  const tabBtn = (id, label, icon) => {
+    const active = activeTab === id;
+    return `<button onclick="setBranchView('${b.key}','${id}')" style="padding:9px 18px;border:none;border-bottom:2.5px solid ${active?'var(--red)':'transparent'};background:none;font-size:.85rem;font-weight:${active?'700':'500'};color:${active?'var(--red)':'var(--muted)'};cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:6px">${icon} ${label}</button>`;
+  };
+
+  // ── Sales tab content ──
+  const salesContent = `
     <div class="sales-kpi">
       <div class="s-kpi k-blue"><div class="s-kpi-icon">💰</div><div class="s-kpi-lbl">Total Sales</div><div class="s-kpi-val blue">${fmt(total)}</div><div class="s-kpi-sub">${sales.length} entr${sales.length!==1?'ies':'y'}</div></div>
       <div class="s-kpi k-green"><div class="s-kpi-icon">📊</div><div class="s-kpi-lbl">Average</div><div class="s-kpi-val green">${fmt(avg)}</div><div class="s-kpi-sub">per entry</div></div>
@@ -3528,7 +3523,7 @@ function renderBranch(b){
     </div>
     <div class="section">
       <div class="sec-hdr">
-        <div><div class="sec-title">Branch Sales</div><div class="sec-count">${sales.length} record${sales.length!==1?'s':''}</div></div>
+        <div><div class="sec-title">Sales Records</div><div class="sec-count">${sales.length} record${sales.length!==1?'s':''}</div></div>
         <div class="sec-total amt-pos">Total: ${fmt(total)}</div>
       </div>
       <table>
@@ -3543,6 +3538,58 @@ function renderBranch(b){
         </tbody>
       </table>
     </div>`;
+
+  // ── History tab content ──
+  const statusColors = { Pending:'#d97706', Fulfilled:'#059669', Cancelled:'#dc2626' };
+  const statusBgs    = { Pending:'#fef3c7', Fulfilled:'#d1fae5', Cancelled:'#fee2e2' };
+  const historyContent = `
+    <div class="section" style="margin-top:0">
+      <div class="sec-hdr" style="margin-bottom:16px">
+        <div><div class="sec-title">Order History</div><div class="sec-count">${orders.length} order${orders.length!==1?'s':''}</div></div>
+      </div>
+      ${orders.length ? `
+      <table>
+        <thead><tr>
+          <th>Date</th><th>Item</th><th>Category</th><th style="text-align:center">Qty</th><th>Unit</th><th>Status</th>
+        </tr></thead>
+        <tbody>${orders.slice().sort((a,z)=>z.date.localeCompare(a.date)).map(o=>{
+          const sc = statusColors[o.status]||'#6b7280';
+          const sb = statusBgs[o.status]||'#f3f4f6';
+          return `<tr>
+            <td><span class="day-pill ${dayClass(o.date)}">${dayName(o.date)}</span> ${fmtDate(o.date)}</td>
+            <td style="font-weight:600">${o.itemName||'—'}</td>
+            <td>${o.category||'—'}</td>
+            <td style="text-align:center;font-weight:700">${o.qty}</td>
+            <td>${o.unit||'—'}</td>
+            <td><span style="background:${sb};color:${sc};padding:3px 10px;border-radius:20px;font-size:.72rem;font-weight:700">${o.status}</span></td>
+          </tr>`;
+        }).join('')}
+        </tbody>
+      </table>` : `<div style="padding:40px;text-align:center;color:var(--muted);font-size:.88rem">No orders submitted yet.</div>`}
+    </div>`;
+
+  let html=`
+    <div class="topbar">
+      <div class="topbar-left">
+        <div class="page-title">🏪 Kamayan sa ${b.label}</div>
+        <div class="page-sub">${b.label} branch tracker</div>
+      </div>
+      <div class="topbar-right">
+        <button class="btn" onclick="openBranchOrderModal('${b.key}')" style="background:#fff;border:1.5px solid var(--border);color:var(--text);font-weight:600;padding:9px 16px;border-radius:8px;cursor:pointer;font-family:inherit;font-size:.83rem;display:flex;align-items:center;gap:6px;box-shadow:var(--sh-sm)">
+          🛒 Order${pendingOrders?` <span style="background:var(--red);color:#fff;border-radius:10px;padding:1px 7px;font-size:.7rem;font-weight:700">${pendingOrders}</span>`:''}
+        </button>
+        <button class="btn btn-red" onclick="openBranchSaleModal('${b.key}')">＋ Add Sale</button>
+      </div>
+    </div>
+
+    <!-- Tab bar -->
+    <div style="display:flex;gap:0;border-bottom:1px solid var(--border);background:#fff;border-radius:12px 12px 0 0;margin-bottom:20px;padding:0 8px">
+      ${tabBtn('sales','Sales','💰')}
+      ${tabBtn('history','History','📋')}
+    </div>
+
+    ${activeTab === 'sales' ? salesContent : historyContent}
+  `;
   el.innerHTML=html;
 }
 
