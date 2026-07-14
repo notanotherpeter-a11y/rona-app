@@ -860,6 +860,10 @@ th { background: #F3F5F8; color: #374151; border-bottom-color: #C8D0DB; }
             <div class="page-sub">Manage inventory items across all branches</div>
           </div>
           <div class="topbar-right">
+            <button onclick="openStockLog()" style="padding:9px 16px;border:1.5px solid var(--border);border-radius:var(--r-sm);font-size:.82rem;font-weight:600;cursor:pointer;font-family:inherit;background:#fff;color:var(--text);box-shadow:var(--sh-sm);display:flex;align-items:center;gap:7px">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+              Log History
+            </button>
             <button class="btn btn-red" onclick="openStockModal()">+ Add Item</button>
           </div>
         </div>
@@ -891,17 +895,6 @@ th { background: #F3F5F8; color: #374151; border-bottom-color: #C8D0DB; }
           <div id="stock-empty" style="display:none;padding:48px;text-align:center;color:var(--muted);font-size:.88rem">No items yet. Click <b>+ Add Item</b> to get started.</div>
         </div>
 
-        <!-- Log History panel -->
-        <div class="card" style="padding:0;overflow:hidden;margin-top:16px">
-          <div style="padding:16px 22px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px">
-            <div>
-              <div style="font-weight:700;font-size:.95rem">Log History</div>
-              <div style="font-size:.75rem;color:var(--muted);margin-top:2px">All changes to inventory items</div>
-            </div>
-            <button onclick="clearStockLog()" style="padding:5px 14px;border:1.5px solid #fecaca;border-radius:6px;background:#fff;cursor:pointer;font-size:.76rem;font-weight:600;font-family:inherit;color:var(--red)">Clear Log</button>
-          </div>
-          <div id="stock-log-wrap" style="max-height:380px;overflow-y:auto"></div>
-        </div>
       </div>
 
       <!-- ── STOCK MODAL ── -->
@@ -962,6 +955,30 @@ th { background: #F3F5F8; color: #374151; border-bottom-color: #C8D0DB; }
           <div style="display:flex;gap:10px">
             <button onclick="closeStockModal()" style="flex:1;padding:10px;border:1.5px solid var(--border);border-radius:8px;background:#fff;font-size:.85rem;font-weight:600;cursor:pointer;font-family:inherit">Cancel</button>
             <button onclick="saveStockItem()" style="flex:1;padding:10px;background:var(--red);color:#fff;border:none;border-radius:8px;font-size:.85rem;font-weight:700;cursor:pointer;font-family:inherit">Save Item</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── LOG HISTORY MODAL ── -->
+      <div id="stock-log-modal" style="display:none;position:fixed;inset:0;z-index:1000;background:var(--bg);flex-direction:column">
+        <!-- Header -->
+        <div style="background:#fff;border-bottom:1px solid var(--border);padding:18px 28px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;box-shadow:var(--sh-sm)">
+          <div>
+            <div style="font-size:1.2rem;font-weight:800;color:var(--text);letter-spacing:-.02em">Log History</div>
+            <div style="font-size:.76rem;color:var(--muted);margin-top:3px">All changes to inventory items</div>
+          </div>
+          <div style="display:flex;gap:10px;align-items:center">
+            <button onclick="clearStockLog()" style="padding:8px 16px;border:1.5px solid #fecaca;border-radius:var(--r-sm);background:#fff;cursor:pointer;font-size:.82rem;font-weight:600;font-family:inherit;color:var(--red)">Clear Log</button>
+            <button onclick="closeStockLog()" style="padding:8px 16px;border:1.5px solid var(--border);border-radius:var(--r-sm);background:#fff;cursor:pointer;font-size:.82rem;font-weight:600;font-family:inherit;color:var(--text);display:flex;align-items:center;gap:6px">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              Close
+            </button>
+          </div>
+        </div>
+        <!-- Log list -->
+        <div style="flex:1;overflow-y:auto;padding:24px 28px">
+          <div style="background:#fff;border-radius:var(--r);border:1px solid var(--border);box-shadow:var(--sh-sm);overflow:hidden">
+            <div id="stock-log-wrap"></div>
           </div>
         </div>
       </div>
@@ -2032,6 +2049,13 @@ function renderStockLog(){
   }).join('');
 }
 
+function openStockLog(){
+  renderStockLog();
+  document.getElementById('stock-log-modal').style.display = 'flex';
+}
+function closeStockLog(){
+  document.getElementById('stock-log-modal').style.display = 'none';
+}
 function clearStockLog(){
   if(!confirm('Clear all log history? This cannot be undone.')) return;
   saveStockLog([]);
@@ -2153,7 +2177,6 @@ function renderStockPendingOrders(){
 function renderStock() {
   renderStockCats();
   renderStockPendingOrders();
-  renderStockLog();
   const items = loadStock();
   const q = (document.getElementById('stock-search')?.value || '').toLowerCase();
   const filtered = q ? items.filter(i => i.name.toLowerCase().includes(q) || (i.category||'').toLowerCase().includes(q)) : items;
