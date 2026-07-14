@@ -2301,7 +2301,13 @@ function renderStock() {
       <td style="padding:13px 20px;color:var(--muted)">${item.category||'—'}</td>
       <td style="padding:13px 20px;text-align:center;font-weight:700">${item.qty}</td>
       <td style="padding:13px 20px;color:var(--muted)">${item.unit||'—'}</td>
-      <td style="padding:13px 20px;text-align:center;color:var(--muted)">${min || '—'}</td>
+      <td style="padding:13px 20px;text-align:center">
+        <input type="number" min="0" value="${min}"
+          style="width:56px;text-align:center;border:1.5px solid var(--border);border-radius:6px;padding:4px 6px;font-size:.83rem;font-family:inherit;color:var(--text);background:#fff;outline:none"
+          onfocus="this.style.borderColor='var(--blue)'"
+          onblur="this.style.borderColor='var(--border)';saveStockMin('${item.id}',this.value)"
+          onkeydown="if(event.key==='Enter')this.blur()">
+      </td>
       <td style="padding:13px 20px">
         <span style="display:inline-flex;align-items:center;gap:7px;font-size:.83rem;font-weight:600;color:${dotColor}">
           <span style="width:9px;height:9px;border-radius:50%;background:${dotColor};flex-shrink:0;display:inline-block"></span>
@@ -2310,6 +2316,15 @@ function renderStock() {
       </td>
     </tr>`;
   }).join('');
+}
+
+function saveStockMin(id, val){
+  const items = loadStock();
+  const item = items.find(i => i.id === id);
+  if(!item) return;
+  item.minQty = Math.max(0, parseInt(val)||0);
+  saveStock(items);
+  renderStock();
 }
 
 function adjustStockQty(id, delta) {
