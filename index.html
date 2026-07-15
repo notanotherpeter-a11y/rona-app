@@ -2160,14 +2160,7 @@ function deleteStockCat(name){
 
 function renderStockCats(){
   const cats = loadStockCats();
-  const wrap = document.getElementById('stock-cats-list');
-  if(!wrap) return;
-  wrap.innerHTML = cats.map(c=>`
-    <span style="display:inline-flex;align-items:center;gap:5px;background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;padding:4px 10px;border-radius:20px;font-size:.78rem;font-weight:600;margin:3px">
-      ${c}
-      <button onclick="deleteStockCat('${c.replace(/'/g,"\\'")}') " style="background:none;border:none;cursor:pointer;color:#93c5fd;font-size:.85rem;line-height:1;padding:0 2px" title="Remove">×</button>
-    </span>`).join('');
-  // also update category select in modal
+  // always update category select in modal (exists on inventory page)
   const sel = document.getElementById('stock-cat-sel');
   if(sel){
     const cur = sel.value;
@@ -2176,6 +2169,14 @@ function renderStockCats(){
   // update datalist fallback
   const dl = document.getElementById('stock-cat-list');
   if(dl) dl.innerHTML = cats.map(c=>`<option value="${c}">`).join('');
+  // update settings page list (only exists on settings page)
+  const wrap = document.getElementById('stock-cats-list');
+  if(!wrap) return;
+  wrap.innerHTML = cats.map(c=>`
+    <span style="display:inline-flex;align-items:center;gap:5px;background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;padding:4px 10px;border-radius:20px;font-size:.78rem;font-weight:600;margin:3px">
+      ${c}
+      <button onclick="deleteStockCat('${c.replace(/'/g,"\\'")}') " style="background:none;border:none;cursor:pointer;color:#93c5fd;font-size:.85rem;line-height:1;padding:0 2px" title="Remove">×</button>
+    </span>`).join('');
 }
 const DEFAULT_STOCK = [
   { id:'s1', name:'Item 1', category:'General', unit:'pcs', qty:0, minQty:5, notes:'' },
