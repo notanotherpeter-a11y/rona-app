@@ -1842,6 +1842,8 @@ async function initSupabase(){
 
 // ── SEED ──
 function seed(){
+  // Never re-seed after the app has been used — prevents cleared data from coming back
+  if(localStorage.getItem('ksq_ever_seeded')==='1') return;
   if(!getS(K_SALES).length){
     setS(K_SALES,[
       {id:1,date:'2026-06-01',amount:34298,notes:''},
@@ -2061,6 +2063,8 @@ function seed(){
     ]);
     localStorage.setItem('ksq_dal_ver',DAL_VER);
   }
+  // Mark as seeded so future page loads never re-seed (even if data is cleared)
+  localStorage.setItem('ksq_ever_seeded','1');
 }
 
 // ── HELPERS ──
@@ -3876,7 +3880,7 @@ function clearAllData(){
   location.reload();
 }
 
-function clearMonthData(ym){
+async function clearMonthData(ym){
   // ym = 'YYYY-MM' e.g. '2026-07'
   const monthLabel = new Date(ym + '-01').toLocaleString('en-PH',{month:'long',year:'numeric'});
   if(!confirm(`This will permanently delete all data entered for ${monthLabel}.\n\nSales, expenses, salary, daily wages, branch data, and stock log entries for ${monthLabel} will be removed.\n\nOther months are NOT affected. Continue?`)) return;
@@ -3891,66 +3895,58 @@ function clearMonthData(ym){
     return after;
   }
 
-  // 1. Main sales (Kamayan + branch sales stored in K_SALES)
-  setS(K_SALES, filterByMonth(getS(K_SALES), 'date'));
+  // Filter all data locally using _origSetItem (bypasses interceptor — we do ONE batch push below)
+  const fSales      = filterByMonth(getS(K_SALES),     'date');  _origSetItem(K_SALES,     JSON.stringify(fSales));
+  const fExp        = filterByMonth(getS(K_EXP),       'date');  _origSetItem(K_EXP,       JSON.stringify(fExp));
+  const fSal        = filterByMonth(getS(K_SAL),       'month'); _origSetItem(K_SAL,       JSON.stringify(fSal));
+  const fSalDaily   = filterByMonth(getS(K_SAL_DAILY), 'date');  _origSetItem(K_SAL_DAILY, JSON.stringify(fSalDaily));
 
-  // 2. Expenses
-  setS(K_EXP, filterByMonth(getS(K_EXP), 'date'));
-
-  // 3. Monthly salary summaries (use 'month' field)
-  setS(K_SAL, filterByMonth(getS(K_SAL), 'month'));
-
-  // 4. Daily salary records
-  setS(K_SAL_DAILY, filterByMonth(getS(K_SAL_DAILY), 'date'));
-
-  // 5. Branch expense keys
+  const branchVals = {};
   BRANCHES.forEach(b => {
-    const raw = JSON.parse(localStorage.getItem(b.kKey)||'[]');
-    const filtered = filterByMonth(raw, 'date');
-    localStorage.setItem(b.kKey, JSON.stringify(filtered));
+    const fk = filterByMonth(JSON.parse(_origGetItem(b.kKey)||'[]'), 'date');
+    _origSetItem(b.kKey, JSON.stringify(fk)); branchVals[b.kKey] = fk;
+    const fs = filterByMonth(JSON.parse(_origGetItem(b.sKey)||'[]'), 'date');
+    _origSetItem(b.sKey, JSON.stringify(fs)); branchVals[b.sKey] = fs;
   });
 
-  // 6. Branch sales keys
-  BRANCHES.forEach(b => {
-    const raw = JSON.parse(localStorage.getItem(b.sKey)||'[]');
-    const filtered = filterByMonth(raw, 'date');
-    localStorage.setItem(b.sKey, JSON.stringify(filtered));
-  });
-
-  // 7. Stock log — entries have 'ts' (ISO timestamp), strip by year-month prefix
   const log = loadStockLog();
-  const logBefore = log.length;
-  const filteredLog = log.filter(e => !(e.ts||'').startsWith(ym));
-  totalRemoved += logBefore - filteredLog.length;
-  saveStockLog(filteredLog);
+  const fLog = log.filter(e => { const m=!(e.ts||'').startsWith(ym); if(!m) totalRemoved++; return m; });
+  _origSetItem(STOCK_LOG_KEY, JSON.stringify(fLog));
 
-  // 8. Branch orders — filter by createdAt date
-  const orders = JSON.parse(localStorage.getItem(BRANCH_ORDERS_KEY)||'[]');
-  const ordersBefore = orders.length;
-  const filteredOrders = orders.filter(o => !(o.createdAt||o.date||'').startsWith(ym));
-  totalRemoved += ordersBefore - filteredOrders.length;
-  localStorage.setItem(BRANCH_ORDERS_KEY, JSON.stringify(filteredOrders));
+  const orders = JSON.parse(_origGetItem(BRANCH_ORDERS_KEY)||'[]');
+  const fOrders = orders.filter(o => { const m=!(o.createdAt||o.date||'').startsWith(ym); if(!m) totalRemoved++; return m; });
+  _origSetItem(BRANCH_ORDERS_KEY, JSON.stringify(fOrders));
 
-  alert(`✅ Done! Cleared ${totalRemoved} record${totalRemoved!==1?'s':''} from ${monthLabel}.\n\nData is syncing to cloud…`);
-
-  // Force-push all modified keys to Supabase immediately (don't rely on background async queue)
-  if(_sbReady && _sb){
-    const keysToSync = [
-      K_SALES, K_EXP, K_SAL, K_SAL_DAILY, STOCK_LOG_KEY, BRANCH_ORDERS_KEY,
-      ...BRANCHES.map(b=>b.kKey), ...BRANCHES.map(b=>b.sKey)
-    ].filter(k=>_origGetItem(k));
-    const batch = keysToSync.map(k=>{
-      let val; try{ val=JSON.parse(_origGetItem(k)); }catch(e){ val=[]; }
-      return {key:k, value:val, updated_at:new Date().toISOString()};
-    });
-    _sb.from('kv_store').upsert(batch,{onConflict:'key'})
-      .then(res=>{ if(!res?.error) keysToSync.forEach(k=>_clearPending(k)); })
-      .catch(()=>{});
-  }
-
-  // Re-render whichever tab is active
+  // Re-render immediately so UI updates without waiting for cloud
   renderCurrentTab();
   renderDashboard();
+
+  // Await the Supabase push so refresh doesn't pull back old data
+  if(_sbReady && _sb){
+    try{
+      const batch = [
+        {key:K_SALES,     value:fSales,    updated_at:new Date().toISOString()},
+        {key:K_EXP,       value:fExp,      updated_at:new Date().toISOString()},
+        {key:K_SAL,       value:fSal,      updated_at:new Date().toISOString()},
+        {key:K_SAL_DAILY, value:fSalDaily, updated_at:new Date().toISOString()},
+        {key:STOCK_LOG_KEY,      value:fLog,    updated_at:new Date().toISOString()},
+        {key:BRANCH_ORDERS_KEY,  value:fOrders, updated_at:new Date().toISOString()},
+        ...Object.entries(branchVals).map(([k,v])=>({key:k,value:v,updated_at:new Date().toISOString()})),
+      ];
+      const res = await _sb.from('kv_store').upsert(batch,{onConflict:'key'});
+      if(!res?.error){
+        alert(`✅ Done! Cleared ${totalRemoved} record${totalRemoved!==1?'s':''} from ${monthLabel}.`);
+      } else {
+        console.warn('[KSQ] clearMonth upsert error:', res.error);
+        alert(`✅ Cleared locally (${totalRemoved} records from ${monthLabel}). Cloud sync failed — reload may restore data. Try again.`);
+      }
+    }catch(e){
+      console.warn('[KSQ] clearMonth push failed:', e);
+      alert(`✅ Cleared locally (${totalRemoved} records from ${monthLabel}). Cloud sync failed — reload may restore data. Try again.`);
+    }
+  } else {
+    alert(`✅ Done! Cleared ${totalRemoved} record${totalRemoved!==1?'s':''} from ${monthLabel}.`);
+  }
 }
 
 // ── OTHER / RECEIVABLES PAGE ──
