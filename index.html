@@ -1736,6 +1736,8 @@ let _sbReady = false;
 
 // Pending sync queue — survives refresh, flushed to Supabase on next init
 const PENDING_SYNC_KEY = 'ksq_pending_sync'; // NOT in SB_SYNC_KEYS
+// Local timestamp tracker — records when each key was last written locally (ms since epoch)
+const LOCAL_TS_KEY = 'ksq_local_ts'; // NOT in SB_SYNC_KEYS
 const _origSetItem = localStorage.setItem.bind(localStorage);
 const _origGetItem = localStorage.getItem.bind(localStorage);
 
@@ -1744,6 +1746,13 @@ function _markPending(k){
 }
 function _clearPending(k){
   try{ const p=JSON.parse(_origGetItem(PENDING_SYNC_KEY)||'{}'); delete p[k]; _origSetItem(PENDING_SYNC_KEY,JSON.stringify(p)); }catch(e){}
+}
+// Track when each key was last written locally — persisted across refreshes
+function _getLocalTs(k){
+  try{ return JSON.parse(_origGetItem(LOCAL_TS_KEY)||'{}')[k] || 0; }catch(e){ return 0; }
+}
+function _setLocalTs(k, ts){
+  try{ const o=JSON.parse(_origGetItem(LOCAL_TS_KEY)||'{}'); o[k]=ts; _origSetItem(LOCAL_TS_KEY,JSON.stringify(o)); }catch(e){}
 }
 
 // ── Save Toast notification ──
@@ -1767,6 +1776,7 @@ const _STOCK_TOAST_KEYS = ['ksq_stock_v1','ksq_stock_cats_v1','ksq_stock_log_v1'
 localStorage.setItem = function(k, v){
   _origSetItem(k, v);
   if(SB_SYNC_KEYS.includes(k)){
+    _setLocalTs(k, Date.now()); // stamp when this key was last written locally
     _markPending(k); // mark as pending BEFORE async upsert — survives if upsert fails
     if(_sbReady && _sb){
       try{
@@ -1828,14 +1838,22 @@ async function initSupabase(){
       }catch(e){ console.warn('[KSQ] Flush error:', e); }
     }
 
-    // Step 2: Pull cloud data — NEVER overwrite keys with pending local changes
-    const { data } = await _sb.from('kv_store').select('key,value');
+    // Step 2: Pull cloud data — use timestamp-based conflict resolution
+    // Supabase data only wins if it's NEWER than our last local write
+    const { data } = await _sb.from('kv_store').select('key,value,updated_at');
     const sbKeys = new Set((data||[]).map(r=>r.key));
     if(data && data.length){
       data.forEach(row => {
-        if(SB_SYNC_KEYS.includes(row.key) && !protectedKeys.has(row.key)){
+        if(!SB_SYNC_KEYS.includes(row.key) || protectedKeys.has(row.key)) return;
+        const sbTs = new Date(row.updated_at || 0).getTime();
+        const localTs = _getLocalTs(row.key);
+        const hasLocal = !!_origGetItem(row.key);
+        // Use Supabase data if: no local data exists OR Supabase is strictly newer
+        if(!hasLocal || sbTs > localTs){
           _origSetItem(row.key, JSON.stringify(row.value));
+          _setLocalTs(row.key, sbTs); // align local ts with Supabase ts
         }
+        // If local is same age or newer: keep local (it will be flushed to Supabase via pending)
       });
     }
 
@@ -2702,6 +2720,7 @@ function adjustStockQty(id, delta) {
   saveStock(items);
   addStockLog(delta > 0 ? 'Qty +' : 'Qty −', item.name, `${oldQty} → ${item.qty} ${item.unit||''}`.trim());
   renderStock();
+  _forcePushKey('ksq_stock_v1'); // push immediately — don't risk async queue timing out before refresh
 }
 
 // Force push all stock data to Supabase right now (bypasses pending queue logic)
@@ -2868,6 +2887,7 @@ function saveStockItem() {
   saveStock(items);
   closeStockModal();
   renderStock();
+  _forcePushKey('ksq_stock_v1');
 }
 
 function deleteStockItem(id) {
@@ -2875,9 +2895,24 @@ function deleteStockItem(id) {
   const all = loadStock();
   const item = all.find(i => i.id === id);
   const remaining = all.filter(i => i.id !== id);
-  saveStock(remaining);
+  saveStock(remaining); // saves locally + interceptor marks pending + async upsert
   if(item) addStockLog('Deleted', item.name, `Was ${item.qty} ${item.unit||''}`.trim());
   renderStock();
+  // Also force-push to Supabase right now so refresh can't restore the deleted item
+  _forcePushKey('ksq_stock_v1');
+}
+
+// Immediately upsert a single key to Supabase (bypasses background queue timing)
+function _forcePushKey(k){
+  if(!_sbReady || !_sb) return;
+  const raw = _origGetItem(k);
+  if(!raw) return;
+  let val;
+  try{ val = JSON.parse(raw); }catch(e){ return; }
+  _sb.from('kv_store')
+    .upsert({key:k, value:val, updated_at:new Date().toISOString()}, {onConflict:'key'})
+    .then(res=>{ if(!res?.error) _clearPending(k); })
+    .catch(()=>{});
 }
 
 // Close stock modal on backdrop click
@@ -3888,11 +3923,12 @@ function importAllData(e){
 function clearAllData(){
   if(!confirm('This will permanently delete ALL records. This cannot be undone. Continue?')) return;
   if(!confirm('Are you sure? All sales, expenses, salary, stock, and branch data will be erased.')) return;
+  // Use setItem with empty arrays (NOT removeItem) so the interceptor fires and Supabase gets cleared too
   ['ksq_sales','ksq_expenses','ksq_salary','ksq_sal_daily','ksq_employees_v1','ksq_other',
    'ksq_stock_v1','ksq_stock_cats_v1','ksq_stock_log_v1','ksq_branch_orders_v1',
    'ksq_cainta','ksq_marikina','ksq_antipolo','ksq_taytay','ksq_quezon_city',
    'ksq_cainta_sales','ksq_marikina_sales','ksq_antipolo_sales','ksq_taytay_sales','ksq_quezon_city_sales']
-  .forEach(k=>localStorage.removeItem(k));
+  .forEach(k => localStorage.setItem(k, '[]')); // triggers interceptor → updates Supabase + sets localTs
   alert('All data cleared. The page will reload.');
   location.reload();
 }
@@ -3953,6 +3989,21 @@ function clearMonthData(ym){
   localStorage.setItem(BRANCH_ORDERS_KEY, JSON.stringify(filteredOrders));
 
   alert(`✅ Done! Cleared ${totalRemoved} record${totalRemoved!==1?'s':''} from ${monthLabel}.\n\nData is syncing to cloud…`);
+
+  // Force-push all modified keys to Supabase immediately (don't rely on background async queue)
+  if(_sbReady && _sb){
+    const keysToSync = [
+      K_SALES, K_EXP, K_SAL, K_SAL_DAILY, STOCK_LOG_KEY, BRANCH_ORDERS_KEY,
+      ...BRANCHES.map(b=>b.kKey), ...BRANCHES.map(b=>b.sKey)
+    ].filter(k=>_origGetItem(k));
+    const batch = keysToSync.map(k=>{
+      let val; try{ val=JSON.parse(_origGetItem(k)); }catch(e){ val=[]; }
+      return {key:k, value:val, updated_at:new Date().toISOString()};
+    });
+    _sb.from('kv_store').upsert(batch,{onConflict:'key'})
+      .then(res=>{ if(!res?.error) keysToSync.forEach(k=>_clearPending(k)); })
+      .catch(()=>{});
+  }
 
   // Re-render whichever tab is active
   renderCurrentTab();
