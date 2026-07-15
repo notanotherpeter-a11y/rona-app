@@ -1598,29 +1598,24 @@ const USERS = [
 ];
 const K_PINS = 'ksq_pins';
 function getPins(){
-  const saved=localStorage.getItem(K_PINS);
-  if(saved) return JSON.parse(saved);
+  const saved=_db[K_PINS];
+  if(saved) return saved;
   const pins={}; USERS.forEach(u=>{ pins[u.role]=u.pin; }); return pins;
 }
-function savePins(pins){
-  localStorage.setItem(K_PINS,JSON.stringify(pins));
-}
+function savePins(pins){ setS(K_PINS, pins); }
 const K_SALES     = 'ksq_sales';
 const K_EXP       = 'ksq_expenses';
 const K_SAL       = 'ksq_salary';
 const K_SAL_DAILY = 'ksq_sal_daily';
 const K_EMPLOYEES = 'ksq_employees_v1';
 function loadEmployees(){
-  const raw=localStorage.getItem(K_EMPLOYEES);
-  if(raw) return JSON.parse(raw);
+  if(_db[K_EMPLOYEES]) return _db[K_EMPLOYEES];
   // Seed from existing K_SAL names on first load
   const names=[...new Set(getS(K_SAL).map(s=>s.name).filter(Boolean))].sort();
-  localStorage.setItem(K_EMPLOYEES, JSON.stringify(names));
+  setS(K_EMPLOYEES, names);
   return names;
 }
-function saveEmployees(names){
-  localStorage.setItem(K_EMPLOYEES,JSON.stringify(names));
-}
+function saveEmployees(names){ setS(K_EMPLOYEES, names); }
 const K_OTHER     = 'ksq_other';
 const BRANCHES = [
   { key:'cainta',       label:'Cainta',       kKey:'ksq_cainta',       sKey:'ksq_cainta_sales'       },
@@ -1699,8 +1694,17 @@ function closeMobSidebar(){
 }
 
 // ── STORAGE ──
-function getS(k){ try{ return JSON.parse(localStorage.getItem(k))||[]; }catch{ return []; } }
-function setS(k,v){ localStorage.setItem(k,JSON.stringify(v)); }
+const _db = {};
+function getS(k){ const v=_db[k]; return Array.isArray(v)?v:(v!=null?v:[]); }
+function setS(k,v){
+  _db[k]=v;
+  if(_sbReady && _sb && SB_SYNC_KEYS.includes(k)){
+    if(_STOCK_TOAST_KEYS.includes(k)) _showSaveToast('saving','⏳ Saving…');
+    _sb.from('kv_store').upsert({key:k,value:v,updated_at:new Date().toISOString()},{onConflict:'key'})
+      .then(r=>{ if(!r?.error && _STOCK_TOAST_KEYS.includes(k)) _showSaveToast('success','✓ Saved to Cloud'); })
+      .catch(()=>{ if(_STOCK_TOAST_KEYS.includes(k)) _showSaveToast('error','⚠ Cloud save failed'); });
+  }
+}
 
 function renderCurrentTab(){
   const active = ALL_TABS.find(t => document.getElementById('tab-'+t)?.style.display !== 'none');
@@ -1733,14 +1737,6 @@ const SB_SYNC_KEYS = [
 ];
 let _sb = null;
 let _sbReady = false;
-const _origSetItem = localStorage.setItem.bind(localStorage);
-const _origGetItem = localStorage.getItem.bind(localStorage);
-
-// ── Dirty key tracker ──
-// Tracks keys that have been written locally but not yet confirmed by Supabase.
-// On beforeunload we fire a keepalive fetch so the data reaches Supabase even if
-// the user refreshes immediately — no localStorage timestamps needed.
-const _dirtyKeys = new Set();
 
 // ── Save Toast ──
 let _toastTimer = null;
@@ -1755,59 +1751,6 @@ function _showSaveToast(type, msg){
 
 const _STOCK_TOAST_KEYS = ['ksq_stock_v1','ksq_stock_cats_v1','ksq_stock_log_v1','ksq_branch_orders_v1'];
 
-// ── Interceptor ──
-// Write to localStorage instantly (instant UI), push to Supabase async.
-// Key is added to _dirtyKeys until Supabase confirms, then removed.
-localStorage.setItem = function(k, v){
-  _origSetItem(k, v);
-  if(SB_SYNC_KEYS.includes(k)){
-    _dirtyKeys.add(k);
-    if(_sbReady && _sb){
-      try{
-        const parsed = JSON.parse(v);
-        if(_STOCK_TOAST_KEYS.includes(k)) _showSaveToast('saving', '⏳ Saving…');
-        _sb.from('kv_store')
-          .upsert({key:k, value:parsed, updated_at: new Date().toISOString()}, {onConflict:'key'})
-          .then(res => {
-            if(!res?.error){
-              _dirtyKeys.delete(k);
-              if(_STOCK_TOAST_KEYS.includes(k)) _showSaveToast('success', '✓ Saved to Cloud');
-            } else {
-              if(_STOCK_TOAST_KEYS.includes(k)) _showSaveToast('error', '⚠ Cloud save failed');
-              console.warn('[KSQ] Upsert error:', k, res.error);
-            }
-          })
-          .catch(() => {
-            if(_STOCK_TOAST_KEYS.includes(k)) _showSaveToast('error', '⚠ Cloud save failed');
-          });
-      }catch(e){ console.warn('[KSQ] setItem intercept error:', e); }
-    }
-  }
-};
-
-// ── Keepalive flush on page close/refresh ──
-// fetch with keepalive:true survives page unload — guarantees dirty keys
-// reach Supabase even if the user refreshes before the async push completes.
-window.addEventListener('beforeunload', () => {
-  if(!_dirtyKeys.size) return;
-  const batch = [..._dirtyKeys].map(k => {
-    let val; try{ val = JSON.parse(_origGetItem(k)||'null'); }catch(e){ val = null; }
-    return {key:k, value:val, updated_at: new Date().toISOString()};
-  }).filter(r => r.value !== null);
-  if(!batch.length) return;
-  fetch(`${SB_URL}/rest/v1/kv_store`, {
-    method: 'POST',
-    headers: {
-      'apikey': SB_KEY,
-      'Authorization': `Bearer ${SB_KEY}`,
-      'Content-Type': 'application/json',
-      'Prefer': 'resolution=merge-duplicates'
-    },
-    body: JSON.stringify(batch),
-    keepalive: true  // survives page close/refresh
-  }).catch(() => {});
-});
-
 async function initSupabase(){
   try{
     _sb = supabase.createClient(SB_URL, SB_KEY);
@@ -1816,17 +1759,9 @@ async function initSupabase(){
     const { data, error } = await _sb.from('kv_store').select('key,value');
     if(!error && data?.length){
       data.forEach(row => {
-        if(SB_SYNC_KEYS.includes(row.key)){
-          _origSetItem(row.key, JSON.stringify(row.value));
-        }
+        if(SB_SYNC_KEYS.includes(row.key)) _db[row.key] = row.value;
       });
     }
-
-    // Supabase is authoritative — remove any local keys not present in Supabase
-    try{
-      const sbKeys = new Set((data||[]).map(r => r.key));
-      SB_SYNC_KEYS.forEach(k => { if(!sbKeys.has(k)) localStorage.removeItem(k); });
-    }catch(e){ console.warn('[KSQ] Local clear failed (non-fatal):', e); }
 
     _sbReady = true;
 
@@ -1842,16 +1777,16 @@ async function initSupabase(){
         // Merge append-only log by id so two users logging simultaneously don't erase each other
         if(row.key === 'ksq_stock_log_v1'){
           try{
-            const local  = JSON.parse(_origGetItem(row.key)||'[]');
+            const local  = Array.isArray(_db[row.key]) ? _db[row.key] : [];
             const remote = Array.isArray(row.value) ? row.value : [];
             const byId = new Map();
             [...local, ...remote].forEach(e => { if(e && e.id!=null) byId.set(e.id, e); });
             const merged = [...byId.values()].sort((a,b)=>(b.id||0)-(a.id||0));
             if(merged.length > 200) merged.length = 200;
-            _origSetItem(row.key, JSON.stringify(merged));
-          }catch(e){ _origSetItem(row.key, JSON.stringify(row.value)); }
+            _db[row.key] = merged;
+          }catch(e){ _db[row.key] = row.value; }
         } else {
-          _origSetItem(row.key, JSON.stringify(row.value));
+          _db[row.key] = row.value;
         }
         renderCurrentTab();
       })
@@ -2143,8 +2078,8 @@ const STOCK_KEY = 'ksq_stock_v1';
 const STOCK_CATS_KEY = 'ksq_stock_cats_v1';
 const STOCK_LOG_KEY = 'ksq_stock_log_v1';
 
-function loadStockLog(){ try{ return JSON.parse(localStorage.getItem(STOCK_LOG_KEY)||'[]'); }catch(e){ return []; } }
-function saveStockLog(log){ localStorage.setItem(STOCK_LOG_KEY, JSON.stringify(log)); }
+function loadStockLog(){ return Array.isArray(_db[STOCK_LOG_KEY])?_db[STOCK_LOG_KEY]:[]; }
+function saveStockLog(log){ setS(STOCK_LOG_KEY, log); }
 
 function addStockLog(action, itemName, details){
   const log = loadStockLog();
@@ -2247,15 +2182,11 @@ function clearStockLog(){
 const DEFAULT_CATS = ['Food', 'Drinks', 'Packaging', 'Supplies', 'Equipment', 'General'];
 
 function loadStockCats(){
-  const raw = localStorage.getItem(STOCK_CATS_KEY);
-  if(raw){
-    try{ return JSON.parse(raw); }catch(e){}
-  }
-  // First load — persist defaults so they survive refresh
-  localStorage.setItem(STOCK_CATS_KEY, JSON.stringify(DEFAULT_CATS));
+  if(Array.isArray(_db[STOCK_CATS_KEY]) && _db[STOCK_CATS_KEY].length) return _db[STOCK_CATS_KEY];
+  setS(STOCK_CATS_KEY, DEFAULT_CATS);
   return [...DEFAULT_CATS];
 }
-function saveStockCats(cats){ localStorage.setItem(STOCK_CATS_KEY, JSON.stringify(cats)); }
+function saveStockCats(cats){ setS(STOCK_CATS_KEY, cats); }
 
 function addStockCat(){
   const inp = document.getElementById('new-cat-inp');
@@ -2304,26 +2235,13 @@ const DEFAULT_STOCK = [
   { id:'s4', name:'Item 4', category:'General', unit:'pcs', qty:0, minQty:5, notes:'' },
 ];
 
-function loadStock() {
-  const raw = localStorage.getItem(STOCK_KEY);
-  if(raw){
-    try{
-      const parsed = JSON.parse(raw);
-      if(Array.isArray(parsed)) return parsed;
-    }catch(e){
-      console.warn('[KSQ] loadStock: corrupted data, resetting to empty');
-    }
-  }
-  return [];
+function loadStock(){
+  return Array.isArray(_db[STOCK_KEY]) ? _db[STOCK_KEY] : [];
 }
-
-function saveStock(items) {
-  localStorage.setItem(STOCK_KEY, JSON.stringify(items));
-}
+function saveStock(items){ setS(STOCK_KEY, items); }
 
 function renderStockPendingOrders(){
-  let allOrders;
-  try{ allOrders = JSON.parse(localStorage.getItem(BRANCH_ORDERS_KEY)||'[]'); }catch(e){ allOrders = []; }
+  const allOrders = Array.isArray(_db[BRANCH_ORDERS_KEY]) ? _db[BRANCH_ORDERS_KEY] : [];
   const pending = allOrders.filter(o=>o.status==='Pending');
   const badge = document.getElementById('stock-pending-badge');
   const wrap  = document.getElementById('stock-pending-orders');
@@ -2712,12 +2630,8 @@ async function forceSyncNow(){
   if(btn){ btn.style.opacity='0.5'; btn.style.pointerEvents='none'; }
   _showSaveToast('saving', '⏳ Syncing all data…');
   try{
-    const stockKeys = _STOCK_TOAST_KEYS.filter(k => _origGetItem(k));
-    const batch = stockKeys.map(k => {
-      let val;
-      try{ val = JSON.parse(_origGetItem(k)); }catch(e){ val = null; }
-      return {key:k, value:val, updated_at:new Date().toISOString()};
-    }).filter(r => r.value !== null);
+    const stockKeys = _STOCK_TOAST_KEYS.filter(k => _db[k] != null);
+    const batch = stockKeys.map(k => ({key:k, value:_db[k], updated_at:new Date().toISOString()}));
     if(batch.length > 0){
       const { error } = await _sb.from('kv_store').upsert(batch, {onConflict:'key'});
       if(error){
@@ -2747,7 +2661,7 @@ async function pullFromCloud(){
     if(error){ _showSaveToast('error', '⚠ Pull failed — check connection'); return; }
     (data||[]).forEach(row => {
       if(!_STOCK_TOAST_KEYS.includes(row.key)) return;
-      _origSetItem(row.key, JSON.stringify(row.value));
+      _db[row.key] = row.value;
     });
     _showSaveToast('success', '✓ Data pulled from cloud');
     renderStock();
@@ -2902,10 +2816,8 @@ async function deleteStockItem(id) {
 // Immediately upsert a single key to Supabase — returns a promise so callers can await it
 function _forcePushKey(k){
   if(!_sbReady || !_sb) return Promise.resolve();
-  const raw = _origGetItem(k);
-  if(!raw) return Promise.resolve();
-  let val;
-  try{ val = JSON.parse(raw); }catch(e){ return Promise.resolve(); }
+  const val = _db[k];
+  if(val == null) return Promise.resolve();
   return _sb.from('kv_store')
     .upsert({key:k, value:val, updated_at:new Date().toISOString()}, {onConflict:'key'})
     .catch(()=>{});
@@ -2932,7 +2844,7 @@ function setBranchOrderFilter(f){
 }
 
 function renderBranchOrdersPage(){
-  const allOrders = JSON.parse(localStorage.getItem(BRANCH_ORDERS_KEY)||'[]');
+  const allOrders = Array.isArray(_db[BRANCH_ORDERS_KEY]) ? _db[BRANCH_ORDERS_KEY] : [];
   const pending = allOrders.filter(o=>o.status==='Pending');
 
   // Update badge
@@ -2993,7 +2905,7 @@ function renderReports(){
   const allSales  = getS(K_SALES);
   const allExp    = getS(K_EXP);
   const allSal    = getS(K_SAL);
-  const allOrders = JSON.parse(localStorage.getItem(BRANCH_ORDERS_KEY)||'[]');
+  const allOrders = Array.isArray(_db[BRANCH_ORDERS_KEY]) ? _db[BRANCH_ORDERS_KEY] : [];
 
   // Populate year/month selectors
   const years = [...new Set(allSales.map(s=>s.date.slice(0,4)))].sort((a,b)=>b-a);
@@ -3881,7 +3793,7 @@ function saveSettingsCat(){
   const cats=loadStockCats();
   if(cats.includes(name)){ alert('Category already exists.'); return; }
   cats.push(name);
-  localStorage.setItem(STOCK_CATS_KEY, JSON.stringify(cats));
+  setS(STOCK_CATS_KEY, cats);
   closeModal('settings-cat-modal');
   renderSettings();
 }
@@ -3892,7 +3804,7 @@ function exportAllData(){
     'ksq_cainta','ksq_marikina','ksq_antipolo','ksq_taytay','ksq_quezon_city',
     'ksq_cainta_sales','ksq_marikina_sales','ksq_antipolo_sales','ksq_taytay_sales','ksq_quezon_city_sales'];
   const data={};
-  keys.forEach(k=>{ const v=localStorage.getItem(k); if(v) data[k]=JSON.parse(v); });
+  keys.forEach(k=>{ const v=_db[k]; if(v!=null) data[k]=v; });
   const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
   const a=document.createElement('a');
   a.href=URL.createObjectURL(blob);
@@ -3907,7 +3819,7 @@ function importAllData(e){
   reader.onload=ev=>{
     try{
       const data=JSON.parse(ev.target.result);
-      Object.entries(data).forEach(([k,v])=>localStorage.setItem(k,JSON.stringify(v)));
+      Object.entries(data).forEach(([k,v])=>setS(k,v));
       alert('Backup restored successfully. The page will reload.');
       location.reload();
     } catch{ alert('Invalid backup file.'); }
@@ -3919,12 +3831,12 @@ function importAllData(e){
 function clearAllData(){
   if(!confirm('This will permanently delete ALL records. This cannot be undone. Continue?')) return;
   if(!confirm('Are you sure? All sales, expenses, salary, stock, and branch data will be erased.')) return;
-  // Use setItem with empty arrays (NOT removeItem) so the interceptor fires and Supabase gets cleared too
+  // Use setS so _db is updated and Supabase gets cleared too
   ['ksq_sales','ksq_expenses','ksq_salary','ksq_sal_daily','ksq_employees_v1','ksq_other',
    'ksq_stock_v1','ksq_stock_cats_v1','ksq_stock_log_v1','ksq_branch_orders_v1',
    'ksq_cainta','ksq_marikina','ksq_antipolo','ksq_taytay','ksq_quezon_city',
    'ksq_cainta_sales','ksq_marikina_sales','ksq_antipolo_sales','ksq_taytay_sales','ksq_quezon_city_sales']
-  .forEach(k => localStorage.setItem(k, '[]')); // triggers interceptor → updates Supabase + sets localTs
+  .forEach(k => setS(k, []));
   alert('All data cleared. The page will reload.');
   location.reload();
 }
@@ -3944,27 +3856,27 @@ async function clearMonthData(ym){
     return after;
   }
 
-  // Filter all data locally using _origSetItem (bypasses interceptor — we do ONE batch push below)
-  const fSales      = filterByMonth(getS(K_SALES),     'date');  _origSetItem(K_SALES,     JSON.stringify(fSales));
-  const fExp        = filterByMonth(getS(K_EXP),       'date');  _origSetItem(K_EXP,       JSON.stringify(fExp));
-  const fSal        = filterByMonth(getS(K_SAL),       'month'); _origSetItem(K_SAL,       JSON.stringify(fSal));
-  const fSalDaily   = filterByMonth(getS(K_SAL_DAILY), 'date');  _origSetItem(K_SAL_DAILY, JSON.stringify(fSalDaily));
+  // Filter all data locally, update _db directly — we do ONE batch push below
+  const fSales      = filterByMonth(getS(K_SALES),     'date');  _db[K_SALES]     = fSales;
+  const fExp        = filterByMonth(getS(K_EXP),       'date');  _db[K_EXP]       = fExp;
+  const fSal        = filterByMonth(getS(K_SAL),       'month'); _db[K_SAL]       = fSal;
+  const fSalDaily   = filterByMonth(getS(K_SAL_DAILY), 'date');  _db[K_SAL_DAILY] = fSalDaily;
 
   const branchVals = {};
   BRANCHES.forEach(b => {
-    const fk = filterByMonth(JSON.parse(_origGetItem(b.kKey)||'[]'), 'date');
-    _origSetItem(b.kKey, JSON.stringify(fk)); branchVals[b.kKey] = fk;
-    const fs = filterByMonth(JSON.parse(_origGetItem(b.sKey)||'[]'), 'date');
-    _origSetItem(b.sKey, JSON.stringify(fs)); branchVals[b.sKey] = fs;
+    const fk = filterByMonth(Array.isArray(_db[b.kKey]) ? _db[b.kKey] : [], 'date');
+    _db[b.kKey] = fk; branchVals[b.kKey] = fk;
+    const fs = filterByMonth(Array.isArray(_db[b.sKey]) ? _db[b.sKey] : [], 'date');
+    _db[b.sKey] = fs; branchVals[b.sKey] = fs;
   });
 
   const log = loadStockLog();
   const fLog = log.filter(e => { const m=!(e.ts||'').startsWith(ym); if(!m) totalRemoved++; return m; });
-  _origSetItem(STOCK_LOG_KEY, JSON.stringify(fLog));
+  _db[STOCK_LOG_KEY] = fLog;
 
-  const orders = JSON.parse(_origGetItem(BRANCH_ORDERS_KEY)||'[]');
+  const orders = Array.isArray(_db[BRANCH_ORDERS_KEY]) ? _db[BRANCH_ORDERS_KEY] : [];
   const fOrders = orders.filter(o => { const m=!(o.createdAt||o.date||'').startsWith(ym); if(!m) totalRemoved++; return m; });
-  _origSetItem(BRANCH_ORDERS_KEY, JSON.stringify(fOrders));
+  _db[BRANCH_ORDERS_KEY] = fOrders;
 
   // Re-render immediately so UI updates without waiting for cloud
   renderCurrentTab();
@@ -4244,10 +4156,10 @@ function renderBranchSales(){
 // ── BRANCH ORDERS ────────────────────────────────────────────
 const BRANCH_ORDERS_KEY = 'ksq_branch_orders_v1';
 function getBranchOrders(branchKey){
-  const all = JSON.parse(localStorage.getItem(BRANCH_ORDERS_KEY)||'[]');
+  const all = Array.isArray(_db[BRANCH_ORDERS_KEY]) ? _db[BRANCH_ORDERS_KEY] : [];
   return branchKey ? all.filter(o=>o.branch===branchKey) : all;
 }
-function saveBranchOrders(orders){ localStorage.setItem(BRANCH_ORDERS_KEY, JSON.stringify(orders)); }
+function saveBranchOrders(orders){ setS(BRANCH_ORDERS_KEY, orders); }
 
 function openBranchOrderModal(branchKey){
   const b = BRANCHES.find(x=>x.key===branchKey);
@@ -4347,8 +4259,7 @@ function submitBranchOrder(branchKey){
   const stockItems = loadStock();
   const item = stockItems.find(i=>i.id===itemId);
   if(!item) return;
-  let all;
-  try{ all = JSON.parse(localStorage.getItem(BRANCH_ORDERS_KEY)||'[]'); }catch(e){ all = []; }
+  const all = Array.isArray(_db[BRANCH_ORDERS_KEY]) ? [..._db[BRANCH_ORDERS_KEY]] : [];
   const d = new Date(dateVal+'T00:00:00');
   all.push({
     id: 'bo'+Date.now(),
@@ -4370,8 +4281,7 @@ function submitBranchOrder(branchKey){
 }
 
 function updateBranchOrderStatus(branchKey, orderId, newStatus){
-  let all;
-  try{ all = JSON.parse(localStorage.getItem(BRANCH_ORDERS_KEY)||'[]'); }catch(e){ all = []; }
+  const all = Array.isArray(_db[BRANCH_ORDERS_KEY]) ? [..._db[BRANCH_ORDERS_KEY]] : [];
   const o = all.find(x=>x.id===orderId);
   if(!o) return;
   const prev = o.status;
@@ -5185,7 +5095,7 @@ function buildNotifications(){
 
   // ── Pending branch orders ──
   try{
-    const allOrders=JSON.parse(localStorage.getItem(BRANCH_ORDERS_KEY)||'[]');
+    const allOrders=Array.isArray(_db[BRANCH_ORDERS_KEY])?_db[BRANCH_ORDERS_KEY]:[];
     const pending=allOrders.filter(o=>o.status==='Pending');
     if(pending.length){
       notifs.push({
