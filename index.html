@@ -555,6 +555,10 @@ th { background: #F3F5F8; color: #374151; border-bottom-color: #C8D0DB; }
         <div class="nav-item" onclick="showTab('settings');closeMobSidebar()" data-access="admin-only">
           <span class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span><span>Settings</span>
         </div>
+        <div class="nav-item" onclick="showTab('notifications');closeMobSidebar()" data-access="admin" style="position:relative">
+          <span class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></span><span>Notifications</span>
+          <span id="notif-nav-badge" style="display:none;margin-left:auto;background:#dc2626;color:#fff;font-size:.58rem;font-weight:800;min-width:17px;height:17px;padding:0 5px;border-radius:20px;line-height:17px;text-align:center">0</span>
+        </div>
         <div class="nav-section" data-access="branches">Branches</div>
         <div class="nav-item" onclick="showTab('cainta');closeMobSidebar()" data-access="branch-cainta">
           <span class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></span><span>Cainta</span>
@@ -1205,6 +1209,31 @@ th { background: #F3F5F8; color: #374151; border-bottom-color: #C8D0DB; }
         </div>
       </div>
 
+      <!-- NOTIFICATIONS -->
+      <div id="tab-notifications" style="display:none">
+        <div class="topbar">
+          <div class="topbar-left">
+            <div class="page-title">Notifications</div>
+            <div class="page-sub" id="notif-page-sub">Activity alerts &amp; updates</div>
+          </div>
+          <div class="topbar-right">
+            <button class="btn btn-ghost" onclick="markAllNotifsRead()" style="font-size:.78rem">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              Mark all read
+            </button>
+          </div>
+        </div>
+        <!-- Filter tabs -->
+        <div style="display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:18px;background:var(--white);border-radius:var(--r) var(--r) 0 0;padding:0 6px;box-shadow:var(--sh-sm);border:1px solid var(--border);border-bottom:2px solid var(--border)">
+          <button class="s-vt active" id="nf-all"     onclick="setNotifFilter('all')"    >All</button>
+          <button class="s-vt"        id="nf-unread"  onclick="setNotifFilter('unread')" >Unread <span id="nf-unread-count" style="margin-left:4px;background:#dc2626;color:#fff;font-size:.58rem;font-weight:800;padding:1px 6px;border-radius:20px;display:none">0</span></button>
+          <button class="s-vt"        id="nf-alerts"  onclick="setNotifFilter('alerts')" >⚠ Alerts</button>
+          <button class="s-vt"        id="nf-updates" onclick="setNotifFilter('updates')">📝 Updates</button>
+        </div>
+        <!-- Notification list -->
+        <div id="notif-list"></div>
+      </div>
+
       <div id="tab-cainta"       style="display:none" data-branch="cainta"></div>
       <div id="tab-marikina"     style="display:none" data-branch="marikina"></div>
       <div id="tab-antipolo"     style="display:none" data-branch="antipolo"></div>
@@ -1563,7 +1592,7 @@ const BRANCHES = [
   { key:'quezon-city',  label:'Quezon City',  kKey:'ksq_quezon_city',  sKey:'ksq_quezon_city_sales'  },
 ];
 const branchView = {cainta:'sales',marikina:'sales',antipolo:'sales',taytay:'sales','quezon-city':'sales'};
-const ALL_TABS = ['dashboard','sales','branches-sale','expenses','salary','stock','branch-orders','reports','others','settings','cainta','marikina','antipolo','taytay','quezon-city'];
+const ALL_TABS = ['dashboard','sales','branches-sale','expenses','salary','stock','branch-orders','reports','others','settings','notifications','cainta','marikina','antipolo','taytay','quezon-city'];
 let editSaleId = null, editExpId = null, editSalId = null, editOtherId = null, editBranchId = null;
 let empProfileName = '', empCalYear = new Date().getFullYear(), empCalMonth = new Date().getMonth();
 const EMP_CAL_MO = ['JANUARY','FEBRUARY','MARCH','APRIL','MAY','JUNE','JULY','AUGUST','SEPTEMBER','OCTOBER','NOVEMBER','DECEMBER'];
@@ -1647,6 +1676,7 @@ function renderCurrentTab(){
   else if(active==='branch-orders') renderBranchOrdersPage();
   else if(active==='reports') renderReports();
   else if(active==='others') renderOther();
+  else if(active==='notifications') renderNotifications();
   else{ const b=BRANCHES.find(x=>x.key===active); if(b) renderBranch(b); }
 }
 
@@ -1986,7 +2016,8 @@ function showTab(tab){
   else if(tab==='stock')          renderStock();
   else if(tab==='branch-orders')  renderBranchOrdersPage();
   else if(tab==='reports')        renderReports();
-  else if(tab==='settings')  { renderSettings(); loadEmailConfigIntoSettings(); }
+  else if(tab==='settings')       { renderSettings(); loadEmailConfigIntoSettings(); }
+  else if(tab==='notifications')  renderNotifications();
   else { const b=BRANCHES.find(x=>x.key===tab); if(b) renderBranch(b); }
 }
 
@@ -4310,6 +4341,7 @@ function init(){
   const role=sessionStorage.getItem('ksq_role')||'admin';
   applyRoleUI(role);
   showTab((role==='admin'||role==='investor')?'dashboard':role);
+  setTimeout(updateNotifBadge, 500);
 }
 
 // ── CROSS-TAB / AUTO-SYNC ──
@@ -4662,6 +4694,232 @@ window.onload=async()=>{
     setTimeout(()=>document.getElementById('login-username').focus(),100);
   }
 };
+
+// ── NOTIFICATIONS ────────────────────────────────────────────────────────────
+const K_NOTIF_READ = 'ksq_notif_read';
+let _notifFilter = 'all';
+
+function getNotifReadSet(){
+  try{ return new Set(JSON.parse(localStorage.getItem(K_NOTIF_READ)||'[]')); }catch{ return new Set(); }
+}
+function saveNotifReadSet(s){ localStorage.setItem(K_NOTIF_READ, JSON.stringify([...s])); }
+
+function markNotifRead(id){
+  const s=getNotifReadSet(); s.add(id); saveNotifReadSet(s);
+  renderNotifications(); updateNotifBadge();
+}
+
+function markAllNotifsRead(){
+  const notifs=buildNotifications();
+  const s=getNotifReadSet();
+  notifs.forEach(n=>s.add(n.id));
+  saveNotifReadSet(s); renderNotifications(); updateNotifBadge();
+}
+
+function setNotifFilter(f){
+  _notifFilter=f;
+  ['all','unread','alerts','updates'].forEach(x=>{
+    const el=document.getElementById('nf-'+x);
+    if(el) el.classList.toggle('active',x===f);
+  });
+  renderNotifications();
+}
+
+function buildNotifications(){
+  const notifs=[];
+  const todayStr=new Date().toISOString().slice(0,10);
+  const sevenAgo=new Date(Date.now()-7*86400000).toISOString().slice(0,10);
+  const threeAgo=new Date(Date.now()-3*86400000).toISOString().slice(0,10);
+
+  // ── Low stock alerts ──
+  try{
+    const stockItems=loadStock();
+    stockItems.forEach(item=>{
+      if(item.qty<=item.minQty){
+        notifs.push({
+          id:'low-stock-'+item.id,
+          type:'alert',
+          icon:'📦',
+          title:'Low Stock: '+item.name,
+          body:'Only '+item.qty+' '+(item.unit||'pcs')+' remaining (min: '+item.minQty+')',
+          date:todayStr, ts:Date.now()-1000,
+          tab:'stock'
+        });
+      }
+    });
+  }catch(e){}
+
+  // ── Pending branch orders ──
+  try{
+    const allOrders=JSON.parse(localStorage.getItem(BRANCH_ORDERS_KEY)||'[]');
+    const pending=allOrders.filter(o=>o.status==='Pending');
+    if(pending.length){
+      notifs.push({
+        id:'pending-orders-'+pending.length,
+        type:'alert',
+        icon:'🛒',
+        title:pending.length+' Pending Branch Order'+(pending.length!==1?'s':''),
+        body:'Orders from branches awaiting fulfillment',
+        date:todayStr, ts:Date.now()-2000,
+        tab:'branch-orders'
+      });
+    }
+    // ── Recently fulfilled orders ──
+    allOrders.filter(o=>o.status==='Fulfilled'&&o.date>=threeAgo).slice(0,5).forEach(o=>{
+      const bl=(BRANCHES.find(b=>b.key===o.branch)||{label:o.branch}).label;
+      notifs.push({
+        id:'fulfilled-'+o.id,
+        type:'success',
+        icon:'✅',
+        title:'Order Fulfilled — '+bl,
+        body:o.qty+' × '+o.itemName+' has been fulfilled',
+        date:o.date, ts:new Date(o.date+'T12:00:00').getTime(),
+        tab:'branch-orders'
+      });
+    });
+  }catch(e){}
+
+  // ── Recent sales (7 days) ──
+  try{
+    const sales=getS(K_SALES).filter(s=>s.date>=sevenAgo);
+    if(sales.length){
+      const total=sales.reduce((s,r)=>s+(r.amount||0),0);
+      notifs.push({
+        id:'recent-sales-7d',
+        type:'info',
+        icon:'💰',
+        title:sales.length+' Sale'+(sales.length!==1?'s':'')+' This Week',
+        body:'Total: ₱'+total.toLocaleString()+' over the past 7 days',
+        date:todayStr, ts:Date.now()-3000,
+        tab:'sales'
+      });
+    }
+  }catch(e){}
+
+  // ── Recent expenses (7 days) ──
+  try{
+    const exps=getS(K_EXP).filter(e=>e.date>=sevenAgo);
+    if(exps.length){
+      const total=exps.reduce((s,e)=>s+(e.amount||0),0);
+      notifs.push({
+        id:'recent-expenses-7d',
+        type:'info',
+        icon:'💳',
+        title:exps.length+' Expense'+(exps.length!==1?'s':'')+' This Week',
+        body:'Total spent: ₱'+total.toLocaleString()+' over the past 7 days',
+        date:todayStr, ts:Date.now()-4000,
+        tab:'expenses'
+      });
+    }
+  }catch(e){}
+
+  // ── Recent stock log events ──
+  try{
+    const log=loadStockLog().slice(0,8);
+    log.forEach(l=>{
+      notifs.push({
+        id:'stock-log-'+l.id,
+        type:'update',
+        icon:'📝',
+        title:'Stock '+l.action+': '+l.itemName,
+        body:l.details||'Inventory updated',
+        date:(l.ts||'').slice(0,10)||todayStr,
+        ts:l.id||0,
+        tab:'stock'
+      });
+    });
+  }catch(e){}
+
+  notifs.sort((a,b)=>(b.ts||0)-(a.ts||0));
+  return notifs;
+}
+
+function updateNotifBadge(){
+  const notifs=buildNotifications();
+  const read=getNotifReadSet();
+  const unread=notifs.filter(n=>!read.has(n.id)).length;
+  const badge=document.getElementById('notif-nav-badge');
+  if(!badge) return;
+  badge.style.display=unread?'':'none';
+  badge.textContent=unread>99?'99+':unread;
+}
+
+function renderNotifications(){
+  const el=document.getElementById('notif-list');
+  if(!el) return;
+  const notifs=buildNotifications();
+  const read=getNotifReadSet();
+  const unreadCount=notifs.filter(n=>!read.has(n.id)).length;
+
+  // Update unread count pill on tab
+  const uc=document.getElementById('nf-unread-count');
+  if(uc){ uc.textContent=unreadCount; uc.style.display=unreadCount?'':'none'; }
+
+  // Update page sub
+  const sub=document.getElementById('notif-page-sub');
+  if(sub) sub.textContent=unreadCount>0?unreadCount+' unread notification'+(unreadCount!==1?'s':''):'All caught up';
+
+  // Filter
+  let filtered=notifs;
+  if(_notifFilter==='unread')  filtered=notifs.filter(n=>!read.has(n.id));
+  else if(_notifFilter==='alerts')  filtered=notifs.filter(n=>n.type==='alert');
+  else if(_notifFilter==='updates') filtered=notifs.filter(n=>n.type==='update'||n.type==='info'||n.type==='success');
+
+  updateNotifBadge();
+
+  if(!filtered.length){
+    el.innerHTML=`
+      <div style="text-align:center;padding:72px 24px;color:var(--muted)">
+        <div style="font-size:2.5rem;margin-bottom:12px">🔔</div>
+        <div style="font-weight:700;font-size:.92rem;color:var(--text);margin-bottom:6px">No notifications</div>
+        <div style="font-size:.8rem">${_notifFilter==='unread'?'You\'re all caught up!':'Nothing to show here.'}</div>
+      </div>`;
+    return;
+  }
+
+  const typeColors={
+    alert:   {bg:'#fef2f2',border:'#fca5a5',dot:'#dc2626',label:'Alert',    lbg:'#fee2e2',lc:'#991b1b'},
+    warning: {bg:'#fffbeb',border:'#fcd34d',dot:'#d97706',label:'Warning',  lbg:'#fef3c7',lc:'#92400e'},
+    info:    {bg:'#eff6ff',border:'#93c5fd',dot:'#2563eb',label:'Info',     lbg:'#dbeafe',lc:'#1e40af'},
+    success: {bg:'#f0fdf4',border:'#86efac',dot:'#16a34a',label:'Done',     lbg:'#dcfce7',lc:'#166534'},
+    update:  {bg:'#f8fafc',border:'#cbd5e1',dot:'#475569',label:'Update',   lbg:'#e2e8f0',lc:'#334155'},
+  };
+
+  el.innerHTML=filtered.map(n=>{
+    const isRead=read.has(n.id);
+    const c=typeColors[n.type]||typeColors.update;
+    return `
+    <div style="background:${isRead?'var(--white)':c.bg};border:1.5px solid ${isRead?'var(--border)':c.border};border-radius:var(--r);padding:16px 20px;margin-bottom:10px;display:flex;align-items:flex-start;gap:14px;transition:all .15s;cursor:pointer;position:relative"
+         onclick="markNotifRead('${n.id}');showTab('${n.tab||'dashboard'}')" title="Click to view">
+      <div style="font-size:1.3rem;flex-shrink:0;margin-top:2px">${n.icon}</div>
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap">
+          <span style="font-size:.82rem;font-weight:700;color:var(--text)">${n.title}</span>
+          <span style="background:${c.lbg};color:${c.lc};font-size:.6rem;font-weight:700;padding:2px 8px;border-radius:20px;text-transform:uppercase;letter-spacing:.05em">${c.label}</span>
+          ${!isRead?`<span style="width:7px;height:7px;border-radius:50%;background:${c.dot};display:inline-block;margin-left:2px" title="Unread"></span>`:''}
+        </div>
+        <div style="font-size:.78rem;color:var(--muted);margin-bottom:6px">${n.body}</div>
+        <div style="font-size:.68rem;color:var(--light)">${formatNotifDate(n.date)}</div>
+      </div>
+      ${!isRead?`<button onclick="event.stopPropagation();markNotifRead('${n.id}')" title="Mark as read"
+        style="background:none;border:1.5px solid var(--border);border-radius:6px;width:26px;height:26px;cursor:pointer;color:var(--muted);font-size:.65rem;flex-shrink:0;display:flex;align-items:center;justify-content:center">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      </button>`:''}
+    </div>`;
+  }).join('');
+}
+
+function formatNotifDate(d){
+  if(!d) return '';
+  try{
+    const date=new Date(d+'T12:00:00');
+    const diff=Math.floor((Date.now()-date.getTime())/86400000);
+    if(diff===0) return 'Today';
+    if(diff===1) return 'Yesterday';
+    if(diff<7)   return diff+' days ago';
+    return date.toLocaleDateString('en-PH',{month:'short',day:'numeric',year:'numeric'});
+  }catch{ return d; }
+}
 </script>
 </body>
 </html>
