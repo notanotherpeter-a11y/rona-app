@@ -2470,7 +2470,7 @@ function quickPickItem(id){
   renderQuickPickList();
 }
 
-function qpAdjust(id, delta){
+async function qpAdjust(id, delta){
   const items = loadStock();
   const item = items.find(i => i.id === id);
   if(!item) return;
@@ -2480,10 +2480,10 @@ function qpAdjust(id, delta){
   item.qty = newQty;
   saveStock(items);
   addStockLog(delta > 0 ? 'Qty +' : 'Qty −', item.name, `${oldQty} → ${newQty} ${item.unit||''}`.trim());
-  _forcePushKey('ksq_stock_v1'); // same immediate cloud push as adjustStockQty
-  renderQuickPickList();          // update qty display in expanded row
-  renderStock();                  // update main table/cards + notifications
+  renderQuickPickList();
+  renderStock();
   updateNotifBadge();
+  await _forcePushKey('ksq_stock_v1');
 }
 
 function quickPickDelete(id, name){
@@ -2646,7 +2646,7 @@ function renderStock() {
   }
 }
 
-function saveStockMin(id, val){
+async function saveStockMin(id, val){
   const items = loadStock();
   const item = items.find(i => i.id === id);
   if(!item) return;
@@ -2657,20 +2657,21 @@ function saveStockMin(id, val){
   saveStock(items);
   addStockLog('Edited', item.name, `Min qty: ${oldMin} → ${newMin}`);
   renderStock();
+  await _forcePushKey('ksq_stock_v1');
 }
 
-function adjustStockQty(id, delta) {
+async function adjustStockQty(id, delta) {
   const items = loadStock();
   const item = items.find(i => i.id === id);
   if (!item) return;
   const oldQty = item.qty || 0;
   const newQty = Math.max(0, oldQty + delta);
-  if (newQty === oldQty) return; // no change (e.g. already at 0 and pressing −)
+  if (newQty === oldQty) return;
   item.qty = newQty;
   saveStock(items);
   addStockLog(delta > 0 ? 'Qty +' : 'Qty −', item.name, `${oldQty} → ${item.qty} ${item.unit||''}`.trim());
   renderStock();
-  _forcePushKey('ksq_stock_v1'); // push immediately — don't risk async queue timing out before refresh
+  await _forcePushKey('ksq_stock_v1');
 }
 
 // Force push all stock data to Supabase right now (bypasses pending queue logic)
@@ -2799,7 +2800,7 @@ function closeStockModal() {
   document.getElementById('stock-modal').style.display = 'none';
 }
 
-function saveStockItem() {
+async function saveStockItem() {
   const name = document.getElementById('stock-name').value.trim();
   if (!name) { alert('Item name is required.'); return; }
   // Resolve custom category and auto-save it to the categories list
@@ -2855,29 +2856,32 @@ function saveStockItem() {
   saveStock(items);
   closeStockModal();
   renderStock();
-  _forcePushKey('ksq_stock_v1');
+  _showSaveToast('saving', '⏳ Saving…');
+  await _forcePushKey('ksq_stock_v1');
+  _showSaveToast('success', '✓ Saved to Cloud');
 }
 
-function deleteStockItem(id) {
+async function deleteStockItem(id) {
   if (!confirm('Delete this item?')) return;
   const all = loadStock();
   const item = all.find(i => i.id === id);
   const remaining = all.filter(i => i.id !== id);
-  saveStock(remaining); // saves locally + interceptor marks pending + async upsert
+  saveStock(remaining);
   if(item) addStockLog('Deleted', item.name, `Was ${item.qty} ${item.unit||''}`.trim());
   renderStock();
-  // Also force-push to Supabase right now so refresh can't restore the deleted item
-  _forcePushKey('ksq_stock_v1');
+  _showSaveToast('saving', '⏳ Saving…');
+  await _forcePushKey('ksq_stock_v1');
+  _showSaveToast('success', '✓ Saved to Cloud');
 }
 
-// Immediately upsert a single key to Supabase (bypasses background queue timing)
+// Immediately upsert a single key to Supabase — returns a promise so callers can await it
 function _forcePushKey(k){
-  if(!_sbReady || !_sb) return;
+  if(!_sbReady || !_sb) return Promise.resolve();
   const raw = _origGetItem(k);
-  if(!raw) return;
+  if(!raw) return Promise.resolve();
   let val;
-  try{ val = JSON.parse(raw); }catch(e){ return; }
-  _sb.from('kv_store')
+  try{ val = JSON.parse(raw); }catch(e){ return Promise.resolve(); }
+  return _sb.from('kv_store')
     .upsert({key:k, value:val, updated_at:new Date().toISOString()}, {onConflict:'key'})
     .catch(()=>{});
 }
