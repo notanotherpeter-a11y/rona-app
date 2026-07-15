@@ -897,6 +897,20 @@ th { background: #F3F5F8; color: #374151; border-bottom-color: #C8D0DB; }
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
               Log History
             </button>
+            <!-- Quick Pick dropdown -->
+            <div style="position:relative">
+              <button id="quick-pick-btn" onclick="toggleQuickPickDropdown()" style="padding:9px 14px;border:1.5px solid var(--border);border-radius:var(--r-sm);font-size:.82rem;font-weight:600;cursor:pointer;font-family:inherit;background:#fff;color:var(--text);box-shadow:var(--sh-sm);display:flex;align-items:center;gap:7px;white-space:nowrap" title="Pick from existing items">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                Item List
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
+              <div id="quick-pick-menu" style="display:none;position:absolute;top:calc(100% + 6px);right:0;background:#fff;border:1.5px solid var(--border);border-radius:var(--r-sm);box-shadow:var(--sh);z-index:200;width:260px;overflow:hidden">
+                <div style="padding:10px 12px;border-bottom:1px solid var(--border)">
+                  <input id="quick-pick-search" type="text" placeholder="Search items…" oninput="renderQuickPickList()" style="width:100%;padding:6px 10px;border:1.5px solid var(--border);border-radius:7px;font-size:.8rem;font-family:inherit;outline:none;box-sizing:border-box">
+                </div>
+                <div id="quick-pick-list" style="max-height:260px;overflow-y:auto"></div>
+              </div>
+            </div>
             <button class="btn btn-red" onclick="openStockModal()">+ Add Item</button>
           </div>
         </div>
@@ -2291,10 +2305,70 @@ function setCatFilter(cat){
   renderStock();
 }
 
-// Close dropdown when clicking outside
+// Close category filter dropdown when clicking outside
 document.addEventListener('click', e => {
   const menu = document.getElementById('stock-cat-filter-menu');
   const btn  = document.getElementById('stock-cat-filter-btn');
+  if(menu && btn && !btn.contains(e.target) && !menu.contains(e.target)){
+    menu.style.display = 'none';
+  }
+});
+
+// ── Quick Pick ────────────────────────────────────────────────
+function toggleQuickPickDropdown(){
+  const menu = document.getElementById('quick-pick-menu');
+  if(!menu) return;
+  const isOpen = menu.style.display !== 'none';
+  menu.style.display = isOpen ? 'none' : 'block';
+  if(!isOpen){
+    const inp = document.getElementById('quick-pick-search');
+    if(inp) inp.value = '';
+    renderQuickPickList();
+    setTimeout(() => { if(inp) inp.focus(); }, 60);
+  }
+}
+
+function renderQuickPickList(){
+  const list = document.getElementById('quick-pick-list');
+  if(!list) return;
+  const q = (document.getElementById('quick-pick-search')?.value || '').toLowerCase();
+  const items = loadStock();
+  const filtered = q ? items.filter(i => i.name.toLowerCase().includes(q) || (i.category||'').toLowerCase().includes(q)) : items;
+  if(!filtered.length){
+    list.innerHTML = `<div style="padding:20px;text-align:center;color:var(--muted);font-size:.8rem">${q ? 'No items match.' : 'No items yet.'}</div>`;
+    return;
+  }
+  list.innerHTML = filtered.map(i => {
+    const catColor = '#2563eb';
+    return `<button onclick="quickPickItem('${i.id}')" style="display:flex;align-items:center;gap:10px;width:100%;padding:10px 14px;border:none;background:none;cursor:pointer;font-family:inherit;text-align:left;border-bottom:1px solid var(--border);transition:background .1s" onmouseover="this.style.background='#f8f9fb'" onmouseout="this.style.background='none'">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:.83rem;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${i.name}</div>
+        ${i.category ? `<div style="font-size:.72rem;color:${catColor};margin-top:2px">${i.category}</div>` : ''}
+      </div>
+      <div style="font-size:.75rem;color:var(--muted);flex-shrink:0">${i.unit || ''}</div>
+    </button>`;
+  }).join('');
+}
+
+function quickPickItem(id){
+  const item = loadStock().find(i => i.id === id);
+  if(!item) return;
+  // Close quick pick dropdown
+  const menu = document.getElementById('quick-pick-menu');
+  if(menu) menu.style.display = 'none';
+  // Open Add Item modal pre-filled with this item's details
+  openStockModal();
+  document.getElementById('stock-name').value = item.name;
+  setCatField(item.category || '');
+  setUnitField(item.unit || '');
+  document.getElementById('stock-qty').value = '';
+  document.getElementById('stock-notes').value = item.notes || '';
+}
+
+// Close Quick Pick dropdown when clicking outside
+document.addEventListener('click', e => {
+  const menu = document.getElementById('quick-pick-menu');
+  const btn  = document.getElementById('quick-pick-btn');
   if(menu && btn && !btn.contains(e.target) && !menu.contains(e.target)){
     menu.style.display = 'none';
   }
