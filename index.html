@@ -2419,6 +2419,8 @@ function toggleQuickPickDropdown(){
   }
 }
 
+let _qpActiveId = null;
+
 function renderQuickPickList(){
   const list = document.getElementById('quick-pick-list');
   if(!list) return;
@@ -2430,14 +2432,39 @@ function renderQuickPickList(){
     return;
   }
   list.innerHTML = filtered.map(i => {
-    const catColor = '#2563eb';
+    const isActive = _qpActiveId === i.id;
+    const qtyColor = i.qty === 0 ? '#dc2626' : i.qty <= (i.minQty||0) ? '#d97706' : '#16a34a';
+    if(isActive){
+      // Expanded row — inline qty adjuster
+      return `<div style="border-bottom:1px solid var(--border);background:#f0f6ff">
+        <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid #dbeafe">
+          <div style="flex:1;min-width:0">
+            <div style="font-size:.83rem;font-weight:700;color:#1d4ed8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${i.name}</div>
+            ${i.category ? `<div style="font-size:.72rem;color:#2563eb;margin-top:1px">${i.category}</div>` : ''}
+          </div>
+          <button onclick="_qpActiveId=null;renderQuickPickList()" style="padding:4px 8px;border:1px solid #bfdbfe;background:#eff6ff;color:#1d4ed8;border-radius:6px;cursor:pointer;font-size:.72rem;font-family:inherit">✕ Close</button>
+          <button onclick="quickPickDelete('${i.id}','${i.name.replace(/'/g,"\\'")}')" title="Delete item" style="padding:4px 8px;border:1px solid #fecaca;background:#fff5f5;color:#dc2626;border-radius:6px;cursor:pointer;font-size:.72rem;font-family:inherit;display:flex;align-items:center;gap:4px">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+          </button>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:center;gap:16px;padding:14px 16px">
+          <button onclick="qpAdjust('${i.id}',-1)" style="width:40px;height:40px;border-radius:50%;border:2px solid #bfdbfe;background:#fff;color:#1d4ed8;font-size:1.3rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;transition:background .15s" onmouseover="this.style.background='#dbeafe'" onmouseout="this.style.background='#fff'">−</button>
+          <div style="text-align:center;min-width:70px">
+            <div style="font-size:1.6rem;font-weight:800;color:${qtyColor};line-height:1">${i.qty}</div>
+            <div style="font-size:.72rem;color:var(--muted);margin-top:2px">${i.unit || 'units'}</div>
+          </div>
+          <button onclick="qpAdjust('${i.id}',+1)" style="width:40px;height:40px;border-radius:50%;border:2px solid #bfdbfe;background:#1d4ed8;color:#fff;font-size:1.3rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;transition:background .15s" onmouseover="this.style.background='#1e40af'" onmouseout="this.style.background='#1d4ed8'">+</button>
+        </div>
+      </div>`;
+    }
+    // Normal row
     return `<div style="display:flex;align-items:center;border-bottom:1px solid var(--border)">
       <button onclick="quickPickItem('${i.id}')" style="flex:1;display:flex;align-items:center;gap:10px;padding:10px 14px;border:none;background:none;cursor:pointer;font-family:inherit;text-align:left;transition:background .1s;min-width:0" onmouseover="this.style.background='#f8f9fb'" onmouseout="this.style.background='none'">
         <div style="flex:1;min-width:0">
           <div style="font-size:.83rem;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${i.name}</div>
-          ${i.category ? `<div style="font-size:.72rem;color:${catColor};margin-top:2px">${i.category}</div>` : ''}
+          ${i.category ? `<div style="font-size:.72rem;color:#2563eb;margin-top:2px">${i.category}</div>` : ''}
         </div>
-        <div style="font-size:.75rem;color:var(--muted);flex-shrink:0">${i.unit || ''}</div>
+        <div style="font-size:.75rem;color:${qtyColor};font-weight:600;flex-shrink:0">${i.qty} ${i.unit||''}</div>
       </button>
       <button onclick="quickPickDelete('${i.id}','${i.name.replace(/'/g,"\\'")}')" title="Delete item" style="padding:10px 12px;border:none;background:none;cursor:pointer;color:#dc2626;flex-shrink:0;display:flex;align-items:center;transition:background .1s;border-left:1px solid var(--border)" onmouseover="this.style.background='#fee2e2'" onmouseout="this.style.background='none'">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
@@ -2447,18 +2474,22 @@ function renderQuickPickList(){
 }
 
 function quickPickItem(id){
-  const item = loadStock().find(i => i.id === id);
+  _qpActiveId = (_qpActiveId === id) ? null : id;
+  renderQuickPickList();
+}
+
+function qpAdjust(id, delta){
+  const items = loadStock();
+  const item = items.find(i => i.id === id);
   if(!item) return;
-  // Close quick pick dropdown
-  const menu = document.getElementById('quick-pick-menu');
-  if(menu) menu.style.display = 'none';
-  // Open Add Item modal pre-filled with this item's details
-  openStockModal();
-  document.getElementById('stock-name').value = item.name;
-  setCatField(item.category || '');
-  setUnitField(item.unit || '');
-  document.getElementById('stock-qty').value = '';
-  document.getElementById('stock-notes').value = item.notes || '';
+  const oldQty = item.qty;
+  const newQty = Math.max(0, oldQty + delta);
+  if(newQty === oldQty) return;
+  item.qty = newQty;
+  saveStock(items);
+  addStockLog(delta > 0 ? 'Qty +' : 'Qty −', item.name, `${oldQty} → ${newQty}`);
+  renderQuickPickList(); // re-render to show updated qty in expanded row
+  renderStock();         // update main table/cards
 }
 
 function quickPickDelete(id, name){
