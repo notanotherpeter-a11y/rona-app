@@ -1169,6 +1169,7 @@ th { background: #F3F5F8; color: #374151; border-bottom-color: #C8D0DB; }
             <div style="display:flex;gap:10px;flex-wrap:wrap">
               <button onclick="exportAllData()" style="flex:1;min-width:120px;padding:10px;background:#1A6B3C;color:#fff;border:none;border-radius:9px;font-size:.8rem;font-weight:600;cursor:pointer;font-family:inherit">⬇ Export Backup</button>
               <button onclick="document.getElementById('import-file').click()" style="flex:1;min-width:120px;padding:10px;background:#1E5CA8;color:#fff;border:none;border-radius:9px;font-size:.8rem;font-weight:600;cursor:pointer;font-family:inherit">⬆ Import Backup</button>
+              <button onclick="clearMonthData('2026-07')" style="flex:1;min-width:120px;padding:10px;background:#92400e;color:#fff;border:none;border-radius:9px;font-size:.8rem;font-weight:600;cursor:pointer;font-family:inherit">🗓 Clear July 2026</button>
               <button onclick="clearAllData()" style="flex:1;min-width:120px;padding:10px;background:#A52B23;color:#fff;border:none;border-radius:9px;font-size:.8rem;font-weight:600;cursor:pointer;font-family:inherit">🗑 Clear All Data</button>
             </div>
             <input type="file" id="import-file" accept=".json" style="display:none" onchange="importAllData(event)">
@@ -3784,6 +3785,68 @@ function clearAllData(){
   .forEach(k=>localStorage.removeItem(k));
   alert('All data cleared. The page will reload.');
   location.reload();
+}
+
+function clearMonthData(ym){
+  // ym = 'YYYY-MM' e.g. '2026-07'
+  const monthLabel = new Date(ym + '-01').toLocaleString('en-PH',{month:'long',year:'numeric'});
+  if(!confirm(`This will permanently delete all data entered for ${monthLabel}.\n\nSales, expenses, salary, daily wages, branch data, and stock log entries for ${monthLabel} will be removed.\n\nOther months are NOT affected. Continue?`)) return;
+
+  let totalRemoved = 0;
+
+  // Helper: filter array, remove entries matching the month prefix
+  function filterByMonth(arr, dateField){
+    const before = arr.length;
+    const after = arr.filter(r => !(r[dateField]||'').startsWith(ym));
+    totalRemoved += before - after.length;
+    return after;
+  }
+
+  // 1. Main sales (Kamayan + branch sales stored in K_SALES)
+  setS(K_SALES, filterByMonth(getS(K_SALES), 'date'));
+
+  // 2. Expenses
+  setS(K_EXP, filterByMonth(getS(K_EXP), 'date'));
+
+  // 3. Monthly salary summaries (use 'month' field)
+  setS(K_SAL, filterByMonth(getS(K_SAL), 'month'));
+
+  // 4. Daily salary records
+  setS(K_SAL_DAILY, filterByMonth(getS(K_SAL_DAILY), 'date'));
+
+  // 5. Branch expense keys
+  BRANCHES.forEach(b => {
+    const raw = JSON.parse(localStorage.getItem(b.kKey)||'[]');
+    const filtered = filterByMonth(raw, 'date');
+    localStorage.setItem(b.kKey, JSON.stringify(filtered));
+  });
+
+  // 6. Branch sales keys
+  BRANCHES.forEach(b => {
+    const raw = JSON.parse(localStorage.getItem(b.sKey)||'[]');
+    const filtered = filterByMonth(raw, 'date');
+    localStorage.setItem(b.sKey, JSON.stringify(filtered));
+  });
+
+  // 7. Stock log — entries have 'ts' (ISO timestamp), strip by year-month prefix
+  const log = loadStockLog();
+  const logBefore = log.length;
+  const filteredLog = log.filter(e => !(e.ts||'').startsWith(ym));
+  totalRemoved += logBefore - filteredLog.length;
+  saveStockLog(filteredLog);
+
+  // 8. Branch orders — filter by createdAt date
+  const orders = JSON.parse(localStorage.getItem(BRANCH_ORDERS_KEY)||'[]');
+  const ordersBefore = orders.length;
+  const filteredOrders = orders.filter(o => !(o.createdAt||o.date||'').startsWith(ym));
+  totalRemoved += ordersBefore - filteredOrders.length;
+  localStorage.setItem(BRANCH_ORDERS_KEY, JSON.stringify(filteredOrders));
+
+  alert(`✅ Done! Cleared ${totalRemoved} record${totalRemoved!==1?'s':''} from ${monthLabel}.\n\nData is syncing to cloud…`);
+
+  // Re-render whichever tab is active
+  renderCurrentTab();
+  renderDashboard();
 }
 
 // ── OTHER / RECEIVABLES PAGE ──
