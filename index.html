@@ -2894,7 +2894,7 @@ function saveStockItem() {
   renderStock();
 }
 
-function deleteStockItem(id) {
+async function deleteStockItem(id) {
   if (!confirm('Delete this item?')) return;
   const all = loadStock();
   const item = all.find(i => i.id === id);
@@ -2902,6 +2902,9 @@ function deleteStockItem(id) {
   saveStock(remaining);
   if(item) addStockLog('Deleted', item.name, `Was ${item.qty} ${item.unit||''}`.trim());
   renderStock();
+  // Await cloud confirmation so a quick refresh doesn't restore the deleted item
+  await _forcePushKey(STOCK_KEY);
+  if(item) await _forcePushKey(STOCK_LOG_KEY);
 }
 
 // Immediately upsert a single key to Supabase — returns a promise so callers can await it
