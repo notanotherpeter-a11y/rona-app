@@ -1780,18 +1780,21 @@ const _STOCK_TOAST_KEYS = ['ksq_stock_v1','ksq_stock_cats_v1','ksq_stock_log_v1'
 localStorage.setItem = function(k, v){
   _origSetItem(k, v);
   if(SB_SYNC_KEYS.includes(k)){
-    _setLocalTs(k, Date.now()); // stamp when this key was last written locally
+    // Capture ONE timestamp and use it for BOTH local record and Supabase updated_at.
+    // This ensures they are identical — so on next pull, sbTs === localTs → tie → local wins.
+    // If another device wrote later, their sbTs will be strictly GREATER → their data wins.
+    const writeTs = Date.now();
+    const writeTsIso = new Date(writeTs).toISOString();
+    _setLocalTs(k, writeTs);
     _markPending(k); // mark as pending BEFORE async upsert — survives if upsert fails
     if(_sbReady && _sb){
       try{
         const parsed = JSON.parse(v);
         if(_STOCK_TOAST_KEYS.includes(k)) _showSaveToast('saving', '⏳ Saving…');
         _sb.from('kv_store')
-          .upsert({key:k, value:parsed, updated_at: new Date().toISOString()}, {onConflict:'key'})
+          .upsert({key:k, value:parsed, updated_at: writeTsIso}, {onConflict:'key'})
           .then(res => {
             if(!res?.error){
-              // Upsert succeeded — clear pending regardless of snapshot.
-              // If a newer write happened, it already re-marked pending and started its own upsert.
               _clearPending(k);
               if(_STOCK_TOAST_KEYS.includes(k)) _showSaveToast('success', '✓ Saved & Synced');
             } else {
@@ -1828,7 +1831,10 @@ async function initSupabase(){
         const batch = pendingKeys.map(k => {
           let val;
           try{ val = JSON.parse(_origGetItem(k)); }catch(e){ val = null; }
-          return {key:k, value:val, updated_at:new Date().toISOString()};
+          // Use stored local timestamp so Supabase gets the original write time.
+          // This ensures Step 2's timestamp comparison correctly sees our flush as same-age.
+          const storedTs = _getLocalTs(k) || Date.now();
+          return {key:k, value:val, updated_at:new Date(storedTs).toISOString()};
         }).filter(r => r.value !== null);
         const { error: flushErr } = await _sb.from('kv_store').upsert(batch, {onConflict:'key'});
         if(!flushErr){
@@ -1838,23 +1844,26 @@ async function initSupabase(){
       }catch(e){ console.warn('[KSQ] Flush error:', e); }
     }
 
-    // Step 2: Pull cloud data
-    // LOCAL ALWAYS WINS — only use Supabase data when there is NO local copy at all
-    // (fresh device / first-time load). This prevents Supabase from overwriting a local
-    // change that hasn't fully synced yet (the race that caused reverts on refresh).
-    // The realtime subscription handles live cross-device updates without a page refresh.
+    // Step 2: Pull cloud data — TRUE LAST-WRITE-WINS
+    // Compare Supabase updated_at vs local timestamp (both set to the same Date.now() value
+    // when written, so ties mean local is same-age → local wins; strictly newer Supabase wins).
+    // protectedKeys (pending local writes) are always skipped — local is authoritative.
     const { data } = await _sb.from('kv_store').select('key,value,updated_at');
     const sbKeys = new Set((data||[]).map(r=>r.key));
     if(data && data.length){
       data.forEach(row => {
         if(!SB_SYNC_KEYS.includes(row.key) || protectedKeys.has(row.key)) return;
+        const sbTs = new Date(row.updated_at || 0).getTime();
+        const localTs = _getLocalTs(row.key);
         const hasLocal = !!_origGetItem(row.key);
-        // Only write Supabase data if there is zero local data for this key
-        if(!hasLocal){
+        // Use Supabase when: no local data at all, OR Supabase is strictly NEWER than local
+        // (meaning another device wrote after us — their change should win)
+        if(!hasLocal || sbTs > localTs){
           _origSetItem(row.key, JSON.stringify(row.value));
-          _setLocalTs(row.key, new Date(row.updated_at || 0).getTime());
+          _setLocalTs(row.key, sbTs); // align local ts so next refresh doesn't re-overwrite
         }
-        // Local data exists → keep it; pending queue pushes it back to Supabase
+        // sbTs === localTs → tie → keep local (we wrote this, Supabase already has it)
+        // sbTs < localTs  → local is newer → keep local (pending will push it)
       });
     }
 
@@ -1908,6 +1917,10 @@ async function initSupabase(){
         } else {
           _origSetItem(row.key, JSON.stringify(row.value));
         }
+        // Update local timestamp to match the remote write time so future page-load
+        // comparisons correctly see this as same-age (tie → local wins, no re-overwrite).
+        const remoteTsMs = new Date(row.updated_at || 0).getTime();
+        if(remoteTsMs > 0) _setLocalTs(row.key, remoteTsMs);
         // Re-render the active tab so remote changes appear instantly
         renderCurrentTab();
       })
