@@ -467,9 +467,26 @@ th { background: #F3F5F8; color: #374151; border-bottom-color: #C8D0DB; }
   .section { padding: 16px; }
   table { font-size: .78rem; }
 }
+/* ── STOCK SAVE TOAST ── */
+#ksq-save-toast {
+  position: fixed; bottom: 28px; right: 28px; z-index: 9998;
+  display: flex; align-items: center; gap: 10px;
+  padding: 11px 18px; border-radius: 10px;
+  font-size: .83rem; font-weight: 600; font-family: 'Inter', sans-serif;
+  box-shadow: 0 4px 20px rgba(0,0,0,.18);
+  transition: opacity .3s, transform .3s;
+  opacity: 0; transform: translateY(10px); pointer-events: none;
+}
+#ksq-save-toast.show { opacity: 1; transform: translateY(0); }
+#ksq-save-toast.success { background: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; }
+#ksq-save-toast.saving  { background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; }
+#ksq-save-toast.error   { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
 </style>
 </head>
 <body>
+
+<!-- ── SAVE TOAST ── -->
+<div id="ksq-save-toast"></div>
 
 <!-- ── CLOUD SYNC OVERLAY ── -->
 <div id="ksq-sync-overlay" style="display:none;position:fixed;inset:0;z-index:9999;background:linear-gradient(135deg,#0F1C2E 0%,#1A2F4E 60%,#0E2040 100%);align-items:center;justify-content:center;flex-direction:column;gap:16px;">
@@ -896,6 +913,10 @@ th { background: #F3F5F8; color: #374151; border-bottom-color: #C8D0DB; }
             <button onclick="openStockLog()" style="padding:9px 16px;border:1.5px solid var(--border);border-radius:var(--r-sm);font-size:.82rem;font-weight:600;cursor:pointer;font-family:inherit;background:#fff;color:var(--text);box-shadow:var(--sh-sm);display:flex;align-items:center;gap:7px">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
               Log History
+            </button>
+            <button onclick="forceSyncNow()" id="force-sync-btn" title="Force sync all stock data to cloud now" style="padding:9px 14px;border:1.5px solid var(--border);border-radius:var(--r-sm);font-size:.82rem;font-weight:600;cursor:pointer;font-family:inherit;background:#fff;color:var(--muted);box-shadow:var(--sh-sm);display:flex;align-items:center;gap:6px">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+              Sync
             </button>
             <!-- Quick Pick dropdown -->
             <div style="position:relative">
@@ -1725,7 +1746,24 @@ function _clearPending(k){
   try{ const p=JSON.parse(_origGetItem(PENDING_SYNC_KEY)||'{}'); delete p[k]; _origSetItem(PENDING_SYNC_KEY,JSON.stringify(p)); }catch(e){}
 }
 
+// ── Save Toast notification ──
+let _toastTimer = null;
+function _showSaveToast(type, msg){
+  const el = document.getElementById('ksq-save-toast');
+  if(!el) return;
+  el.className = `show ${type}`;
+  el.textContent = msg;
+  if(_toastTimer) clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => {
+    el.classList.remove('show');
+    _toastTimer = null;
+  }, type === 'saving' ? 8000 : 2500);
+}
+
 // Intercept ALL localStorage.setItem calls — if it's a sync key, push to Supabase
+// STOCK_KEY, STOCK_CATS_KEY, STOCK_LOG_KEY are defined near line 2080; BRANCH_ORDERS_KEY near 4096
+// Use string literals here to avoid temporal dead zone issues
+const _STOCK_TOAST_KEYS = ['ksq_stock_v1','ksq_stock_cats_v1','ksq_stock_log_v1','ksq_branch_orders_v1'];
 localStorage.setItem = function(k, v){
   _origSetItem(k, v);
   if(SB_SYNC_KEYS.includes(k)){
@@ -1734,6 +1772,8 @@ localStorage.setItem = function(k, v){
       try{
         const parsed = JSON.parse(v);
         const snapshot = v; // remember the exact value we're pushing
+        // Show "saving" toast only for stock-related keys (not all keys)
+        if(_STOCK_TOAST_KEYS.includes(k)) _showSaveToast('saving', '⏳ Saving…');
         _sb.from('kv_store')
           .upsert({key:k, value:parsed, updated_at: new Date().toISOString()}, {onConflict:'key'})
           .then(res => {
@@ -1741,10 +1781,19 @@ localStorage.setItem = function(k, v){
             // Otherwise a newer local write happened after this upsert started, and
             // that newer write is still in flight (or queued) — leave pending set so
             // the queue survives refresh.
-            if(!res?.error && _origGetItem(k) === snapshot) _clearPending(k);
+            if(!res?.error && _origGetItem(k) === snapshot){
+              _clearPending(k);
+              if(_STOCK_TOAST_KEYS.includes(k)) _showSaveToast('success', '✓ Saved & Synced');
+            } else if(res?.error){
+              if(_STOCK_TOAST_KEYS.includes(k)) _showSaveToast('error', '⚠ Saved locally — sync pending');
+              console.warn('[KSQ] Upsert error for', k, ':', res.error);
+            }
           })
-          .catch(() => { /* keep pending on network rejection — retried on next init */ });
-      }catch(e){}
+          .catch(err => {
+            if(_STOCK_TOAST_KEYS.includes(k)) _showSaveToast('error', '⚠ Saved locally — sync pending');
+            console.warn('[KSQ] Upsert catch for', k, ':', err);
+          });
+      }catch(e){ console.warn('[KSQ] setItem intercept error:', e); }
     }
   }
 };
@@ -1755,14 +1804,22 @@ async function initSupabase(){
 
     // Step 1: Collect pending local keys — these are authoritative regardless of flush outcome
     const pendingRaw = _origGetItem(PENDING_SYNC_KEY);
-    const pending = pendingRaw ? JSON.parse(pendingRaw) : {};
+    let pending = {};
+    try{ if(pendingRaw) pending = JSON.parse(pendingRaw); }catch(e){
+      console.warn('[KSQ] Corrupted pending queue, resetting');
+      _origSetItem(PENDING_SYNC_KEY, '{}');
+    }
     const pendingKeys = Object.keys(pending).filter(k => SB_SYNC_KEYS.includes(k) && _origGetItem(k));
     const protectedKeys = new Set(pendingKeys); // NEVER overwrite these from Supabase
 
     // Try to flush pending to Supabase
     if(pendingKeys.length > 0){
       try{
-        const batch = pendingKeys.map(k => ({key:k, value:JSON.parse(_origGetItem(k)), updated_at:new Date().toISOString()}));
+        const batch = pendingKeys.map(k => {
+          let val;
+          try{ val = JSON.parse(_origGetItem(k)); }catch(e){ val = null; }
+          return {key:k, value:val, updated_at:new Date().toISOString()};
+        }).filter(r => r.value !== null);
         const { error: flushErr } = await _sb.from('kv_store').upsert(batch, {onConflict:'key'});
         if(!flushErr){
           _origSetItem(PENDING_SYNC_KEY, '{}'); // only clear queue on success
@@ -1783,11 +1840,18 @@ async function initSupabase(){
     }
 
     // Step 3: Push any local keys missing from Supabase (first-time migration)
-    const localOnly = SB_SYNC_KEYS.filter(k => !sbKeys.has(k) && _origGetItem(k));
-    if(localOnly.length > 0){
-      const batch = localOnly.map(k => ({key:k, value:JSON.parse(_origGetItem(k)), updated_at:new Date().toISOString()}));
-      await _sb.from('kv_store').upsert(batch, {onConflict:'key'});
-    }
+    // Wrapped in its own try-catch so a parse error here doesn't abort _sbReady being set
+    try{
+      const localOnly = SB_SYNC_KEYS.filter(k => !sbKeys.has(k) && _origGetItem(k));
+      if(localOnly.length > 0){
+        const batch = localOnly.map(k => {
+          let val;
+          try{ val = JSON.parse(_origGetItem(k)); }catch(e){ val = null; }
+          return {key:k, value:val, updated_at:new Date().toISOString()};
+        }).filter(r => r.value !== null);
+        if(batch.length > 0) await _sb.from('kv_store').upsert(batch, {onConflict:'key'});
+      }
+    }catch(e){ console.warn('[KSQ] Migration push failed (non-fatal):', e); }
 
     _sbReady = true; // Start intercepting writes AFTER initial pull
 
@@ -2112,7 +2176,7 @@ const STOCK_KEY = 'ksq_stock_v1';
 const STOCK_CATS_KEY = 'ksq_stock_cats_v1';
 const STOCK_LOG_KEY = 'ksq_stock_log_v1';
 
-function loadStockLog(){ return JSON.parse(localStorage.getItem(STOCK_LOG_KEY)||'[]'); }
+function loadStockLog(){ try{ return JSON.parse(localStorage.getItem(STOCK_LOG_KEY)||'[]'); }catch(e){ return []; } }
 function saveStockLog(log){ localStorage.setItem(STOCK_LOG_KEY, JSON.stringify(log)); }
 
 function addStockLog(action, itemName, details){
@@ -2217,7 +2281,9 @@ const DEFAULT_CATS = ['Food', 'Drinks', 'Packaging', 'Supplies', 'Equipment', 'G
 
 function loadStockCats(){
   const raw = localStorage.getItem(STOCK_CATS_KEY);
-  if(raw) return JSON.parse(raw);
+  if(raw){
+    try{ return JSON.parse(raw); }catch(e){}
+  }
   // First load — persist defaults so they survive refresh
   localStorage.setItem(STOCK_CATS_KEY, JSON.stringify(DEFAULT_CATS));
   return [...DEFAULT_CATS];
@@ -2273,7 +2339,11 @@ const DEFAULT_STOCK = [
 
 function loadStock() {
   const raw = localStorage.getItem(STOCK_KEY);
-  if(raw) return JSON.parse(raw);
+  if(raw){
+    try{ return JSON.parse(raw); }catch(e){
+      console.warn('[KSQ] loadStock: corrupted data, resetting to defaults');
+    }
+  }
   // First load — persist defaults so subsequent reads (and Supabase) see them,
   // otherwise defaults render but never sync and edits made against them can
   // appear to "revert" after refresh.
@@ -2286,7 +2356,8 @@ function saveStock(items) {
 }
 
 function renderStockPendingOrders(){
-  const allOrders = JSON.parse(localStorage.getItem(BRANCH_ORDERS_KEY)||'[]');
+  let allOrders;
+  try{ allOrders = JSON.parse(localStorage.getItem(BRANCH_ORDERS_KEY)||'[]'); }catch(e){ allOrders = []; }
   const pending = allOrders.filter(o=>o.status==='Pending');
   const badge = document.getElementById('stock-pending-badge');
   const wrap  = document.getElementById('stock-pending-orders');
@@ -2625,10 +2696,49 @@ function adjustStockQty(id, delta) {
   const item = items.find(i => i.id === id);
   if (!item) return;
   const oldQty = item.qty || 0;
-  item.qty = Math.max(0, oldQty + delta);
+  const newQty = Math.max(0, oldQty + delta);
+  if (newQty === oldQty) return; // no change (e.g. already at 0 and pressing −)
+  item.qty = newQty;
   saveStock(items);
   addStockLog(delta > 0 ? 'Qty +' : 'Qty −', item.name, `${oldQty} → ${item.qty} ${item.unit||''}`.trim());
   renderStock();
+}
+
+// Force push all stock data to Supabase right now (bypasses pending queue logic)
+async function forceSyncNow(){
+  const btn = document.getElementById('force-sync-btn');
+  if(!_sbReady || !_sb){
+    _showSaveToast('error', '⚠ Not connected to cloud');
+    return;
+  }
+  if(btn){ btn.style.opacity='0.5'; btn.style.pointerEvents='none'; }
+  _showSaveToast('saving', '⏳ Syncing all data…');
+  try{
+    const stockKeys = _STOCK_TOAST_KEYS.filter(k => _origGetItem(k));
+    const batch = stockKeys.map(k => {
+      let val;
+      try{ val = JSON.parse(_origGetItem(k)); }catch(e){ val = null; }
+      return {key:k, value:val, updated_at:new Date().toISOString()};
+    }).filter(r => r.value !== null);
+    if(batch.length > 0){
+      const { error } = await _sb.from('kv_store').upsert(batch, {onConflict:'key'});
+      if(error){
+        _showSaveToast('error', '⚠ Sync failed — check connection');
+        console.warn('[KSQ] forceSyncNow error:', error);
+      } else {
+        // Clear pending for all these keys
+        stockKeys.forEach(k => _clearPending(k));
+        _showSaveToast('success', `✓ All ${batch.length} keys synced to cloud`);
+      }
+    } else {
+      _showSaveToast('success', '✓ Nothing to sync');
+    }
+  }catch(e){
+    _showSaveToast('error', '⚠ Sync error — check connection');
+    console.warn('[KSQ] forceSyncNow catch:', e);
+  } finally {
+    if(btn){ btn.style.opacity='1'; btn.style.pointerEvents=''; }
+  }
 }
 
 function setCatField(val){
@@ -4198,7 +4308,8 @@ function submitBranchOrder(branchKey){
   const stockItems = loadStock();
   const item = stockItems.find(i=>i.id===itemId);
   if(!item) return;
-  const all = JSON.parse(localStorage.getItem(BRANCH_ORDERS_KEY)||'[]');
+  let all;
+  try{ all = JSON.parse(localStorage.getItem(BRANCH_ORDERS_KEY)||'[]'); }catch(e){ all = []; }
   const d = new Date(dateVal+'T00:00:00');
   all.push({
     id: 'bo'+Date.now(),
@@ -4220,7 +4331,8 @@ function submitBranchOrder(branchKey){
 }
 
 function updateBranchOrderStatus(branchKey, orderId, newStatus){
-  const all = JSON.parse(localStorage.getItem(BRANCH_ORDERS_KEY)||'[]');
+  let all;
+  try{ all = JSON.parse(localStorage.getItem(BRANCH_ORDERS_KEY)||'[]'); }catch(e){ all = []; }
   const o = all.find(x=>x.id===orderId);
   if(!o) return;
   const prev = o.status;
