@@ -2340,13 +2340,18 @@ function renderQuickPickList(){
   }
   list.innerHTML = filtered.map(i => {
     const catColor = '#2563eb';
-    return `<button onclick="quickPickItem('${i.id}')" style="display:flex;align-items:center;gap:10px;width:100%;padding:10px 14px;border:none;background:none;cursor:pointer;font-family:inherit;text-align:left;border-bottom:1px solid var(--border);transition:background .1s" onmouseover="this.style.background='#f8f9fb'" onmouseout="this.style.background='none'">
-      <div style="flex:1;min-width:0">
-        <div style="font-size:.83rem;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${i.name}</div>
-        ${i.category ? `<div style="font-size:.72rem;color:${catColor};margin-top:2px">${i.category}</div>` : ''}
-      </div>
-      <div style="font-size:.75rem;color:var(--muted);flex-shrink:0">${i.unit || ''}</div>
-    </button>`;
+    return `<div style="display:flex;align-items:center;border-bottom:1px solid var(--border)">
+      <button onclick="quickPickItem('${i.id}')" style="flex:1;display:flex;align-items:center;gap:10px;padding:10px 14px;border:none;background:none;cursor:pointer;font-family:inherit;text-align:left;transition:background .1s;min-width:0" onmouseover="this.style.background='#f8f9fb'" onmouseout="this.style.background='none'">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:.83rem;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${i.name}</div>
+          ${i.category ? `<div style="font-size:.72rem;color:${catColor};margin-top:2px">${i.category}</div>` : ''}
+        </div>
+        <div style="font-size:.75rem;color:var(--muted);flex-shrink:0">${i.unit || ''}</div>
+      </button>
+      <button onclick="quickPickDelete('${i.id}','${i.name.replace(/'/g,"\\'")}')" title="Delete item" style="padding:10px 12px;border:none;background:none;cursor:pointer;color:#dc2626;flex-shrink:0;display:flex;align-items:center;transition:background .1s;border-left:1px solid var(--border)" onmouseover="this.style.background='#fee2e2'" onmouseout="this.style.background='none'">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+      </button>
+    </div>`;
   }).join('');
 }
 
@@ -2363,6 +2368,15 @@ function quickPickItem(id){
   setUnitField(item.unit || '');
   document.getElementById('stock-qty').value = '';
   document.getElementById('stock-notes').value = item.notes || '';
+}
+
+function quickPickDelete(id, name){
+  if(!confirm(`Delete "${name}" from inventory?`)) return;
+  const items = loadStock().filter(i => i.id !== id);
+  saveStock(items);
+  addStockLog('Deleted', name, '');
+  renderQuickPickList();
+  renderStock();
 }
 
 // Close Quick Pick dropdown when clicking outside
