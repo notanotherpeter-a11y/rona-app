@@ -2540,8 +2540,12 @@ function saveStockMin(id, val){
   const items = loadStock();
   const item = items.find(i => i.id === id);
   if(!item) return;
-  item.minQty = Math.max(0, parseInt(val)||0);
+  const oldMin = item.minQty || 0;
+  const newMin = Math.max(0, parseInt(val)||0);
+  if(oldMin === newMin) return;
+  item.minQty = newMin;
   saveStock(items);
+  addStockLog('Edited', item.name, `Min qty: ${oldMin} → ${newMin}`);
   renderStock();
 }
 
