@@ -1727,6 +1727,10 @@ function renderCurrentTab(){
 }
 
 // ── SUPABASE CLOUD SYNC ──
+// Supabase is the single source of truth. localStorage is only a display cache.
+// On write  → save locally (instant UI) + push to Supabase immediately.
+// On load   → always pull from Supabase first, overwrite localStorage.
+// Realtime  → any device's change streams in live.
 const SB_URL = 'https://aswhwsekxqivbkuivvqp.supabase.co';
 const SB_KEY = 'sb_publishable_AnhZhNqXNPYwznpR2zZzxQ_ordj3CKi';
 const SB_SYNC_KEYS = [
@@ -1737,27 +1741,8 @@ const SB_SYNC_KEYS = [
 ];
 let _sb = null;
 let _sbReady = false;
-
-// Pending sync queue — survives refresh, flushed to Supabase on next init
-const PENDING_SYNC_KEY = 'ksq_pending_sync'; // NOT in SB_SYNC_KEYS
-// Local timestamp tracker — records when each key was last written locally (ms since epoch)
-const LOCAL_TS_KEY = 'ksq_local_ts'; // NOT in SB_SYNC_KEYS
 const _origSetItem = localStorage.setItem.bind(localStorage);
 const _origGetItem = localStorage.getItem.bind(localStorage);
-
-function _markPending(k){
-  try{ const p=JSON.parse(_origGetItem(PENDING_SYNC_KEY)||'{}'); p[k]=true; _origSetItem(PENDING_SYNC_KEY,JSON.stringify(p)); }catch(e){}
-}
-function _clearPending(k){
-  try{ const p=JSON.parse(_origGetItem(PENDING_SYNC_KEY)||'{}'); delete p[k]; _origSetItem(PENDING_SYNC_KEY,JSON.stringify(p)); }catch(e){}
-}
-// Track when each key was last written locally — persisted across refreshes
-function _getLocalTs(k){
-  try{ return JSON.parse(_origGetItem(LOCAL_TS_KEY)||'{}')[k] || 0; }catch(e){ return 0; }
-}
-function _setLocalTs(k, ts){
-  try{ const o=JSON.parse(_origGetItem(LOCAL_TS_KEY)||'{}'); o[k]=ts; _origSetItem(LOCAL_TS_KEY,JSON.stringify(o)); }catch(e){}
-}
 
 // ── Save Toast notification ──
 let _toastTimer = null;
@@ -1773,41 +1758,31 @@ function _showSaveToast(type, msg){
   }, type === 'saving' ? 8000 : 2500);
 }
 
-// Intercept ALL localStorage.setItem calls — if it's a sync key, push to Supabase
-// STOCK_KEY, STOCK_CATS_KEY, STOCK_LOG_KEY are defined near line 2080; BRANCH_ORDERS_KEY near 4096
-// Use string literals here to avoid temporal dead zone issues
+// Keys that show a save toast when written
 const _STOCK_TOAST_KEYS = ['ksq_stock_v1','ksq_stock_cats_v1','ksq_stock_log_v1','ksq_branch_orders_v1'];
+
+// Intercept ALL localStorage.setItem — save locally for instant UI, then push to Supabase
 localStorage.setItem = function(k, v){
-  _origSetItem(k, v);
-  if(SB_SYNC_KEYS.includes(k)){
-    // Capture ONE timestamp and use it for BOTH local record and Supabase updated_at.
-    // This ensures they are identical — so on next pull, sbTs === localTs → tie → local wins.
-    // If another device wrote later, their sbTs will be strictly GREATER → their data wins.
-    const writeTs = Date.now();
-    const writeTsIso = new Date(writeTs).toISOString();
-    _setLocalTs(k, writeTs);
-    _markPending(k); // mark as pending BEFORE async upsert — survives if upsert fails
-    if(_sbReady && _sb){
-      try{
-        const parsed = JSON.parse(v);
-        if(_STOCK_TOAST_KEYS.includes(k)) _showSaveToast('saving', '⏳ Saving…');
-        _sb.from('kv_store')
-          .upsert({key:k, value:parsed, updated_at: writeTsIso}, {onConflict:'key'})
-          .then(res => {
-            if(!res?.error){
-              _clearPending(k);
-              if(_STOCK_TOAST_KEYS.includes(k)) _showSaveToast('success', '✓ Saved & Synced');
-            } else {
-              if(_STOCK_TOAST_KEYS.includes(k)) _showSaveToast('error', '⚠ Saved locally — sync pending');
-              console.warn('[KSQ] Upsert error for', k, ':', res.error);
-            }
-          })
-          .catch(err => {
-            if(_STOCK_TOAST_KEYS.includes(k)) _showSaveToast('error', '⚠ Saved locally — sync pending');
-            console.warn('[KSQ] Upsert catch for', k, ':', err);
-          });
-      }catch(e){ console.warn('[KSQ] setItem intercept error:', e); }
-    }
+  _origSetItem(k, v); // instant local cache update
+  if(SB_SYNC_KEYS.includes(k) && _sbReady && _sb){
+    try{
+      const parsed = JSON.parse(v);
+      if(_STOCK_TOAST_KEYS.includes(k)) _showSaveToast('saving', '⏳ Saving…');
+      _sb.from('kv_store')
+        .upsert({key:k, value:parsed, updated_at: new Date().toISOString()}, {onConflict:'key'})
+        .then(res => {
+          if(!res?.error){
+            if(_STOCK_TOAST_KEYS.includes(k)) _showSaveToast('success', '✓ Saved to Cloud');
+          } else {
+            if(_STOCK_TOAST_KEYS.includes(k)) _showSaveToast('error', '⚠ Cloud save failed');
+            console.warn('[KSQ] Upsert error:', k, res.error);
+          }
+        })
+        .catch(err => {
+          if(_STOCK_TOAST_KEYS.includes(k)) _showSaveToast('error', '⚠ Cloud save failed');
+          console.warn('[KSQ] Upsert catch:', k, err);
+        });
+    }catch(e){ console.warn('[KSQ] setItem intercept error:', e); }
   }
 };
 
@@ -1815,93 +1790,29 @@ async function initSupabase(){
   try{
     _sb = supabase.createClient(SB_URL, SB_KEY);
 
-    // Step 1: Collect pending local keys — these are authoritative regardless of flush outcome
-    const pendingRaw = _origGetItem(PENDING_SYNC_KEY);
-    let pending = {};
-    try{ if(pendingRaw) pending = JSON.parse(pendingRaw); }catch(e){
-      console.warn('[KSQ] Corrupted pending queue, resetting');
-      _origSetItem(PENDING_SYNC_KEY, '{}');
-    }
-    const pendingKeys = Object.keys(pending).filter(k => SB_SYNC_KEYS.includes(k) && _origGetItem(k));
-    const protectedKeys = new Set(pendingKeys); // NEVER overwrite these from Supabase
-
-    // Try to flush pending to Supabase
-    if(pendingKeys.length > 0){
-      try{
-        const batch = pendingKeys.map(k => {
-          let val;
-          try{ val = JSON.parse(_origGetItem(k)); }catch(e){ val = null; }
-          // Use stored local timestamp so Supabase gets the original write time.
-          // This ensures Step 2's timestamp comparison correctly sees our flush as same-age.
-          const storedTs = _getLocalTs(k) || Date.now();
-          return {key:k, value:val, updated_at:new Date(storedTs).toISOString()};
-        }).filter(r => r.value !== null);
-        const { error: flushErr } = await _sb.from('kv_store').upsert(batch, {onConflict:'key'});
-        if(!flushErr){
-          _origSetItem(PENDING_SYNC_KEY, '{}'); // only clear queue on success
-        }
-        // If flush failed, keys stay pending and will retry on next refresh
-      }catch(e){ console.warn('[KSQ] Flush error:', e); }
-    }
-
-    // Step 2: Pull cloud data — TRUE LAST-WRITE-WINS
-    // Compare Supabase updated_at vs local timestamp (both set to the same Date.now() value
-    // when written, so ties mean local is same-age → local wins; strictly newer Supabase wins).
-    // protectedKeys (pending local writes) are always skipped — local is authoritative.
-    const { data } = await _sb.from('kv_store').select('key,value,updated_at');
-    const sbKeys = new Set((data||[]).map(r=>r.key));
-    if(data && data.length){
+    // Always pull everything from Supabase — it is the authoritative store
+    const { data, error } = await _sb.from('kv_store').select('key,value');
+    if(!error && data?.length){
       data.forEach(row => {
-        if(!SB_SYNC_KEYS.includes(row.key) || protectedKeys.has(row.key)) return;
-        const sbTs = new Date(row.updated_at || 0).getTime();
-        const localTs = _getLocalTs(row.key);
-        const hasLocal = !!_origGetItem(row.key);
-        // Use Supabase when: no local data at all, OR Supabase is strictly NEWER than local
-        // (meaning another device wrote after us — their change should win)
-        if(!hasLocal || sbTs > localTs){
+        if(SB_SYNC_KEYS.includes(row.key)){
           _origSetItem(row.key, JSON.stringify(row.value));
-          _setLocalTs(row.key, sbTs); // align local ts so next refresh doesn't re-overwrite
         }
-        // sbTs === localTs → tie → keep local (we wrote this, Supabase already has it)
-        // sbTs < localTs  → local is newer → keep local (pending will push it)
       });
     }
 
-    // Step 3: Push any local keys missing from Supabase (first-time migration)
-    // Wrapped in its own try-catch so a parse error here doesn't abort _sbReady being set
-    try{
-      const localOnly = SB_SYNC_KEYS.filter(k => !sbKeys.has(k) && _origGetItem(k));
-      if(localOnly.length > 0){
-        const batch = localOnly.map(k => {
-          let val;
-          try{ val = JSON.parse(_origGetItem(k)); }catch(e){ val = null; }
-          return {key:k, value:val, updated_at:new Date().toISOString()};
-        }).filter(r => r.value !== null);
-        if(batch.length > 0) await _sb.from('kv_store').upsert(batch, {onConflict:'key'});
-      }
-    }catch(e){ console.warn('[KSQ] Migration push failed (non-fatal):', e); }
-
-    _sbReady = true; // Start intercepting writes AFTER initial pull
+    _sbReady = true;
 
     // Update status indicator
     const st = document.getElementById('sb-status');
     if(st){ st.textContent='⬤ cloud synced'; st.style.color='rgba(52,211,153,.6)'; }
 
-    // Subscribe to Realtime — push from another device triggers re-render here
+    // Subscribe to Realtime — any device's write streams in instantly
     _sb.channel('ksq_sync')
       .on('postgres_changes', {event:'*', schema:'public', table:'kv_store'}, payload => {
         if(sessionStorage.getItem('ksq_auth')!=='1') return;
         const row = payload.new;
         if(!row || !SB_SYNC_KEYS.includes(row.key)) return;
-        // Skip if we have a pending local write for this key — our own write is
-        // authoritative and echoing back the remote value would clobber newer local
-        // edits that haven't been upserted yet (rapid +/- clicks race).
-        try{
-          const pending = JSON.parse(_origGetItem(PENDING_SYNC_KEY)||'{}');
-          if(pending[row.key]) return;
-        }catch(e){}
-        // Special-case append-only log: merge by id instead of overwriting, so
-        // simultaneous log entries from two devices don't erase each other.
+        // Special-case append-only log: merge by id so simultaneous entries don't erase each other
         if(row.key === 'ksq_stock_log_v1'){
           try{
             const local  = JSON.parse(_origGetItem(row.key)||'[]');
@@ -1917,10 +1828,6 @@ async function initSupabase(){
         } else {
           _origSetItem(row.key, JSON.stringify(row.value));
         }
-        // Update local timestamp to match the remote write time so future page-load
-        // comparisons correctly see this as same-age (tie → local wins, no re-overwrite).
-        const remoteTsMs = new Date(row.updated_at || 0).getTime();
-        if(remoteTsMs > 0) _setLocalTs(row.key, remoteTsMs);
         // Re-render the active tab so remote changes appear instantly
         renderCurrentTab();
       })
