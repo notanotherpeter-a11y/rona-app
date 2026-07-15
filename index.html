@@ -1736,15 +1736,11 @@ let _sbReady = false;
 const _origSetItem = localStorage.setItem.bind(localStorage);
 const _origGetItem = localStorage.getItem.bind(localStorage);
 
-// ── Local write timestamps ──
-// Each write records the exact ms it happened locally.
-// On page load we compare this to Supabase updated_at:
-//   local_ts > sb_ts  → our write never reached Supabase (refresh too fast) → keep local + re-push
-//   sb_ts > local_ts  → another device wrote later → use Supabase
-//   sb_ts === local_ts → same data → keep local (it's already synced)
-const LOCAL_TS_KEY = 'ksq_local_ts';
-function _getLocalTs(k){ try{ return JSON.parse(_origGetItem(LOCAL_TS_KEY)||'{}')[k]||0; }catch(e){ return 0; } }
-function _setLocalTs(k, ts){ try{ const o=JSON.parse(_origGetItem(LOCAL_TS_KEY)||'{}'); o[k]=ts; _origSetItem(LOCAL_TS_KEY,JSON.stringify(o)); }catch(e){} }
+// ── Dirty key tracker ──
+// Tracks keys that have been written locally but not yet confirmed by Supabase.
+// On beforeunload we fire a keepalive fetch so the data reaches Supabase even if
+// the user refreshes immediately — no localStorage timestamps needed.
+const _dirtyKeys = new Set();
 
 // ── Save Toast ──
 let _toastTimer = null;
@@ -1760,96 +1756,97 @@ function _showSaveToast(type, msg){
 const _STOCK_TOAST_KEYS = ['ksq_stock_v1','ksq_stock_cats_v1','ksq_stock_log_v1','ksq_branch_orders_v1'];
 
 // ── Interceptor ──
-// Write to localStorage instantly (UI never waits), then push to Supabase async.
-// Both use the SAME timestamp so on page-load comparison they're equal (tie → local wins).
-// If the push didn't finish before a refresh: local_ts > sb_ts → local wins → re-pushed on next load.
+// Write to localStorage instantly (instant UI), push to Supabase async.
+// Key is added to _dirtyKeys until Supabase confirms, then removed.
 localStorage.setItem = function(k, v){
   _origSetItem(k, v);
   if(SB_SYNC_KEYS.includes(k)){
-    const ts = Date.now();
-    _setLocalTs(k, ts); // record write time BEFORE async push
+    _dirtyKeys.add(k);
     if(_sbReady && _sb){
       try{
         const parsed = JSON.parse(v);
         if(_STOCK_TOAST_KEYS.includes(k)) _showSaveToast('saving', '⏳ Saving…');
         _sb.from('kv_store')
-          .upsert({key:k, value:parsed, updated_at: new Date(ts).toISOString()}, {onConflict:'key'})
+          .upsert({key:k, value:parsed, updated_at: new Date().toISOString()}, {onConflict:'key'})
           .then(res => {
             if(!res?.error){
+              _dirtyKeys.delete(k);
               if(_STOCK_TOAST_KEYS.includes(k)) _showSaveToast('success', '✓ Saved to Cloud');
             } else {
-              if(_STOCK_TOAST_KEYS.includes(k)) _showSaveToast('error', '⚠ Cloud save failed — will retry on reload');
+              if(_STOCK_TOAST_KEYS.includes(k)) _showSaveToast('error', '⚠ Cloud save failed');
               console.warn('[KSQ] Upsert error:', k, res.error);
             }
           })
-          .catch(err => {
-            if(_STOCK_TOAST_KEYS.includes(k)) _showSaveToast('error', '⚠ Cloud save failed — will retry on reload');
+          .catch(() => {
+            if(_STOCK_TOAST_KEYS.includes(k)) _showSaveToast('error', '⚠ Cloud save failed');
           });
       }catch(e){ console.warn('[KSQ] setItem intercept error:', e); }
     }
   }
 };
 
+// ── Keepalive flush on page close/refresh ──
+// fetch with keepalive:true survives page unload — guarantees dirty keys
+// reach Supabase even if the user refreshes before the async push completes.
+window.addEventListener('beforeunload', () => {
+  if(!_dirtyKeys.size) return;
+  const batch = [..._dirtyKeys].map(k => {
+    let val; try{ val = JSON.parse(_origGetItem(k)||'null'); }catch(e){ val = null; }
+    return {key:k, value:val, updated_at: new Date().toISOString()};
+  }).filter(r => r.value !== null);
+  if(!batch.length) return;
+  fetch(`${SB_URL}/rest/v1/kv_store`, {
+    method: 'POST',
+    headers: {
+      'apikey': SB_KEY,
+      'Authorization': `Bearer ${SB_KEY}`,
+      'Content-Type': 'application/json',
+      'Prefer': 'resolution=merge-duplicates'
+    },
+    body: JSON.stringify(batch),
+    keepalive: true  // survives page close/refresh
+  }).catch(() => {});
+});
+
 async function initSupabase(){
   try{
     _sb = supabase.createClient(SB_URL, SB_KEY);
 
-    // Pull from Supabase and apply last-write-wins per key
-    const { data, error } = await _sb.from('kv_store').select('key,value,updated_at');
-    const sbMap = new Map((data||[]).map(r => [r.key, r]));
-    const toRepush = []; // locally-newer keys whose push didn't complete last session
-
-    SB_SYNC_KEYS.forEach(k => {
-      const row = sbMap.get(k);
-      const localTs = _getLocalTs(k);
-      const hasLocal = !!_origGetItem(k);
-
-      if(!row){
-        // Key not in Supabase yet — push local data (first-time migration)
-        if(hasLocal) toRepush.push(k);
-        return;
-      }
-
-      const sbTs = new Date(row.updated_at||0).getTime();
-
-      if(!hasLocal){
-        // No local data — always use Supabase
-        _origSetItem(k, JSON.stringify(row.value));
-        _setLocalTs(k, sbTs);
-      } else if(sbTs > localTs){
-        // Supabase is strictly newer → another device wrote after us → use Supabase
-        _origSetItem(k, JSON.stringify(row.value));
-        _setLocalTs(k, sbTs);
-      } else if(localTs > sbTs){
-        // Local is newer → our push didn't complete before last refresh → keep local, re-push
-        toRepush.push(k);
-      }
-      // localTs === sbTs → same data, keep local (already in sync)
-    });
-
-    // Re-push any locally-newer keys so Supabase catches up
-    if(toRepush.length > 0){
-      try{
-        const batch = toRepush.map(k => {
-          let val; try{ val=JSON.parse(_origGetItem(k)); }catch(e){ val=null; }
-          return {key:k, value:val, updated_at: new Date(_getLocalTs(k)||Date.now()).toISOString()};
-        }).filter(r=>r.value!==null);
-        if(batch.length) _sb.from('kv_store').upsert(batch,{onConflict:'key'}).catch(()=>{});
-      }catch(e){ console.warn('[KSQ] Re-push failed (non-fatal):', e); }
+    // Always pull from Supabase — it is the authoritative store for all users/devices
+    const { data, error } = await _sb.from('kv_store').select('key,value');
+    if(!error && data?.length){
+      data.forEach(row => {
+        if(SB_SYNC_KEYS.includes(row.key)){
+          _origSetItem(row.key, JSON.stringify(row.value));
+        }
+      });
     }
+
+    // Push any local keys not yet in Supabase (first-time migration)
+    try{
+      const sbKeys = new Set((data||[]).map(r => r.key));
+      const localOnly = SB_SYNC_KEYS.filter(k => !sbKeys.has(k) && _origGetItem(k));
+      if(localOnly.length){
+        const batch = localOnly.map(k => {
+          let val; try{ val = JSON.parse(_origGetItem(k)); }catch(e){ val = null; }
+          return {key:k, value:val, updated_at: new Date().toISOString()};
+        }).filter(r => r.value !== null);
+        if(batch.length) _sb.from('kv_store').upsert(batch, {onConflict:'key'}).catch(()=>{});
+      }
+    }catch(e){ console.warn('[KSQ] Migration push failed (non-fatal):', e); }
 
     _sbReady = true;
 
     const st = document.getElementById('sb-status');
     if(st){ st.textContent='⬤ cloud synced'; st.style.color='rgba(52,211,153,.6)'; }
 
-    // Realtime — another device's write streams in instantly
+    // Realtime — another user's write streams in instantly on all devices
     _sb.channel('ksq_sync')
       .on('postgres_changes', {event:'*', schema:'public', table:'kv_store'}, payload => {
         if(sessionStorage.getItem('ksq_auth')!=='1') return;
         const row = payload.new;
         if(!row || !SB_SYNC_KEYS.includes(row.key)) return;
-        // Merge append-only log by id so two devices logging simultaneously don't erase each other
+        // Merge append-only log by id so two users logging simultaneously don't erase each other
         if(row.key === 'ksq_stock_log_v1'){
           try{
             const local  = JSON.parse(_origGetItem(row.key)||'[]');
@@ -1863,9 +1860,6 @@ async function initSupabase(){
         } else {
           _origSetItem(row.key, JSON.stringify(row.value));
         }
-        // Align local_ts so next page-load sees a tie (not a re-overwrite)
-        const remoteTsMs = new Date(row.updated_at||0).getTime();
-        if(remoteTsMs > 0) _setLocalTs(row.key, remoteTsMs);
         renderCurrentTab();
       })
       .subscribe();
