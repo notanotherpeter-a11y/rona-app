@@ -955,7 +955,7 @@ th { background: #F3F5F8; color: #374151; border-bottom-color: #C8D0DB; }
       </div>
 
       <!-- ── STOCK MODAL ── -->
-      <div id="stock-modal" style="display:none;position:fixed;inset:0;z-index:999;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;padding:16px">
+      <div id="stock-modal" style="display:none;position:fixed;inset:0;z-index:999;background:rgba(0,0,0,.45);align-items:center;justify-content:center;padding:16px">
         <div style="background:#fff;border-radius:16px;padding:28px 28px 24px;width:100%;max-width:420px;box-shadow:0 20px 60px rgba(0,0,0,.25)">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
             <div style="font-weight:800;font-size:1rem" id="stock-modal-title">Add Item</div>
@@ -1732,9 +1732,16 @@ localStorage.setItem = function(k, v){
     if(_sbReady && _sb){
       try{
         const parsed = JSON.parse(v);
+        const snapshot = v; // remember the exact value we're pushing
         _sb.from('kv_store')
           .upsert({key:k, value:parsed, updated_at: new Date().toISOString()}, {onConflict:'key'})
-          .then(res => { if(!res?.error) _clearPending(k); })
+          .then(res => {
+            // Only clear pending if localStorage still holds the value we just pushed.
+            // Otherwise a newer local write happened after this upsert started, and
+            // that newer write is still in flight (or queued) — leave pending set so
+            // the queue survives refresh.
+            if(!res?.error && _origGetItem(k) === snapshot) _clearPending(k);
+          })
           .catch(() => { /* keep pending on network rejection — retried on next init */ });
       }catch(e){}
     }
@@ -1793,7 +1800,30 @@ async function initSupabase(){
         if(sessionStorage.getItem('ksq_auth')!=='1') return;
         const row = payload.new;
         if(!row || !SB_SYNC_KEYS.includes(row.key)) return;
-        _origSetItem(row.key, JSON.stringify(row.value));
+        // Skip if we have a pending local write for this key — our own write is
+        // authoritative and echoing back the remote value would clobber newer local
+        // edits that haven't been upserted yet (rapid +/- clicks race).
+        try{
+          const pending = JSON.parse(_origGetItem(PENDING_SYNC_KEY)||'{}');
+          if(pending[row.key]) return;
+        }catch(e){}
+        // Special-case append-only log: merge by id instead of overwriting, so
+        // simultaneous log entries from two devices don't erase each other.
+        if(row.key === 'ksq_stock_log_v1'){
+          try{
+            const local  = JSON.parse(_origGetItem(row.key)||'[]');
+            const remote = Array.isArray(row.value) ? row.value : [];
+            const byId = new Map();
+            [...local, ...remote].forEach(e => { if(e && e.id!=null) byId.set(e.id, e); });
+            const merged = [...byId.values()].sort((a,b)=>(b.id||0)-(a.id||0));
+            if(merged.length > 200) merged.length = 200;
+            _origSetItem(row.key, JSON.stringify(merged));
+          }catch(e){
+            _origSetItem(row.key, JSON.stringify(row.value));
+          }
+        } else {
+          _origSetItem(row.key, JSON.stringify(row.value));
+        }
         // Re-render the active tab so remote changes appear instantly
         renderCurrentTab();
       })
@@ -2242,7 +2272,12 @@ const DEFAULT_STOCK = [
 
 function loadStock() {
   const raw = localStorage.getItem(STOCK_KEY);
-  return raw ? JSON.parse(raw) : DEFAULT_STOCK;
+  if(raw) return JSON.parse(raw);
+  // First load — persist defaults so subsequent reads (and Supabase) see them,
+  // otherwise defaults render but never sync and edits made against them can
+  // appear to "revert" after refresh.
+  localStorage.setItem(STOCK_KEY, JSON.stringify(DEFAULT_STOCK));
+  return [...DEFAULT_STOCK];
 }
 
 function saveStock(items) {
@@ -4531,7 +4566,8 @@ function init(){
 // (covers edits made in another tab or browser window)
 window.addEventListener('storage', e=>{
   const branchKeys=BRANCHES.map(b=>b.kKey);
-  if(![K_SALES,K_EXP,K_SAL,K_OTHER,...branchKeys].includes(e.key)) return;
+  const stockKeys=[STOCK_KEY,STOCK_CATS_KEY,STOCK_LOG_KEY,BRANCH_ORDERS_KEY];
+  if(![K_SALES,K_EXP,K_SAL,K_OTHER,...branchKeys,...stockKeys].includes(e.key)) return;
   if(sessionStorage.getItem('ksq_auth')!=='1') return;
   const active=ALL_TABS.find(t=>document.getElementById('tab-'+t)?.style.display!=='none');
   if(active==='dashboard') renderDashboard();
@@ -4539,6 +4575,8 @@ window.addEventListener('storage', e=>{
   else if(active==='branches-sale') renderBranchSales();
   else if(active==='expenses') renderExpenses();
   else if(active==='salary') renderSalary();
+  else if(active==='stock') renderStock();
+  else if(active==='branch-orders') renderBranchOrdersPage();
   else if(active==='others') renderOther();
   else { const b=BRANCHES.find(x=>x.key===active); if(b) renderBranch(b); }
   // Always sync dashboard when expenses change (branch entries affect dashboard totals)
