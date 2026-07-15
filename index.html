@@ -1712,15 +1712,30 @@ const SB_SYNC_KEYS = [
 let _sb = null;
 let _sbReady = false;
 
-// Intercept ALL localStorage.setItem calls — if it's a sync key, push to Supabase
+// Pending sync queue — survives refresh, flushed to Supabase on next init
+const PENDING_SYNC_KEY = 'ksq_pending_sync'; // NOT in SB_SYNC_KEYS
 const _origSetItem = localStorage.setItem.bind(localStorage);
+const _origGetItem = localStorage.getItem.bind(localStorage);
+
+function _markPending(k){
+  try{ const p=JSON.parse(_origGetItem(PENDING_SYNC_KEY)||'{}'); p[k]=true; _origSetItem(PENDING_SYNC_KEY,JSON.stringify(p)); }catch(e){}
+}
+function _clearPending(k){
+  try{ const p=JSON.parse(_origGetItem(PENDING_SYNC_KEY)||'{}'); delete p[k]; _origSetItem(PENDING_SYNC_KEY,JSON.stringify(p)); }catch(e){}
+}
+
+// Intercept ALL localStorage.setItem calls — if it's a sync key, push to Supabase
 localStorage.setItem = function(k, v){
   _origSetItem(k, v);
-  if(_sbReady && SB_SYNC_KEYS.includes(k)){
-    try{
-      const parsed = JSON.parse(v);
-      _sb.from('kv_store').upsert({key:k, value:parsed, updated_at: new Date().toISOString()}, {onConflict:'key'}).then(()=>{});
-    }catch(e){}
+  if(SB_SYNC_KEYS.includes(k)){
+    _markPending(k); // always mark as pending first
+    if(_sbReady && _sb){
+      try{
+        const parsed = JSON.parse(v);
+        _sb.from('kv_store').upsert({key:k, value:parsed, updated_at: new Date().toISOString()}, {onConflict:'key'})
+          .then(({error}) => { if(!error) _clearPending(k); });
+      }catch(e){}
+    }
   }
 };
 
@@ -1728,7 +1743,19 @@ async function initSupabase(){
   try{
     _sb = supabase.createClient(SB_URL, SB_KEY);
 
-    // Pull all cloud data into localStorage FIRST (so seed() sees it)
+    // Step 1: Flush any pending local changes to Supabase BEFORE pulling
+    const pendingRaw = _origGetItem(PENDING_SYNC_KEY);
+    if(pendingRaw){
+      const pending = JSON.parse(pendingRaw || '{}');
+      const pendingKeys = Object.keys(pending).filter(k => SB_SYNC_KEYS.includes(k) && _origGetItem(k));
+      if(pendingKeys.length > 0){
+        const batch = pendingKeys.map(k => ({key:k, value:JSON.parse(_origGetItem(k)), updated_at:new Date().toISOString()}));
+        await _sb.from('kv_store').upsert(batch, {onConflict:'key'});
+        _origSetItem(PENDING_SYNC_KEY, '{}');
+      }
+    }
+
+    // Step 2: Pull all cloud data into localStorage
     const { data } = await _sb.from('kv_store').select('key,value');
     const sbKeys = new Set((data||[]).map(r=>r.key));
     if(data && data.length){
@@ -1739,10 +1766,10 @@ async function initSupabase(){
       });
     }
 
-    // Push any local keys missing from Supabase (one-time migration from localStorage)
-    const localOnly = SB_SYNC_KEYS.filter(k => !sbKeys.has(k) && localStorage.getItem(k));
+    // Step 3: Push any local keys missing from Supabase (first-time migration)
+    const localOnly = SB_SYNC_KEYS.filter(k => !sbKeys.has(k) && _origGetItem(k));
     if(localOnly.length > 0){
-      const batch = localOnly.map(k => ({key:k, value:JSON.parse(localStorage.getItem(k)), updated_at:new Date().toISOString()}));
+      const batch = localOnly.map(k => ({key:k, value:JSON.parse(_origGetItem(k)), updated_at:new Date().toISOString()}));
       await _sb.from('kv_store').upsert(batch, {onConflict:'key'});
     }
 
