@@ -1822,18 +1822,11 @@ async function initSupabase(){
       });
     }
 
-    // Push any local keys not yet in Supabase (first-time migration)
+    // Supabase is authoritative — clear any local keys not present in Supabase
     try{
       const sbKeys = new Set((data||[]).map(r => r.key));
-      const localOnly = SB_SYNC_KEYS.filter(k => !sbKeys.has(k) && _origGetItem(k));
-      if(localOnly.length){
-        const batch = localOnly.map(k => {
-          let val; try{ val = JSON.parse(_origGetItem(k)); }catch(e){ val = null; }
-          return {key:k, value:val, updated_at: new Date().toISOString()};
-        }).filter(r => r.value !== null);
-        if(batch.length) _sb.from('kv_store').upsert(batch, {onConflict:'key'}).catch(()=>{});
-      }
-    }catch(e){ console.warn('[KSQ] Migration push failed (non-fatal):', e); }
+      SB_SYNC_KEYS.forEach(k => { if(!sbKeys.has(k)) _origSetItem(k, JSON.stringify(null)); });
+    }catch(e){ console.warn('[KSQ] Local clear failed (non-fatal):', e); }
 
     _sbReady = true;
 
@@ -2314,15 +2307,14 @@ const DEFAULT_STOCK = [
 function loadStock() {
   const raw = localStorage.getItem(STOCK_KEY);
   if(raw){
-    try{ return JSON.parse(raw); }catch(e){
-      console.warn('[KSQ] loadStock: corrupted data, resetting to defaults');
+    try{
+      const parsed = JSON.parse(raw);
+      if(Array.isArray(parsed)) return parsed;
+    }catch(e){
+      console.warn('[KSQ] loadStock: corrupted data, resetting to empty');
     }
   }
-  // First load — persist defaults so subsequent reads (and Supabase) see them,
-  // otherwise defaults render but never sync and edits made against them can
-  // appear to "revert" after refresh.
-  localStorage.setItem(STOCK_KEY, JSON.stringify(DEFAULT_STOCK));
-  return [...DEFAULT_STOCK];
+  return [];
 }
 
 function saveStock(items) {
