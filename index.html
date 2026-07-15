@@ -1822,10 +1822,10 @@ async function initSupabase(){
       });
     }
 
-    // Supabase is authoritative — clear any local keys not present in Supabase
+    // Supabase is authoritative — remove any local keys not present in Supabase
     try{
       const sbKeys = new Set((data||[]).map(r => r.key));
-      SB_SYNC_KEYS.forEach(k => { if(!sbKeys.has(k)) _origSetItem(k, JSON.stringify(null)); });
+      SB_SYNC_KEYS.forEach(k => { if(!sbKeys.has(k)) localStorage.removeItem(k); });
     }catch(e){ console.warn('[KSQ] Local clear failed (non-fatal):', e); }
 
     _sbReady = true;
