@@ -2609,8 +2609,21 @@ function saveStockItem() {
       addStockLog('Edited', name, `${payload.qty} ${payload.unit||''}`.trim());
     }
   } else {
-    items.push({ id: 's' + Date.now(), ...payload });
-    addStockLog('Added', name, `${payload.qty} ${payload.unit||''}`.trim());
+    // Check if an item with the same name already exists — add qty to it instead of duplicating
+    const existingIdx = items.findIndex(i => i.name.toLowerCase() === name.toLowerCase());
+    if (existingIdx !== -1) {
+      const oldQty = items[existingIdx].qty || 0;
+      const addedQty = payload.qty;
+      items[existingIdx].qty = oldQty + addedQty;
+      // Also update category/unit/notes if provided
+      if (payload.category) items[existingIdx].category = payload.category;
+      if (payload.unit) items[existingIdx].unit = payload.unit;
+      if (payload.notes) items[existingIdx].notes = payload.notes;
+      addStockLog('Qty +', name, `${oldQty} → ${items[existingIdx].qty} ${items[existingIdx].unit||''}`.trim());
+    } else {
+      items.push({ id: 's' + Date.now(), ...payload });
+      addStockLog('Added', name, `${payload.qty} ${payload.unit||''}`.trim());
+    }
   }
   saveStock(items);
   closeStockModal();
