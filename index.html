@@ -1736,7 +1736,17 @@ let _sbReady = false;
 const _origSetItem = localStorage.setItem.bind(localStorage);
 const _origGetItem = localStorage.getItem.bind(localStorage);
 
-// ── Save Toast notification ──
+// ── Local write timestamps ──
+// Each write records the exact ms it happened locally.
+// On page load we compare this to Supabase updated_at:
+//   local_ts > sb_ts  → our write never reached Supabase (refresh too fast) → keep local + re-push
+//   sb_ts > local_ts  → another device wrote later → use Supabase
+//   sb_ts === local_ts → same data → keep local (it's already synced)
+const LOCAL_TS_KEY = 'ksq_local_ts';
+function _getLocalTs(k){ try{ return JSON.parse(_origGetItem(LOCAL_TS_KEY)||'{}')[k]||0; }catch(e){ return 0; } }
+function _setLocalTs(k, ts){ try{ const o=JSON.parse(_origGetItem(LOCAL_TS_KEY)||'{}'); o[k]=ts; _origSetItem(LOCAL_TS_KEY,JSON.stringify(o)); }catch(e){} }
+
+// ── Save Toast ──
 let _toastTimer = null;
 function _showSaveToast(type, msg){
   const el = document.getElementById('ksq-save-toast');
@@ -1744,37 +1754,39 @@ function _showSaveToast(type, msg){
   el.className = `show ${type}`;
   el.textContent = msg;
   if(_toastTimer) clearTimeout(_toastTimer);
-  _toastTimer = setTimeout(() => {
-    el.classList.remove('show');
-    _toastTimer = null;
-  }, type === 'saving' ? 8000 : 2500);
+  _toastTimer = setTimeout(() => { el.classList.remove('show'); _toastTimer = null; }, type==='saving' ? 8000 : 2500);
 }
 
-// Keys that show a save toast when written
 const _STOCK_TOAST_KEYS = ['ksq_stock_v1','ksq_stock_cats_v1','ksq_stock_log_v1','ksq_branch_orders_v1'];
 
-// Intercept ALL localStorage.setItem — save locally for instant UI, then push to Supabase
+// ── Interceptor ──
+// Write to localStorage instantly (UI never waits), then push to Supabase async.
+// Both use the SAME timestamp so on page-load comparison they're equal (tie → local wins).
+// If the push didn't finish before a refresh: local_ts > sb_ts → local wins → re-pushed on next load.
 localStorage.setItem = function(k, v){
-  _origSetItem(k, v); // instant local cache update
-  if(SB_SYNC_KEYS.includes(k) && _sbReady && _sb){
-    try{
-      const parsed = JSON.parse(v);
-      if(_STOCK_TOAST_KEYS.includes(k)) _showSaveToast('saving', '⏳ Saving…');
-      _sb.from('kv_store')
-        .upsert({key:k, value:parsed, updated_at: new Date().toISOString()}, {onConflict:'key'})
-        .then(res => {
-          if(!res?.error){
-            if(_STOCK_TOAST_KEYS.includes(k)) _showSaveToast('success', '✓ Saved to Cloud');
-          } else {
-            if(_STOCK_TOAST_KEYS.includes(k)) _showSaveToast('error', '⚠ Cloud save failed');
-            console.warn('[KSQ] Upsert error:', k, res.error);
-          }
-        })
-        .catch(err => {
-          if(_STOCK_TOAST_KEYS.includes(k)) _showSaveToast('error', '⚠ Cloud save failed');
-          console.warn('[KSQ] Upsert catch:', k, err);
-        });
-    }catch(e){ console.warn('[KSQ] setItem intercept error:', e); }
+  _origSetItem(k, v);
+  if(SB_SYNC_KEYS.includes(k)){
+    const ts = Date.now();
+    _setLocalTs(k, ts); // record write time BEFORE async push
+    if(_sbReady && _sb){
+      try{
+        const parsed = JSON.parse(v);
+        if(_STOCK_TOAST_KEYS.includes(k)) _showSaveToast('saving', '⏳ Saving…');
+        _sb.from('kv_store')
+          .upsert({key:k, value:parsed, updated_at: new Date(ts).toISOString()}, {onConflict:'key'})
+          .then(res => {
+            if(!res?.error){
+              if(_STOCK_TOAST_KEYS.includes(k)) _showSaveToast('success', '✓ Saved to Cloud');
+            } else {
+              if(_STOCK_TOAST_KEYS.includes(k)) _showSaveToast('error', '⚠ Cloud save failed — will retry on reload');
+              console.warn('[KSQ] Upsert error:', k, res.error);
+            }
+          })
+          .catch(err => {
+            if(_STOCK_TOAST_KEYS.includes(k)) _showSaveToast('error', '⚠ Cloud save failed — will retry on reload');
+          });
+      }catch(e){ console.warn('[KSQ] setItem intercept error:', e); }
+    }
   }
 };
 
@@ -1782,29 +1794,62 @@ async function initSupabase(){
   try{
     _sb = supabase.createClient(SB_URL, SB_KEY);
 
-    // Always pull everything from Supabase — it is the authoritative store
-    const { data, error } = await _sb.from('kv_store').select('key,value');
-    if(!error && data?.length){
-      data.forEach(row => {
-        if(SB_SYNC_KEYS.includes(row.key)){
-          _origSetItem(row.key, JSON.stringify(row.value));
-        }
-      });
+    // Pull from Supabase and apply last-write-wins per key
+    const { data, error } = await _sb.from('kv_store').select('key,value,updated_at');
+    const sbMap = new Map((data||[]).map(r => [r.key, r]));
+    const toRepush = []; // locally-newer keys whose push didn't complete last session
+
+    SB_SYNC_KEYS.forEach(k => {
+      const row = sbMap.get(k);
+      const localTs = _getLocalTs(k);
+      const hasLocal = !!_origGetItem(k);
+
+      if(!row){
+        // Key not in Supabase yet — push local data (first-time migration)
+        if(hasLocal) toRepush.push(k);
+        return;
+      }
+
+      const sbTs = new Date(row.updated_at||0).getTime();
+
+      if(!hasLocal){
+        // No local data — always use Supabase
+        _origSetItem(k, JSON.stringify(row.value));
+        _setLocalTs(k, sbTs);
+      } else if(sbTs > localTs){
+        // Supabase is strictly newer → another device wrote after us → use Supabase
+        _origSetItem(k, JSON.stringify(row.value));
+        _setLocalTs(k, sbTs);
+      } else if(localTs > sbTs){
+        // Local is newer → our push didn't complete before last refresh → keep local, re-push
+        toRepush.push(k);
+      }
+      // localTs === sbTs → same data, keep local (already in sync)
+    });
+
+    // Re-push any locally-newer keys so Supabase catches up
+    if(toRepush.length > 0){
+      try{
+        const batch = toRepush.map(k => {
+          let val; try{ val=JSON.parse(_origGetItem(k)); }catch(e){ val=null; }
+          return {key:k, value:val, updated_at: new Date(_getLocalTs(k)||Date.now()).toISOString()};
+        }).filter(r=>r.value!==null);
+        if(batch.length) _sb.from('kv_store').upsert(batch,{onConflict:'key'}).catch(()=>{});
+      }catch(e){ console.warn('[KSQ] Re-push failed (non-fatal):', e); }
     }
 
     _sbReady = true;
 
-    // Update status indicator
     const st = document.getElementById('sb-status');
     if(st){ st.textContent='⬤ cloud synced'; st.style.color='rgba(52,211,153,.6)'; }
 
-    // Subscribe to Realtime — any device's write streams in instantly
+    // Realtime — another device's write streams in instantly
     _sb.channel('ksq_sync')
       .on('postgres_changes', {event:'*', schema:'public', table:'kv_store'}, payload => {
         if(sessionStorage.getItem('ksq_auth')!=='1') return;
         const row = payload.new;
         if(!row || !SB_SYNC_KEYS.includes(row.key)) return;
-        // Special-case append-only log: merge by id so simultaneous entries don't erase each other
+        // Merge append-only log by id so two devices logging simultaneously don't erase each other
         if(row.key === 'ksq_stock_log_v1'){
           try{
             const local  = JSON.parse(_origGetItem(row.key)||'[]');
@@ -1814,13 +1859,13 @@ async function initSupabase(){
             const merged = [...byId.values()].sort((a,b)=>(b.id||0)-(a.id||0));
             if(merged.length > 200) merged.length = 200;
             _origSetItem(row.key, JSON.stringify(merged));
-          }catch(e){
-            _origSetItem(row.key, JSON.stringify(row.value));
-          }
+          }catch(e){ _origSetItem(row.key, JSON.stringify(row.value)); }
         } else {
           _origSetItem(row.key, JSON.stringify(row.value));
         }
-        // Re-render the active tab so remote changes appear instantly
+        // Align local_ts so next page-load sees a tie (not a re-overwrite)
+        const remoteTsMs = new Date(row.updated_at||0).getTime();
+        if(remoteTsMs > 0) _setLocalTs(row.key, remoteTsMs);
         renderCurrentTab();
       })
       .subscribe();
@@ -2470,7 +2515,7 @@ function quickPickItem(id){
   renderQuickPickList();
 }
 
-async function qpAdjust(id, delta){
+function qpAdjust(id, delta){
   const items = loadStock();
   const item = items.find(i => i.id === id);
   if(!item) return;
@@ -2483,7 +2528,6 @@ async function qpAdjust(id, delta){
   renderQuickPickList();
   renderStock();
   updateNotifBadge();
-  await _forcePushKey('ksq_stock_v1');
 }
 
 function quickPickDelete(id, name){
@@ -2646,7 +2690,7 @@ function renderStock() {
   }
 }
 
-async function saveStockMin(id, val){
+function saveStockMin(id, val){
   const items = loadStock();
   const item = items.find(i => i.id === id);
   if(!item) return;
@@ -2657,10 +2701,9 @@ async function saveStockMin(id, val){
   saveStock(items);
   addStockLog('Edited', item.name, `Min qty: ${oldMin} → ${newMin}`);
   renderStock();
-  await _forcePushKey('ksq_stock_v1');
 }
 
-async function adjustStockQty(id, delta) {
+function adjustStockQty(id, delta) {
   const items = loadStock();
   const item = items.find(i => i.id === id);
   if (!item) return;
@@ -2671,7 +2714,6 @@ async function adjustStockQty(id, delta) {
   saveStock(items);
   addStockLog(delta > 0 ? 'Qty +' : 'Qty −', item.name, `${oldQty} → ${item.qty} ${item.unit||''}`.trim());
   renderStock();
-  await _forcePushKey('ksq_stock_v1');
 }
 
 // Force push all stock data to Supabase right now (bypasses pending queue logic)
@@ -2800,7 +2842,7 @@ function closeStockModal() {
   document.getElementById('stock-modal').style.display = 'none';
 }
 
-async function saveStockItem() {
+function saveStockItem() {
   const name = document.getElementById('stock-name').value.trim();
   if (!name) { alert('Item name is required.'); return; }
   // Resolve custom category and auto-save it to the categories list
@@ -2856,12 +2898,9 @@ async function saveStockItem() {
   saveStock(items);
   closeStockModal();
   renderStock();
-  _showSaveToast('saving', '⏳ Saving…');
-  await _forcePushKey('ksq_stock_v1');
-  _showSaveToast('success', '✓ Saved to Cloud');
 }
 
-async function deleteStockItem(id) {
+function deleteStockItem(id) {
   if (!confirm('Delete this item?')) return;
   const all = loadStock();
   const item = all.find(i => i.id === id);
@@ -2869,9 +2908,6 @@ async function deleteStockItem(id) {
   saveStock(remaining);
   if(item) addStockLog('Deleted', item.name, `Was ${item.qty} ${item.unit||''}`.trim());
   renderStock();
-  _showSaveToast('saving', '⏳ Saving…');
-  await _forcePushKey('ksq_stock_v1');
-  _showSaveToast('success', '✓ Saved to Cloud');
 }
 
 // Immediately upsert a single key to Supabase — returns a promise so callers can await it
