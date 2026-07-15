@@ -914,9 +914,13 @@ th { background: #F3F5F8; color: #374151; border-bottom-color: #C8D0DB; }
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
               Log History
             </button>
-            <button onclick="forceSyncNow()" id="force-sync-btn" title="Force sync all stock data to cloud now" style="padding:9px 14px;border:1.5px solid var(--border);border-radius:var(--r-sm);font-size:.82rem;font-weight:600;cursor:pointer;font-family:inherit;background:#fff;color:var(--muted);box-shadow:var(--sh-sm);display:flex;align-items:center;gap:6px">
+            <button onclick="forceSyncNow()" id="force-sync-btn" title="Push local data to cloud now" style="padding:9px 14px;border:1.5px solid var(--border);border-radius:var(--r-sm);font-size:.82rem;font-weight:600;cursor:pointer;font-family:inherit;background:#fff;color:var(--muted);box-shadow:var(--sh-sm);display:flex;align-items:center;gap:6px">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-              Sync
+              Push
+            </button>
+            <button onclick="pullFromCloud()" title="Pull latest data from cloud (use on new device)" style="padding:9px 14px;border:1.5px solid var(--border);border-radius:var(--r-sm);font-size:.82rem;font-weight:600;cursor:pointer;font-family:inherit;background:#fff;color:var(--muted);box-shadow:var(--sh-sm);display:flex;align-items:center;gap:6px">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="8 17 12 21 16 17"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.88 18.09A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.29"/></svg>
+              Pull
             </button>
             <!-- Quick Pick dropdown -->
             <div style="position:relative">
@@ -1781,20 +1785,16 @@ localStorage.setItem = function(k, v){
     if(_sbReady && _sb){
       try{
         const parsed = JSON.parse(v);
-        const snapshot = v; // remember the exact value we're pushing
-        // Show "saving" toast only for stock-related keys (not all keys)
         if(_STOCK_TOAST_KEYS.includes(k)) _showSaveToast('saving', '⏳ Saving…');
         _sb.from('kv_store')
           .upsert({key:k, value:parsed, updated_at: new Date().toISOString()}, {onConflict:'key'})
           .then(res => {
-            // Only clear pending if localStorage still holds the value we just pushed.
-            // Otherwise a newer local write happened after this upsert started, and
-            // that newer write is still in flight (or queued) — leave pending set so
-            // the queue survives refresh.
-            if(!res?.error && _origGetItem(k) === snapshot){
+            if(!res?.error){
+              // Upsert succeeded — clear pending regardless of snapshot.
+              // If a newer write happened, it already re-marked pending and started its own upsert.
               _clearPending(k);
               if(_STOCK_TOAST_KEYS.includes(k)) _showSaveToast('success', '✓ Saved & Synced');
-            } else if(res?.error){
+            } else {
               if(_STOCK_TOAST_KEYS.includes(k)) _showSaveToast('error', '⚠ Saved locally — sync pending');
               console.warn('[KSQ] Upsert error for', k, ':', res.error);
             }
@@ -1838,22 +1838,23 @@ async function initSupabase(){
       }catch(e){ console.warn('[KSQ] Flush error:', e); }
     }
 
-    // Step 2: Pull cloud data — use timestamp-based conflict resolution
-    // Supabase data only wins if it's NEWER than our last local write
+    // Step 2: Pull cloud data
+    // LOCAL ALWAYS WINS — only use Supabase data when there is NO local copy at all
+    // (fresh device / first-time load). This prevents Supabase from overwriting a local
+    // change that hasn't fully synced yet (the race that caused reverts on refresh).
+    // The realtime subscription handles live cross-device updates without a page refresh.
     const { data } = await _sb.from('kv_store').select('key,value,updated_at');
     const sbKeys = new Set((data||[]).map(r=>r.key));
     if(data && data.length){
       data.forEach(row => {
         if(!SB_SYNC_KEYS.includes(row.key) || protectedKeys.has(row.key)) return;
-        const sbTs = new Date(row.updated_at || 0).getTime();
-        const localTs = _getLocalTs(row.key);
         const hasLocal = !!_origGetItem(row.key);
-        // Use Supabase data if: no local data exists OR Supabase is strictly newer
-        if(!hasLocal || sbTs > localTs){
+        // Only write Supabase data if there is zero local data for this key
+        if(!hasLocal){
           _origSetItem(row.key, JSON.stringify(row.value));
-          _setLocalTs(row.key, sbTs); // align local ts with Supabase ts
+          _setLocalTs(row.key, new Date(row.updated_at || 0).getTime());
         }
-        // If local is same age or newer: keep local (it will be flushed to Supabase via pending)
+        // Local data exists → keep it; pending queue pushes it back to Supabase
       });
     }
 
@@ -2757,6 +2758,28 @@ async function forceSyncNow(){
     console.warn('[KSQ] forceSyncNow catch:', e);
   } finally {
     if(btn){ btn.style.opacity='1'; btn.style.pointerEvents=''; }
+  }
+}
+
+// Pull latest stock data from Supabase (overwrites local — use when opening on a new device)
+async function pullFromCloud(){
+  if(!_sbReady || !_sb){ _showSaveToast('error', '⚠ Not connected to cloud'); return; }
+  if(!confirm('This will replace your local inventory data with the latest from cloud.\n\nUse this if you opened the app on a new device or browser. Continue?')) return;
+  _showSaveToast('saving', '⏳ Pulling from cloud…');
+  try{
+    const { data, error } = await _sb.from('kv_store').select('key,value,updated_at');
+    if(error){ _showSaveToast('error', '⚠ Pull failed — check connection'); return; }
+    (data||[]).forEach(row => {
+      if(!_STOCK_TOAST_KEYS.includes(row.key)) return;
+      _origSetItem(row.key, JSON.stringify(row.value));
+      _setLocalTs(row.key, new Date(row.updated_at||0).getTime());
+      _clearPending(row.key);
+    });
+    _showSaveToast('success', '✓ Data pulled from cloud');
+    renderStock();
+  }catch(e){
+    _showSaveToast('error', '⚠ Pull error');
+    console.warn('[KSQ] pullFromCloud:', e);
   }
 }
 
