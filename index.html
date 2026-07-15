@@ -1705,7 +1705,7 @@ const SB_URL = 'https://aswhwsekxqivbkuivvqp.supabase.co';
 const SB_KEY = 'sb_publishable_AnhZhNqXNPYwznpR2zZzxQ_ordj3CKi';
 const SB_SYNC_KEYS = [
   'ksq_sales','ksq_expenses','ksq_salary','ksq_sal_daily','ksq_employees_v1','ksq_other',
-  'ksq_stock_v1','ksq_stock_cats_v1','ksq_branch_orders_v1','ksq_pins',
+  'ksq_stock_v1','ksq_stock_cats_v1','ksq_stock_log_v1','ksq_branch_orders_v1','ksq_pins',
   'ksq_cainta','ksq_marikina','ksq_antipolo','ksq_taytay','ksq_quezon_city',
   'ksq_cainta_sales','ksq_marikina_sales','ksq_antipolo_sales','ksq_taytay_sales','ksq_quezon_city_sales'
 ];
@@ -1728,12 +1728,14 @@ function _clearPending(k){
 localStorage.setItem = function(k, v){
   _origSetItem(k, v);
   if(SB_SYNC_KEYS.includes(k)){
-    _markPending(k); // always mark as pending first
+    _markPending(k); // mark as pending BEFORE async upsert — survives if upsert fails
     if(_sbReady && _sb){
       try{
         const parsed = JSON.parse(v);
-        _sb.from('kv_store').upsert({key:k, value:parsed, updated_at: new Date().toISOString()}, {onConflict:'key'})
-          .then(({error}) => { if(!error) _clearPending(k); });
+        _sb.from('kv_store')
+          .upsert({key:k, value:parsed, updated_at: new Date().toISOString()}, {onConflict:'key'})
+          .then(res => { if(!res?.error) _clearPending(k); })
+          .catch(() => { /* keep pending on network rejection — retried on next init */ });
       }catch(e){}
     }
   }
@@ -1743,24 +1745,30 @@ async function initSupabase(){
   try{
     _sb = supabase.createClient(SB_URL, SB_KEY);
 
-    // Step 1: Flush any pending local changes to Supabase BEFORE pulling
+    // Step 1: Collect pending local keys — these are authoritative regardless of flush outcome
     const pendingRaw = _origGetItem(PENDING_SYNC_KEY);
-    if(pendingRaw){
-      const pending = JSON.parse(pendingRaw || '{}');
-      const pendingKeys = Object.keys(pending).filter(k => SB_SYNC_KEYS.includes(k) && _origGetItem(k));
-      if(pendingKeys.length > 0){
+    const pending = pendingRaw ? JSON.parse(pendingRaw) : {};
+    const pendingKeys = Object.keys(pending).filter(k => SB_SYNC_KEYS.includes(k) && _origGetItem(k));
+    const protectedKeys = new Set(pendingKeys); // NEVER overwrite these from Supabase
+
+    // Try to flush pending to Supabase
+    if(pendingKeys.length > 0){
+      try{
         const batch = pendingKeys.map(k => ({key:k, value:JSON.parse(_origGetItem(k)), updated_at:new Date().toISOString()}));
-        await _sb.from('kv_store').upsert(batch, {onConflict:'key'});
-        _origSetItem(PENDING_SYNC_KEY, '{}');
-      }
+        const { error: flushErr } = await _sb.from('kv_store').upsert(batch, {onConflict:'key'});
+        if(!flushErr){
+          _origSetItem(PENDING_SYNC_KEY, '{}'); // only clear queue on success
+        }
+        // If flush failed, keys stay pending and will retry on next refresh
+      }catch(e){ console.warn('[KSQ] Flush error:', e); }
     }
 
-    // Step 2: Pull all cloud data into localStorage
+    // Step 2: Pull cloud data — NEVER overwrite keys with pending local changes
     const { data } = await _sb.from('kv_store').select('key,value');
     const sbKeys = new Set((data||[]).map(r=>r.key));
     if(data && data.length){
       data.forEach(row => {
-        if(SB_SYNC_KEYS.includes(row.key)){
+        if(SB_SYNC_KEYS.includes(row.key) && !protectedKeys.has(row.key)){
           _origSetItem(row.key, JSON.stringify(row.value));
         }
       });
