@@ -2482,14 +2482,16 @@ function qpAdjust(id, delta){
   const items = loadStock();
   const item = items.find(i => i.id === id);
   if(!item) return;
-  const oldQty = item.qty;
+  const oldQty = item.qty || 0;
   const newQty = Math.max(0, oldQty + delta);
   if(newQty === oldQty) return;
   item.qty = newQty;
   saveStock(items);
-  addStockLog(delta > 0 ? 'Qty +' : 'Qty −', item.name, `${oldQty} → ${newQty}`);
-  renderQuickPickList(); // re-render to show updated qty in expanded row
-  renderStock();         // update main table/cards
+  addStockLog(delta > 0 ? 'Qty +' : 'Qty −', item.name, `${oldQty} → ${newQty} ${item.unit||''}`.trim());
+  _forcePushKey('ksq_stock_v1'); // same immediate cloud push as adjustStockQty
+  renderQuickPickList();          // update qty display in expanded row
+  renderStock();                  // update main table/cards + notifications
+  updateNotifBadge();
 }
 
 function quickPickDelete(id, name){
@@ -2701,8 +2703,6 @@ async function forceSyncNow(){
         _showSaveToast('error', '⚠ Sync failed — check connection');
         console.warn('[KSQ] forceSyncNow error:', error);
       } else {
-        // Clear pending for all these keys
-        stockKeys.forEach(k => _clearPending(k));
         _showSaveToast('success', `✓ All ${batch.length} keys synced to cloud`);
       }
     } else {
@@ -2727,8 +2727,6 @@ async function pullFromCloud(){
     (data||[]).forEach(row => {
       if(!_STOCK_TOAST_KEYS.includes(row.key)) return;
       _origSetItem(row.key, JSON.stringify(row.value));
-      _setLocalTs(row.key, new Date(row.updated_at||0).getTime());
-      _clearPending(row.key);
     });
     _showSaveToast('success', '✓ Data pulled from cloud');
     renderStock();
@@ -2889,7 +2887,6 @@ function _forcePushKey(k){
   try{ val = JSON.parse(raw); }catch(e){ return; }
   _sb.from('kv_store')
     .upsert({key:k, value:val, updated_at:new Date().toISOString()}, {onConflict:'key'})
-    .then(res=>{ if(!res?.error) _clearPending(k); })
     .catch(()=>{});
 }
 
