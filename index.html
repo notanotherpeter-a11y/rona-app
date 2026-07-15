@@ -2697,8 +2697,10 @@ function saveStockItem() {
   if (editId) {
     const idx = items.findIndex(i => i.id === editId);
     if (idx !== -1) {
+      const oldQty = items[idx].qty || 0;
       items[idx] = { ...items[idx], ...payload };
-      addStockLog('Edited', name, `${payload.qty} ${payload.unit||''}`.trim());
+      const qtyChange = oldQty !== payload.qty ? ` | qty: ${oldQty} → ${payload.qty}` : '';
+      addStockLog('Edited', name, `${payload.unit||''}${qtyChange}`.trim());
     }
   } else {
     // Check if an item with the same name already exists — add qty to it instead of duplicating
